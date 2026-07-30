@@ -1202,6 +1202,74 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
   }
 });
 
+app.post("/api/tts", requireUser, requireHours, async (req, res) => {
+  try {
+    if (!VENICE_API_KEY) {
+      return res.status(500).json({ error: "VENICE_API_KEY missing." });
+    }
+    const raw = String(req.body?.text || "").trim();
+    if (!raw) {
+      return res.status(400).json({ error: "text required" });
+    }
+
+    // Speak dialogue only — drop *actions* and "Name:" labels
+    let spoken = raw
+      .replace(/\*[^*]*\*/g, " ")
+      .replace(/^\s*[A-Za-z][\w .'-]{0,40}:\s*/gm, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 3500);
+
+    if (spoken.length < 2) {
+      return res.status(400).json({ error: "Nothing to speak in that message." });
+    }
+
+    const model = process.env.VENICE_TTS_MODEL || "tts-kokoro";
+    const voice = process.env.VENICE_TTS_VOICE || "af_sky";
+
+    const response = await fetch(`${VENICE_BASE_URL}/audio/speech`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${VENICE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        voice,
+        input: spoken,
+        response_format: "mp3",
+      }),
+    });
+
+    if (!response.ok) {
+      let message = "Voice generation failed";
+      try {
+        const errData = await response.json();
+        message =
+          errData?.error?.message || errData?.error || message;
+      } catch (_) {
+        /* binary error body */
+      }
+      return res.status(response.status).json({ error: String(message) });
+    }
+
+    const buf = Buffer.from(await response.arrayBuffer());
+    if (!buf.length) {
+      return res.status(502).json({ error: "Empty audio from Venice" });
+    }
+
+    res.set({
+      "Content-Type": "audio/mpeg",
+      "Cache-Control": "no-store",
+      "Content-Length": String(buf.length),
+    });
+    res.send(buf);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error while creating voice." });
+  }
+});
+
 app.listen(PORT, () => {
   billing.ensureDirs();
   console.log(`Chat running at http://localhost:${PORT}`);
