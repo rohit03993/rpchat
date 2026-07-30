@@ -18,6 +18,7 @@ const {
   looksIncompleteReply,
   parseSetupMeta,
 } = require("./lib/maaAgent");
+const { roleIs } = require("./lib/roles");
 const billing = require("./lib/billing");
 
 const app = express();
@@ -37,14 +38,15 @@ function pickModel(chatMode) {
 }
 
 function isMomSonRoles(botRole, userRole) {
-  const bot = (botRole || "").toLowerCase();
-  const user = (userRole || "").toLowerCase();
   const mom =
-    /mom|mummy|mama|maa|mother|माँ|मम्मी/.test(bot) ||
-    /mom|mummy|mama|maa|mother|माँ|मम्मी/.test(user);
+    roleIs(botRole, "mom", "mummy", "maa", "mother") ||
+    roleIs(userRole, "mom", "mummy", "maa", "mother") ||
+    /माँ|मम्मी/.test(String(botRole || "")) ||
+    /माँ|मम्मी/.test(String(userRole || ""));
   const son =
-    /beta|son|ladka|putra|बेटा/.test(bot) ||
-    /beta|son|ladka|putra|बेटा/.test(user);
+    roleIs(botRole, "beta", "son", "ladka") ||
+    roleIs(userRole, "beta", "son", "ladka") ||
+    /putra|बेटा/.test(String(botRole || "") + " " + String(userRole || ""));
   return mom && son;
 }
 

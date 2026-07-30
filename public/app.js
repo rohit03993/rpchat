@@ -1441,17 +1441,181 @@
     titleEl.textContent = (botRoleEl && botRoleEl.value.trim()) || "Buddy";
   }
 
+  function roleIsClient(role) {
+    const names = Array.prototype.slice.call(arguments, 1);
+    const r = String(role || "")
+      .toLowerCase()
+      .trim();
+    if (!r || !names.length) return false;
+    for (let i = 0; i < names.length; i++) {
+      if (r === names[i]) return true;
+    }
+    const sorted = names.slice().sort(function (a, b) {
+      return b.length - a.length;
+    });
+    for (let i = 0; i < sorted.length; i++) {
+      const n = sorted[i];
+      if (!n) continue;
+      const re = new RegExp(
+        "\\b" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b"
+      );
+      if (re.test(r)) return true;
+    }
+    return false;
+  }
+
   function inferGenderClient(role) {
-    const r = String(role || "").toLowerCase();
+    const r = String(role || "")
+      .toLowerCase()
+      .trim();
+    const femaleExact = {
+      mom: 1,
+      mummy: 1,
+      maa: 1,
+      mother: 1,
+      sister: 1,
+      bahan: 1,
+      gf: 1,
+      girlfriend: 1,
+      wife: 1,
+      biwi: 1,
+      girl: 1,
+      didi: 1,
+      female: 1,
+      woman: 1,
+      ladki: 1,
+      aunty: 1,
+      mausi: 1,
+      maushi: 1,
+      mami: 1,
+      bua: 1,
+      chachi: 1,
+      tai: 1,
+      dadi: 1,
+      nani: 1,
+      saas: 1,
+      bhabhi: 1,
+      nanad: 1,
+      sali: 1,
+      bahu: 1,
+      beti: 1,
+      bhanji: 1,
+      poti: 1,
+      bhatiji: 1,
+    };
+    const maleExact = {
+      dad: 1,
+      papa: 1,
+      father: 1,
+      brother: 1,
+      bhai: 1,
+      bf: 1,
+      boyfriend: 1,
+      husband: 1,
+      pati: 1,
+      boy: 1,
+      male: 1,
+      man: 1,
+      beta: 1,
+      son: 1,
+      uncle: 1,
+      ladka: 1,
+      mama: 1,
+      mausa: 1,
+      chacha: 1,
+      tau: 1,
+      phupha: 1,
+      dada: 1,
+      nana: 1,
+      sasur: 1,
+      jija: 1,
+      devar: 1,
+      jeth: 1,
+      sala: 1,
+      jamai: 1,
+      damad: 1,
+      bhanja: 1,
+      bhatija: 1,
+      pota: 1,
+    };
+    if (femaleExact[r]) return "female";
+    if (maleExact[r]) return "male";
+    // Word-boundary only (saas⊂sasur, nana⊂nanad never flip)
     if (
-      /mom|mummy|maa|mother|sister|gf|girlfriend|wife|biwi|girl|didi|bahan|female|ladki|aunty|mausi|maushi|mami|bua|chachi|tai|dadi|nani|saas|sas|bhabhi|nanad|sali|bahu|beti|bhanji|poti/.test(
-        r
+      roleIsClient(
+        r,
+        "mom",
+        "mummy",
+        "maa",
+        "mother",
+        "sister",
+        "gf",
+        "girlfriend",
+        "wife",
+        "biwi",
+        "girl",
+        "didi",
+        "bahan",
+        "female",
+        "woman",
+        "ladki",
+        "aunty",
+        "mausi",
+        "maushi",
+        "mami",
+        "bua",
+        "chachi",
+        "tai",
+        "dadi",
+        "nani",
+        "saas",
+        "bhabhi",
+        "nanad",
+        "sali",
+        "bahu",
+        "beti",
+        "bhanji",
+        "poti",
+        "bhatiji"
       )
     )
       return "female";
     if (
-      /dad|papa|father|brother|bhai|bf|boyfriend|husband|pati|boy|male|beta|son|uncle|ladka|mama|mausa|chacha|tau|phupha|dada|nana|sasur|jija|devar|jeth|sala|jamai|damad|bhanja|bhatija|pota/.test(
-        r
+      roleIsClient(
+        r,
+        "dad",
+        "papa",
+        "father",
+        "brother",
+        "bhai",
+        "bf",
+        "boyfriend",
+        "husband",
+        "pati",
+        "boy",
+        "male",
+        "man",
+        "beta",
+        "son",
+        "uncle",
+        "ladka",
+        "mama",
+        "mausa",
+        "chacha",
+        "tau",
+        "phupha",
+        "dada",
+        "nana",
+        "sasur",
+        "jija",
+        "devar",
+        "jeth",
+        "sala",
+        "jamai",
+        "damad",
+        "bhanja",
+        "bhatija",
+        "pota"
       )
     )
       return "male";
@@ -1715,7 +1879,7 @@
     const name = roles.characterName || "Chat";
     const you = userAddressName(roles.userRole);
     const bot = String(roles.botRole || "").toLowerCase();
-    if (/^(dad|papa|father)$/.test(bot)) {
+    if (roleIsClient(bot, "dad", "papa", "father")) {
       return (
         name +
         ": Hello meri " +
@@ -1723,7 +1887,7 @@
         "... Papa yahan hai. Bol, kya haal hai? 💕"
       );
     }
-    if (/^(mom|mummy|maa|mother)$/.test(bot)) {
+    if (roleIsClient(bot, "mom", "mummy", "maa", "mother")) {
       return (
         name +
         ": Hello " +
@@ -1731,28 +1895,34 @@
         "... Mummy yahan hai. Bol, kya haal hai? 💕"
       );
     }
-    if (/sasur/.test(bot)) {
+    if (roleIsClient(bot, "sasur")) {
       return (
         name +
         ": Hello bahu... aao. Mujhe Papa ji bolna — samjhi? Bol, kya haal hai? 💕"
       );
     }
-    if (/bahu/.test(bot)) {
+    if (roleIsClient(bot, "saas")) {
+      return (
+        name +
+        ": Hello bahu... aao. Mujhe Mummy ji bolna — samjhi? Bol, kya haal hai? 💕"
+      );
+    }
+    if (roleIsClient(bot, "bahu")) {
       return (
         name +
         ": Hello Papa ji... bahu yahan hai. Bolie, kya haal hai? 💕"
       );
     }
-    if (/nani/.test(bot)) {
+    if (roleIsClient(bot, "nani")) {
       return name + ": Hello " + you + "... Nani yahan hai. Bol, kya haal hai? 💕";
     }
-    if (/dadi/.test(bot)) {
+    if (roleIsClient(bot, "dadi")) {
       return name + ": Hello " + you + "... Dadi yahan hai. Bol, kya haal hai? 💕";
     }
-    if (/mausi|maushi/.test(bot)) {
+    if (roleIsClient(bot, "mausi", "maushi")) {
       return name + ": Hello " + you + "... Mausi yahan hai. Bol, kya haal hai? 💕";
     }
-    if (/bua/.test(bot)) {
+    if (roleIsClient(bot, "bua")) {
       return name + ": Hello " + you + "... Bua yahan hai. Bol, kya haal hai? 💕";
     }
     return (
