@@ -9,6 +9,7 @@ const {
   buildMaaVoicePrompt,
   buildMaaHinglishPolishPrompt,
   recentTranscript,
+  buildChatMemoryCard,
   sceneHeatIsDirty,
   detectUserHeat,
   patchSceneCardForMirror,
@@ -806,7 +807,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       const hist = prepareMessages(messages);
       const lastUser =
         [...messages].reverse().find((m) => m.role === "user")?.content || "";
-      const transcript = recentTranscript(messages, 10);
+      const transcript = recentTranscript(messages, 8);
       const setupText = String(rpSetup || "").trim();
       const charOverrides = {
         characterName: String(characterName || "").trim(),
@@ -815,6 +816,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         botGender: String(botGender || "").trim(),
         userGender: String(userGender || "").trim(),
       };
+      const memoryCard = buildChatMemoryCard(hist, setupText, charOverrides);
 
       // --- Step 1: Brain ---
       let sceneCard = "";
@@ -827,6 +829,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         {
           role: "user",
           content:
+            `${memoryCard}\n\n` +
             `Recent chat:\n${transcript || "(start)"}\n\n` +
             `Latest from user (decode typos): "${lastUser}"\n` +
             `Detected USER_HEAT: ${userHeat} — language dirtiness can match this.\n` +
@@ -897,7 +900,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
           : "");
 
-      const voiceHist = hist.map((m) => ({
+      const voiceHist = hist.slice(-12).map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -909,7 +912,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           (stillResisting
             ? `; RESIST sex yes — deny/tease only`
             : ``) +
-          `; short unless asked long; no gender swap.)`;
+          `; short unless asked long; no gender swap. Obey CHAT MEMORY CARD.)`;
       }
 
       const voicePayload = [
@@ -917,6 +920,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           role: "system",
           content:
             buildMaaVoicePrompt(lang, sceneCard, setupText, charOverrides) +
+            "\n\n" +
+            memoryCard +
             "\n\n" +
             identitySticky,
         },
