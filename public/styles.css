@@ -25,14 +25,27 @@
   padding: 0;
 }
 
+html {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 html,
 body {
-  min-height: 100%;
+  width: 100%;
+  max-width: 100%;
 }
 
 body {
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100%;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
   display: grid;
   place-items: stretch;
   font-family: var(--font-body);
@@ -42,13 +55,18 @@ body {
     radial-gradient(900px 500px at 100% 0%, rgba(53, 140, 180, 0.1), transparent 50%),
     linear-gradient(165deg, #050a0d 0%, #0a1419 42%, #071016 100%);
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
+  /* Stop iOS/Android rubber-band of the whole page */
+  position: fixed;
+  inset: 0;
 }
 
 /* ========== AUTH (web landing) ========== */
 .auth-gate {
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: grid;
   place-items: center;
   padding:
@@ -211,7 +229,7 @@ body {
   border-radius: 12px;
   padding: 12px 14px;
   font: inherit;
-  font-size: 1rem;
+  font-size: 16px;
   transition: border-color 0.15s ease;
 }
 
@@ -373,8 +391,9 @@ body {
 .phone {
   width: 100%;
   max-width: 1100px;
+  height: 100%;
   height: 100dvh;
-  height: 100vh;
+  height: var(--app-height, 100dvh);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -386,6 +405,9 @@ body {
   border-right: 1px solid var(--line);
   box-shadow: var(--shadow);
   animation: fadeRise 0.35s ease-out;
+  /* Flex children must be allowed to shrink so only .messages scrolls */
+  min-height: 0;
+  touch-action: manipulation;
 }
 
 .chat-header {
@@ -1188,8 +1210,13 @@ body {
 }
 
 .messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 18px 20px 22px;
   display: flex;
   flex-direction: column;
@@ -1330,6 +1357,8 @@ body {
   background: var(--header);
   border-top: 1px solid var(--line);
   flex-shrink: 0;
+  position: relative;
+  z-index: 5;
 }
 
 .composer input {
@@ -1341,7 +1370,8 @@ body {
   border-radius: 999px;
   padding: 13px 18px;
   font: inherit;
-  font-size: 0.95rem;
+  /* 16px+ prevents iOS focus-zoom that shifts the whole UI */
+  font-size: 16px;
 }
 
 .composer input::placeholder {
@@ -1563,6 +1593,14 @@ body {
 
 /* Desktop web-app frame */
 @media (min-width: 900px) {
+  html,
+  body {
+    position: static;
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
   body {
     padding: 20px;
     place-items: center;
@@ -1571,7 +1609,7 @@ body {
   .app-shell.phone,
   .phone {
     height: min(860px, calc(100dvh - 40px));
-    height: min(860px, calc(100vh - 40px));
+    max-height: calc(100dvh - 40px);
     border-radius: 24px;
     border: 1px solid var(--line);
   }
@@ -1639,7 +1677,7 @@ body {
   }
 
   .auth-shell {
-    min-height: 100dvh;
+    min-height: 100%;
     border-radius: 0;
     border: none;
     box-shadow: none;
@@ -1659,8 +1697,14 @@ body {
   .app-shell.phone,
   .phone {
     max-width: none;
+    width: 100%;
     border: none;
     box-shadow: none;
+    /* Lock chat frame to the live viewport (keyboard-safe) */
+    position: fixed;
+    inset: 0;
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
   }
 
   .chat-header {
@@ -1805,10 +1849,5 @@ body {
   width: 18px;
   height: 18px;
   accent-color: #1ec9a0;
-}
-
-.app-shell,
-.phone {
-  position: relative;
 }
 

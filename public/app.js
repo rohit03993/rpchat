@@ -2332,14 +2332,49 @@
         toast(soundEnabled ? "Sound on" : "Sound off", "ok");
       });
     }
+    /* Lock layout to live visual viewport (stops mobile rubber-band / keyboard jump) */
+    function syncAppViewport() {
+      var h =
+        window.visualViewport && window.visualViewport.height
+          ? window.visualViewport.height
+          : window.innerHeight;
+      document.documentElement.style.setProperty(
+        "--app-height",
+        Math.round(h) + "px"
+      );
+      if (appShell) {
+        var offsetTop =
+          window.visualViewport && typeof window.visualViewport.offsetTop === "number"
+            ? window.visualViewport.offsetTop
+            : 0;
+        if (window.matchMedia("(max-width: 560px)").matches) {
+          appShell.style.top = offsetTop + "px";
+        } else {
+          appShell.style.top = "";
+        }
+      }
+      if (isNearBottom()) scrollMessagesToEnd(true);
+    }
+    syncAppViewport();
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", function () {
-        if (isNearBottom()) scrollMessagesToEnd(true);
+      window.visualViewport.addEventListener("resize", syncAppViewport);
+      window.visualViewport.addEventListener("scroll", syncAppViewport);
+    }
+    window.addEventListener("resize", syncAppViewport);
+    window.addEventListener("orientationchange", function () {
+      setTimeout(syncAppViewport, 80);
+    });
+    if (input) {
+      input.addEventListener("focus", function () {
+        setTimeout(function () {
+          syncAppViewport();
+          scrollMessagesToEnd(true);
+        }, 120);
+      });
+      input.addEventListener("blur", function () {
+        setTimeout(syncAppViewport, 120);
       });
     }
-    window.addEventListener("resize", function () {
-      if (isNearBottom()) scrollMessagesToEnd(true);
-    });
 
     if (authToken) {
       const ok = await refreshMe();
