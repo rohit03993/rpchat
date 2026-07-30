@@ -23,6 +23,7 @@
   const rpVibeEl = document.getElementById("rp-vibe");
   const rpPaceEl = document.getElementById("rp-pace");
   const rpNoteEl = document.getElementById("rp-note");
+  const rpResistanceEl = document.getElementById("rp-resistance");
   const charNameEl = document.getElementById("char-name");
   const rpBotRoleEl = document.getElementById("rp-bot-role");
   const rpUserRoleEl = document.getElementById("rp-user-role");
@@ -301,6 +302,7 @@
       vibe: rpVibeEl ? rpVibeEl.value : "",
       pace: rpPaceEl ? rpPaceEl.value : "",
       note: rpNoteEl ? rpNoteEl.value : "",
+      resistance: rpResistanceEl ? rpResistanceEl.value : "strict",
       chatSource: chatSourceEl ? chatSourceEl.value : "maa",
       chatMode: chatModeEl ? chatModeEl.value : "normal",
       botRoleCustom: botRoleEl ? botRoleEl.value : "",
@@ -319,6 +321,7 @@
     if (rpVibeEl && form.vibe) rpVibeEl.value = form.vibe;
     if (rpPaceEl && form.pace) rpPaceEl.value = form.pace;
     if (rpNoteEl && form.note != null) rpNoteEl.value = form.note;
+    if (rpResistanceEl && form.resistance) rpResistanceEl.value = form.resistance;
     if (chatSourceEl && form.chatSource) chatSourceEl.value = form.chatSource;
     if (chatModeEl && form.chatMode) chatModeEl.value = form.chatMode;
     if (botRoleEl && form.botRoleCustom != null) botRoleEl.value = form.botRoleCustom;
@@ -1698,6 +1701,10 @@
     if (rpSetupStatus) {
       rpSetupStatus.textContent = smart.hint + (setupLocked ? " Save changes in sidebar." : " Start chat dabao.");
     }
+    // Parent roles default to strict resistance (slow burn)
+    if (rpResistanceEl && (key === "mummy" || key === "dad")) {
+      if (!setupLocked || forceName) rpResistanceEl.value = "strict";
+    }
   }
 
   function getRpRoles() {
@@ -1732,6 +1739,13 @@
     const pace = rpPaceEl
       ? rpPaceEl.value
       : "slow: shy then flirty then more only if user pushes";
+    const resistance = rpResistanceEl ? rpResistanceEl.value : "strict";
+    const resistanceLine =
+      resistance === "easy"
+        ? "Resistance: easy — soft denials short; can heat up faster when user pushes; still never jump soft→sex in one line."
+        : resistance === "normal"
+          ? "Resistance: normal — tease and shy first; sex only after several clear pushes; no instant yes to papa-wali baat."
+          : "Resistance: strict — STRONG slow burn (especially Mummy/Papa). Many shy/deny/tease beats before any sex yes. NEVER agree quickly to 'jo papa ko deti ho' / first dirty ask. Make user work for it (push, slap talk, beg) across many messages. Shame + nakhre + 'galat hai… lekin' then still delay actual sex. Easy yes FORBIDDEN.";
     const relationship =
       roles.botRole +
       " primary with " +
@@ -1764,7 +1778,9 @@
       vibe +
       ". Pace: " +
       pace +
-      ". All adults 18+. " +
+      ". " +
+      resistanceLine +
+      " All adults 18+. " +
       briefBlock +
       ". Default shy + flirty first unless brief/vibe says otherwise."
     );
@@ -2241,7 +2257,7 @@
       if (!setupLocked) resetChat();
     });
   }
-  [rpVibeEl, rpPaceEl, rpNoteEl, charNameEl, rpBotRoleEl, rpUserRoleEl, rpCustomBot, rpCustomUser].forEach(function (el) {
+  [rpVibeEl, rpPaceEl, rpNoteEl, rpResistanceEl, charNameEl, rpBotRoleEl, rpUserRoleEl, rpCustomBot, rpCustomUser].forEach(function (el) {
     if (!el) return;
     el.addEventListener("change", function () {
       if (el === rpBotRoleEl) {
