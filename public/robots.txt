@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Do not index private / admin / uploads (adult chat is behind login on / )
+Disallow: /admin.html
+Disallow: /admin.js
+Disallow: /admin.css
+Disallow: /payment-uploads/
+Disallow: /upi-uploads/
+Disallow: /api/
+
+Sitemap: https://rp.desichat.online/sitemap.xml

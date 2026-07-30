@@ -69,12 +69,52 @@ body {
   overscroll-behavior: contain;
   display: grid;
   place-items: center;
+  align-content: start;
+  justify-items: center;
+  gap: 28px;
   padding:
     max(24px, env(safe-area-inset-top))
     max(24px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom))
     max(24px, env(safe-area-inset-left));
   animation: fadeRise 0.45s ease-out;
+}
+
+.seo-landing {
+  width: min(980px, 100%);
+  padding: 8px 8px 28px;
+  color: #c5d5dc;
+}
+
+.seo-landing h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.4vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.seo-landing p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin-bottom: 10px;
+  max-width: 70ch;
+}
+
+.seo-landing ul {
+  margin: 8px 0 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #b8c9d1;
+}
+
+.seo-landing strong {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .auth-shell {
@@ -1196,15 +1236,17 @@ body {
   flex-shrink: 0;
 }
 
-.header-text h1 {
+.header-text h1,
+.header-text .chat-title-text {
   font-family: var(--font-display);
   font-size: 1.08rem;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  color: var(--text);
 }
 
-.header-text p {
+.header-text p#status {
   font-size: 0.8rem;
   color: var(--accent);
 }
@@ -1674,13 +1716,18 @@ body {
   .auth-gate {
     padding: 0;
     place-items: stretch;
+    gap: 0;
   }
 
   .auth-shell {
-    min-height: 100%;
+    min-height: 100dvh;
     border-radius: 0;
     border: none;
     box-shadow: none;
+  }
+
+  .seo-landing {
+    padding: 22px 20px max(36px, env(safe-area-inset-bottom));
   }
 
   .auth-brand {

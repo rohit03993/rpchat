@@ -304,6 +304,23 @@ function stripPhotoTags(text) {
 
 app.use(cors());
 app.use(express.json({ limit: "6mb" }));
+
+// Keep search engines on the public landing page only
+app.use((req, res, next) => {
+  const p = String(req.path || "").toLowerCase();
+  if (
+    p === "/admin.html" ||
+    p === "/admin.js" ||
+    p === "/admin.css" ||
+    p.startsWith("/payment-uploads/") ||
+    p.startsWith("/upi-uploads/") ||
+    p.startsWith("/api/")
+  ) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 billing.ensureDirs();

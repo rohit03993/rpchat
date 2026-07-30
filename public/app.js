@@ -693,15 +693,44 @@
     }
   }
 
+  function setPublicSeoMode(isPublicLanding) {
+    const robots = document.getElementById("meta-robots");
+    const googlebot = document.getElementById("meta-googlebot");
+    if (isPublicLanding) {
+      if (robots) {
+        robots.setAttribute(
+          "content",
+          "index, follow, max-snippet:-1, max-image-preview:large"
+        );
+      }
+      if (googlebot) googlebot.setAttribute("content", "index, follow");
+      document.title =
+        "Best Roleplay Site | Desi Hinglish WhatsApp RP Chat – DesiChat";
+    } else {
+      // Logged-in private chat must not be indexed
+      if (robots) robots.setAttribute("content", "noindex, nofollow");
+      if (googlebot) googlebot.setAttribute("content", "noindex, nofollow");
+      document.title = "DesiChat";
+    }
+  }
+
   function showAuth() {
     stopLiveTimer();
     if (authGate) authGate.classList.remove("hidden");
-    if (appShell) appShell.classList.add("hidden");
+    if (appShell) {
+      appShell.classList.add("hidden");
+      appShell.setAttribute("aria-hidden", "true");
+    }
+    setPublicSeoMode(true);
   }
 
   async function showApp() {
     if (authGate) authGate.classList.add("hidden");
-    if (appShell) appShell.classList.remove("hidden");
+    if (appShell) {
+      appShell.classList.remove("hidden");
+      appShell.setAttribute("aria-hidden", "false");
+    }
+    setPublicSeoMode(false);
     hoursCounting = false;
     stopLiveTimer();
     // Wait for first user message before draining time
