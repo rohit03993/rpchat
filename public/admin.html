@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0d171c" />
+    <title>Admin · Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/admin.css?v=6" />
+  </head>
+  <body>
+    <div class="admin-app">
+      <header class="admin-top">
+        <div class="brand-block">
+          <p class="brand-kicker">Control panel</p>
+          <h1>Admin</h1>
+          <p class="sub">Users · payments · chat history · hours unlock</p>
+        </div>
+        <div id="top-bar" class="top-actions hidden">
+          <a class="link-chat" href="/">← Chat app</a>
+          <button type="button" id="logout-btn" class="btn-ghost btn-sm">Logout</button>
+        </div>
+      </header>
+
+      <main class="admin-body">
+        <section id="login-screen" class="login-screen">
+          <div class="login-card">
+            <h2>Admin sign in</h2>
+            <p class="meta">
+              Use your admin ID + password from <code>.env</code>
+              (<b>ADMIN_ID</b> / <b>ADMIN_PASSWORD</b>). Or login from the main site with the same ID.
+            </p>
+            <label class="field">
+              <span>Admin ID</span>
+              <input
+                id="admin-id"
+                type="text"
+                placeholder="admin"
+                autocomplete="username"
+              />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input
+                id="admin-pass"
+                type="password"
+                placeholder="Password"
+                autocomplete="current-password"
+              />
+            </label>
+            <button type="button" id="admin-login-btn" class="btn">Login</button>
+            <p id="login-msg" class="msg"></p>
+            <p class="meta" style="margin-top: 8px">
+              <a class="link-chat" href="/">← Back to chat login</a>
+            </p>
+          </div>
+        </section>
+
+        <section id="dash" class="hidden">
+          <div class="stats">
+            <div class="stat">
+              <b id="stat-users">0</b>
+              <span>Users</span>
+            </div>
+            <div class="stat warn">
+              <b id="stat-pending">0</b>
+              <span>Pending pay</span>
+            </div>
+            <div class="stat money">
+              <b id="stat-money">₹0</b>
+              <span>Money collected</span>
+            </div>
+            <div class="stat">
+              <b id="stat-hours">0</b>
+              <span>Hours live</span>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button type="button" class="tab active" id="tab-users">Users</button>
+            <button type="button" class="tab" id="tab-payments">Payments</button>
+            <button type="button" class="tab" id="tab-pay-setup">Pay setup</button>
+          </div>
+
+          <div id="users-view" class="panel">
+            <div class="toolbar">
+              <input
+                id="user-search"
+                type="search"
+                placeholder="Search ID, PIN, scene, role…"
+                autocomplete="off"
+              />
+              <select id="user-filter" title="Filter users">
+                <option value="all" selected>All users</option>
+                <option value="online">Online</option>
+                <option value="idle">Idle</option>
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="has-time">Has time</option>
+                <option value="no-time">No time</option>
+              </select>
+              <span id="users-count" class="meta"></span>
+              <button type="button" id="refresh-users-btn" class="btn-ghost btn-sm">
+                Refresh
+              </button>
+            </div>
+            <div id="users" class="table-wrap"></div>
+          </div>
+
+          <div id="payments-view" class="panel hidden">
+            <div class="toolbar">
+              <input
+                id="pay-search"
+                type="search"
+                placeholder="Search User ID, pay ID, remark, ₹…"
+                autocomplete="off"
+              />
+              <select id="status-filter">
+                <option value="all">All status</option>
+                <option value="pending" selected>Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <span id="payments-count" class="meta"></span>
+              <button type="button" id="refresh-btn" class="btn-ghost btn-sm">Refresh</button>
+            </div>
+            <p id="pay-money-line" class="meta pay-money-line"></p>
+            <div id="payments" class="payments-grid"></div>
+          </div>
+
+          <div id="pay-setup-view" class="panel hidden">
+            <h3 class="setup-heading">UPI &amp; packages</h3>
+            <p class="meta setup-lead">
+              Edit UPI ID, upload your real QR, and change pack prices. Users see this on Pay.
+            </p>
+            <div class="setup-grid-admin">
+              <label class="field">
+                <span>UPI ID</span>
+                <input id="set-upi-id" type="text" placeholder="yourname@upi" autocomplete="off" />
+              </label>
+              <label class="field">
+                <span>Display name</span>
+                <input id="set-upi-name" type="text" placeholder="Chat Service" autocomplete="off" />
+              </label>
+            </div>
+            <div class="qr-admin-block">
+              <p class="field"><span>UPI QR image</span></p>
+              <img id="set-qr-preview" class="admin-qr-preview" alt="UPI QR" />
+              <div class="row-actions">
+                <label class="btn-ghost btn-sm file-label">
+                  Choose QR
+                  <input id="set-qr-file" type="file" accept="image/*" hidden />
+                </label>
+                <button type="button" id="set-qr-upload-btn" class="btn btn-sm">Upload QR</button>
+                <button type="button" id="set-qr-clear-btn" class="btn-danger btn-sm">
+                  Clear QR
+                </button>
+              </div>
+              <p id="set-qr-msg" class="meta"></p>
+            </div>
+            <h4 class="setup-heading">Packages (hours &amp; cost)</h4>
+            <div id="set-packages" class="pkg-editor"></div>
+            <div class="row-actions" style="margin-top: 12px">
+              <button type="button" id="set-pkg-add" class="btn-ghost btn-sm">+ Add pack</button>
+              <button type="button" id="set-save-btn" class="btn btn-sm">Save UPI &amp; prices</button>
+            </div>
+            <p id="set-save-msg" class="meta"></p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="chat-drawer" class="chat-drawer hidden" aria-hidden="true">
+      <div class="chat-drawer-backdrop" data-close-chat></div>
+      <aside class="chat-drawer-panel" role="dialog" aria-labelledby="chat-drawer-title">
+        <header class="chat-drawer-head">
+          <div>
+            <p class="brand-kicker">User chat</p>
+            <h2 id="chat-drawer-title">—</h2>
+            <p id="chat-drawer-meta" class="meta"></p>
+          </div>
+          <button type="button" class="btn-ghost btn-sm" data-close-chat>Close</button>
+        </header>
+        <div id="chat-drawer-body" class="chat-drawer-body">
+          <p class="meta">Loading…</p>
+        </div>
+      </aside>
+    </div>
+
+    <script src="/admin.js?v=10"></script>
+  </body>
+</html>

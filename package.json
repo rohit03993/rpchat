@@ -1,0 +1,22 @@
+{
+  "name": "hinglish-chat",
+  "version": "1.0.0",
+  "description": "WhatsApp-style Hinglish chat powered by OpenRouter",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop chat-bot",
+    "pm2:restart": "pm2 restart chat-bot",
+    "pm2:logs": "pm2 logs chat-bot"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "pm2": "^5.4.3"
+  }
+}

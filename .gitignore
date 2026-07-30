@@ -1,0 +1,12 @@
+node_modules/
+.env
+.DS_Store
+*.log
+.pm2/
+public/generated/*
+!public/generated/.gitkeep
+public/payment-uploads/*
+!public/payment-uploads/.gitkeep
+data/store.json
+data/store.json.tmp
+data/*.bak
