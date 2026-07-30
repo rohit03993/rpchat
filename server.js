@@ -77,6 +77,30 @@ function isTooSimilar(reply, messages) {
   return recent.some((prev) => wordSimilarity(reply, prev) >= 0.5);
 }
 
+/** Detect same closing interview-question loop (e.g. "dimaag mein kya chal raha hai"). */
+function extractClosingQuestion(text) {
+  const matches = String(text || "").match(/[^.!?\n]*\?/g);
+  if (!matches || !matches.length) return "";
+  return normalizeCompare(matches[matches.length - 1]);
+}
+
+function repeatsSameHookQuestion(reply, messages) {
+  const q = extractClosingQuestion(reply);
+  if (!q || q.length < 10) return false;
+  const recentQs = (messages || [])
+    .filter((m) => m.role === "assistant")
+    .slice(-4)
+    .map((m) => extractClosingQuestion(m.content))
+    .filter(Boolean);
+  return recentQs.some((prev) => {
+    if (wordSimilarity(q, prev) >= 0.5) return true;
+    // Common loop phrases
+    const loopRe =
+      /(dimaag|soch|kya\s+chal|kaisa\s+lag|bata\s+na|bol\s+na|kya\s+feel)/i;
+    return loopRe.test(q) && loopRe.test(prev) && wordSimilarity(q, prev) >= 0.35;
+  });
+}
+
 function sceneBeat(messages, chatMode) {
   if (chatMode === "normal") {
     return "SCENE BEAT: normal caring chat. Everyday talk. No sexual content unless user clearly starts it.";
@@ -796,6 +820,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             (strictStillResisting(setupText, hist)
               ? `RESISTANCE OVERRIDE (strict/normal still resisting): HEAT dirty talk OK, but NEXT_BEATS must DENY sex consent — no "aaja" / panty off / sex yes yet. Make them push more.\n`
               : `Mirror heat. Do not jump ahead of user.\n`) +
+            `If user answered your previous question, MUST_ANSWER = react to that answer — NEVER re-ask "dimaag/soch/kaisa laga".\n` +
             `Default LENGTH=short and ACTIONS=none unless user asked for long/story/listen/guest.\n\n` +
             `Write the SCENE CARD now.`,
         },
@@ -907,7 +932,11 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
 
       let reply = extractText(data?.choices?.[0]?.message);
 
-      if (reply && isTooSimilar(reply, messages)) {
+      const needsFresh =
+        (reply && isTooSimilar(reply, messages)) ||
+        (reply && repeatsSameHookQuestion(reply, messages));
+
+      if (needsFresh) {
         const refresh = await callVenice(
           voiceModel,
           [
@@ -915,11 +944,13 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             {
               role: "user",
               content:
-                "Too repetitive. Follow SCENE CARD with a fresh reply. Finish complete sentences. Easy real Hinglish only.",
+                "LOOP FIX: Do NOT repeat your last question (no more 'dimaag mein kya / kya soch / kaisa laga' if already asked). " +
+                "User's latest message IS the answer — react to it and advance the scene. " +
+                "No same *sharmaati hai* opener every time. Fresh Easy Hinglish. Short WhatsApp.",
             },
           ],
           {
-            temperature: Math.min(voiceTemp + 0.15, 1),
+            temperature: Math.min(voiceTemp + 0.2, 1),
             max_tokens: tokenBudget,
           }
         );
