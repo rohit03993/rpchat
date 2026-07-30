@@ -1212,41 +1212,22 @@ app.post("/api/tts", requireUser, requireHours, async (req, res) => {
       return res.status(400).json({ error: "text required" });
     }
 
-    // Dialogue only — drop *actions* and "Name:" labels
+    // Dialogue only — drop *actions* and "Name:" labels (keep speech tight, no fake pauses)
     let spoken = raw
       .replace(/\*[^*]*\*/g, " ")
       .replace(/^\s*[A-Za-z][\w .'-]{0,40}:\s*/gm, "")
-      .replace(/[—–]/g, ", ")
-      .replace(/\.{3,}/g, ", ")
+      .replace(/[—–…]+/g, " ")
+      .replace(/\.{2,}/g, " ")
+      .replace(/[,\s]+/g, " ")
       .replace(/\s+/g, " ")
-      .trim();
-
-    // Light Hinglish pronunciation hints (Roman text → clearer speech)
-    spoken = spoken
-      .replace(/\bbeta\b/gi, "bayta")
-      .replace(/\bbeti\b/gi, "baytee")
-      .replace(/\bmaa\b/gi, "maa")
-      .replace(/\bmummy\b/gi, "mummy")
-      .replace(/\bnahi\b/gi, "nahee")
-      .replace(/\bhaan\b/gi, "haan")
-      .replace(/\baccha\b/gi, "acchaa")
-      .replace(/\btheek\b/gi, "theek")
-      .replace(/\bchut\b/gi, "choot")
-      .replace(/\blund\b/gi, "lund")
-      .replace(/\bchod\b/gi, "chod")
-      .replace(/\bmadarchod\b/gi, "madarchod")
-      .replace(/\bbhenchod\b/gi, "bhenchod")
-      .replace(/\brandi\b/gi, "randee")
-      .replace(/\bkutti\b/gi, "kuttee")
-      .replace(/\bgaand\b/gi, "gaand")
+      .trim()
       .slice(0, 3500);
 
     if (spoken.length < 2) {
       return res.status(400).json({ error: "Nothing to speak in that message." });
     }
 
-    // Default: Indian female (Inworld Priya) — better on Roman Hinglish than US English voices
-    // Alt: tts-kokoro + hf_alpha / hf_beta (Hindi-native Kokoro women)
+    // Default: Indian female (Inworld Priya). Alt: tts-kokoro + hf_alpha
     const model =
       process.env.VENICE_TTS_MODEL || "tts-inworld-1-5-max";
     const voice = process.env.VENICE_TTS_VOICE || "Priya";
@@ -1254,12 +1235,16 @@ app.post("/api/tts", requireUser, requireHours, async (req, res) => {
       String(req.body?.language || process.env.VENICE_TTS_LANGUAGE || "").trim() ||
       undefined;
 
+    // 1.2 = natural pace (0.95 was dragging words with long gaps)
+    let speed = Number(process.env.VENICE_TTS_SPEED);
+    if (!Number.isFinite(speed) || speed < 0.5 || speed > 2) speed = 1.2;
+
     const payload = {
       model,
       voice,
       input: spoken,
       response_format: "mp3",
-      speed: Number(process.env.VENICE_TTS_SPEED || 0.95) || 0.95,
+      speed,
     };
     if (language) payload.language = language;
 
