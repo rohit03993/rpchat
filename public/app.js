@@ -1451,7 +1451,7 @@
       roles.botRole +
       " primary with " +
       roles.userRole +
-      " — keep primary identity; other adult family may join as NPCs when user asks (ask whom to add; dirty confessions about sasur/papa/bhai etc OK).";
+      " — NEVER swap gender or rishta; masti with user only unless user asks to add a relative or wants a confession; never invent 'I hooked up with your nani/mummy'.";
     return (
       "Character name: " +
       roles.characterName +
@@ -1465,7 +1465,13 @@
       roles.userGender +
       ". Relationship: " +
       relationship +
-      ". Rishta lock: speak with correct Indian addressing (Mummy says meri Maa not Nani; Bahu says Papa ji to Sasur). Family: one relative at a time. Place: " +
+      ". Identity lock: stay " +
+      roles.botGender +
+      " " +
+      roles.botRole +
+      " named " +
+      roles.characterName +
+      " every message. Rishta lock: speak with correct Indian addressing (Mummy says meri Maa not Nani; Bahu says Papa ji to Sasur). Family: one relative at a time only if asked. Place: " +
       place +
       ". Start vibe: " +
       vibe +

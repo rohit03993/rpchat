@@ -714,12 +714,13 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         sceneCard =
           `USER_SAID: ${lastUser}\n` +
           `INTENT: match user\n` +
+          `IDENTITY: ${(charOverrides.characterName || "Character")} = ${(charOverrides.botRole || "role")} (${(charOverrides.botGender || "female")}) talking to ${(charOverrides.userRole || "user")} — never swap\n` +
           `EMOTION: shy, soft flirty\n` +
           `SCENE: ${setupText || "ongoing private chat"}\n` +
           `MUST_ANSWER: react directly to his last words\n` +
-          `NEXT_BEATS: shy smile or soft tease; one gentle invite\n` +
+          `NEXT_BEATS: stay in role; shy smile or soft tease with USER only; no invented nani/mummy hookups\n` +
           `HEAT: flirty\n` +
-          `AVOID: ignore setup, ignore his words, sudden full lust, lecture`;
+          `AVOID: gender swap, forget role, invent relative hookups, lecture`;
       }
 
       // --- Step 2: Voice ---
@@ -733,12 +734,35 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           : 0.55
         : 0.9;
 
+      const identitySticky =
+        `IDENTITY STICKY: You are "${charOverrides.characterName || "Character"}" = ${charOverrides.botRole || "role"} (${charOverrides.botGender || "female"}). ` +
+        `User is your ${charOverrides.userRole || "partner"} (${charOverrides.userGender || "male"}). ` +
+        `Stay this gender+rishta. Masti with USER only unless they asked for a guest/confession. ` +
+        `Never say you hooked up with "teri nani/mummy" as a third person. Never use opposite-gender grammar on yourself. ` +
+        (String(charOverrides.botRole || "").toLowerCase().match(/^(mom|mummy|maa|mother)$/)
+          ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
+          : "");
+
+      const voiceHist = hist.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      const lastVoice = voiceHist[voiceHist.length - 1];
+      if (lastVoice && lastVoice.role === "user") {
+        lastVoice.content =
+          String(lastVoice.content || "") +
+          `\n\n(Remember silently: you are ${charOverrides.botRole || "role"}, ${charOverrides.botGender || "female"}, talking to your ${charOverrides.userRole || "partner"} — no gender swap, no fake relative hookups.)`;
+      }
+
       const voicePayload = [
         {
           role: "system",
-          content: buildMaaVoicePrompt(lang, sceneCard, setupText, charOverrides),
+          content:
+            buildMaaVoicePrompt(lang, sceneCard, setupText, charOverrides) +
+            "\n\n" +
+            identitySticky,
         },
-        ...hist,
+        ...voiceHist,
       ];
 
       let steps = 2;
