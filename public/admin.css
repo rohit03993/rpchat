@@ -829,3 +829,46 @@ code {
   }
 }
 
+.reports-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.report-item {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.report-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.report-note {
+  font-size: 0.85rem;
+  color: #f0d28a;
+  margin: 6px 0;
+}
+
+.report-ai {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #d5e0e5;
+  max-height: 160px;
+  overflow: auto;
+}
+

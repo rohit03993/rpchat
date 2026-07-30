@@ -1321,6 +1321,52 @@ body {
   margin-top: 4px;
 }
 
+.bubble-report-btn {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bubble-report-btn:hover {
+  color: #f0b4ba;
+  border-color: rgba(227, 93, 106, 0.35);
+}
+
+.bubble-report-btn.done {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+.report-card label.full {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.report-card select,
+.report-card input {
+  border: 1px solid var(--line);
+  outline: none;
+  background: var(--input);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
 .bubble.error {
   background: #5c2b2b;
   align-self: center;

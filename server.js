@@ -556,6 +556,54 @@ app.post("/api/admin/chats/purge-old", requireAdmin, (_req, res) => {
   res.json(result);
 });
 
+app.post("/api/chat/report", requireUser, (req, res) => {
+  try {
+    const result = billing.submitAiReport({
+      userId: req.userId,
+      reason: req.body?.reason,
+      note: req.body?.note,
+      aiMessage: req.body?.aiMessage,
+      context: req.body?.context,
+      setup: req.body?.setup,
+      characterName: req.body?.characterName,
+      botRole: req.body?.botRole,
+      userRole: req.body?.userRole,
+      botGender: req.body?.botGender,
+      userGender: req.body?.userGender,
+    });
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message || "Report failed" });
+  }
+});
+
+app.get("/api/admin/reports", requireAdmin, (_req, res) => {
+  const reports = billing.listAiReports();
+  res.json({ reports, count: reports.length });
+});
+
+app.get("/api/admin/reports/download", requireAdmin, (_req, res) => {
+  const reports = billing.listAiReports();
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    count: reports.length,
+    reports,
+  };
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader(
+    "Content-Disposition",
+    'attachment; filename="ai-reports-' + stamp + '.json"'
+  );
+  res.send(JSON.stringify(payload, null, 2));
+});
+
+app.delete("/api/admin/reports", requireAdmin, (_req, res) => {
+  const result = billing.clearAiReports();
+  res.json(result);
+});
+
 app.post("/api/admin/users/:id/migrate-id", requireAdmin, (req, res) => {
   const result = billing.adminMigrateToFourDigit(req.params.id);
   if (!result.ok) return res.status(400).json({ error: result.error });

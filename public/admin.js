@@ -18,10 +18,18 @@
   const refreshUsersBtn = document.getElementById("refresh-users-btn");
   const tabUsers = document.getElementById("tab-users");
   const tabPayments = document.getElementById("tab-payments");
+  const tabReports = document.getElementById("tab-reports");
   const tabPaySetup = document.getElementById("tab-pay-setup");
   const usersView = document.getElementById("users-view");
   const paymentsView = document.getElementById("payments-view");
+  const reportsView = document.getElementById("reports-view");
   const paySetupView = document.getElementById("pay-setup-view");
+  const reportsList = document.getElementById("reports-list");
+  const reportsCount = document.getElementById("reports-count");
+  const downloadReportsBtn = document.getElementById("download-reports-btn");
+  const clearReportsBtn = document.getElementById("clear-reports-btn");
+  const refreshReportsBtn = document.getElementById("refresh-reports-btn");
+  let reportsCache = [];
   const statUsers = document.getElementById("stat-users");
   const statPending = document.getElementById("stat-pending");
   const statHours = document.getElementById("stat-hours");
@@ -102,31 +110,40 @@
     setMsg("Logged out.", "ok");
   }
 
-  function showUsersTab() {
-    tabUsers.classList.add("active");
+  function hideAllTabs() {
+    tabUsers.classList.remove("active");
     tabPayments.classList.remove("active");
+    if (tabReports) tabReports.classList.remove("active");
     if (tabPaySetup) tabPaySetup.classList.remove("active");
-    usersView.classList.remove("hidden");
+    usersView.classList.add("hidden");
     paymentsView.classList.add("hidden");
+    if (reportsView) reportsView.classList.add("hidden");
     if (paySetupView) paySetupView.classList.add("hidden");
+  }
+
+  function showUsersTab() {
+    hideAllTabs();
+    tabUsers.classList.add("active");
+    usersView.classList.remove("hidden");
   }
 
   function showPaymentsTab() {
+    hideAllTabs();
     tabPayments.classList.add("active");
-    tabUsers.classList.remove("active");
-    if (tabPaySetup) tabPaySetup.classList.remove("active");
     paymentsView.classList.remove("hidden");
-    usersView.classList.add("hidden");
-    if (paySetupView) paySetupView.classList.add("hidden");
+  }
+
+  function showReportsTab() {
+    hideAllTabs();
+    if (tabReports) tabReports.classList.add("active");
+    if (reportsView) reportsView.classList.remove("hidden");
+    loadReports();
   }
 
   function showPaySetupTab() {
+    hideAllTabs();
     if (tabPaySetup) tabPaySetup.classList.add("active");
-    tabUsers.classList.remove("active");
-    tabPayments.classList.remove("active");
     if (paySetupView) paySetupView.classList.remove("hidden");
-    usersView.classList.add("hidden");
-    paymentsView.classList.add("hidden");
     loadPaySettings();
   }
 
@@ -1064,7 +1081,145 @@
   }
   tabUsers.addEventListener("click", showUsersTab);
   tabPayments.addEventListener("click", showPaymentsTab);
+  if (tabReports) tabReports.addEventListener("click", showReportsTab);
   if (tabPaySetup) tabPaySetup.addEventListener("click", showPaySetupTab);
+
+  async function loadReports() {
+    if (!reportsList) return;
+    reportsList.innerHTML = "<p class='meta'>Loading reports…</p>";
+    try {
+      const res = await fetch("/api/admin/reports", { headers: authHeaders() });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        reportsList.innerHTML =
+          "<div class='empty'>" +
+          escapeHtml(data.error || "Could not load reports") +
+          "</div>";
+        return;
+      }
+      reportsCache = data.reports || [];
+      if (reportsCount) {
+        reportsCount.textContent =
+          reportsCache.length +
+          " report" +
+          (reportsCache.length === 1 ? "" : "s");
+      }
+      if (!reportsCache.length) {
+        reportsList.innerHTML =
+          "<div class='empty'>No AI reports yet.<br/>Users tap Report on a bad reply.</div>";
+        return;
+      }
+      reportsList.innerHTML = reportsCache
+        .map(function (r) {
+          const when = r.createdAt
+            ? new Date(r.createdAt).toLocaleString()
+            : "—";
+          const scene =
+            (r.characterName || "—") +
+            " · " +
+            (r.botRole || "?") +
+            " → " +
+            (r.userRole || "?");
+          return (
+            "<article class='report-item'>" +
+            "<div class='report-item-head'>" +
+            "<span class='id-pill'>" +
+            escapeHtml(r.userId || "") +
+            "</span>" +
+            "<span class='badge'>" +
+            escapeHtml(r.reason || "bad reply") +
+            "</span>" +
+            "<span class='meta'>" +
+            escapeHtml(when) +
+            "</span>" +
+            "</div>" +
+            "<p class='meta'>" +
+            escapeHtml(scene) +
+            (r.botGender ? " · AI " + escapeHtml(r.botGender) : "") +
+            "</p>" +
+            (r.note
+              ? "<p class='report-note'>" + escapeHtml(r.note) + "</p>"
+              : "") +
+            "<pre class='report-ai'>" +
+            escapeHtml(String(r.aiMessage || "").slice(0, 600)) +
+            (String(r.aiMessage || "").length > 600 ? "…" : "") +
+            "</pre>" +
+            "</article>"
+          );
+        })
+        .join("");
+    } catch (e) {
+      reportsList.innerHTML = "<div class='empty'>Network error</div>";
+    }
+  }
+
+  if (downloadReportsBtn) {
+    downloadReportsBtn.addEventListener("click", async function () {
+      try {
+        const res = await fetch("/api/admin/reports/download", {
+          headers: { Authorization: "Bearer " + token },
+        });
+        if (!res.ok) {
+          if (handleAuthFail(res)) return;
+          const data = await res.json().catch(function () {
+            return {};
+          });
+          toast(data.error || "Download failed", "err");
+          return;
+        }
+        const blob = await res.blob();
+        const dispo = res.headers.get("Content-Disposition") || "";
+        const match = dispo.match(/filename=\"?([^\";]+)\"?/i);
+        const filename = match
+          ? match[1]
+          : "ai-reports.json";
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast("Reports downloaded", "ok");
+      } catch (e) {
+        toast("Download failed", "err");
+      }
+    });
+  }
+
+  if (clearReportsBtn) {
+    clearReportsBtn.addEventListener("click", async function () {
+      if (
+        !confirm(
+          "Clear ALL AI reports?\n\nDownload first if you still need them."
+        )
+      ) {
+        return;
+      }
+      const res = await fetch("/api/admin/reports", {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Clear failed", "err");
+        return;
+      }
+      toast("Cleared " + (data.cleared || 0) + " reports", "ok");
+      loadReports();
+    });
+  }
+
+  if (refreshReportsBtn) {
+    refreshReportsBtn.addEventListener("click", loadReports);
+  }
 
   if (setPackages) {
     setPackages.addEventListener("click", function (e) {

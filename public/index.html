@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=46" />
+    <link rel="stylesheet" href="/styles.css?v=47" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -518,6 +518,34 @@
     <div id="scene-chip" class="hidden"><span id="scene-chip-text"></span><button type="button" id="scene-edit-btn"></button></div>
     <button type="button" id="reset-btn" class="hidden"></button>
 
+    <div id="report-sheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-backdrop" id="report-backdrop"></div>
+      <div class="sheet-card report-card" role="dialog" aria-labelledby="report-title">
+        <div class="sheet-handle"></div>
+        <h2 id="report-title">Report reply</h2>
+        <p class="setup-sub">Is AI reply mein kya problem thi? Admin ko report jayegi.</p>
+        <label class="full">
+          Reason
+          <select id="report-reason">
+            <option value="bad reply">Bad / weird reply</option>
+            <option value="wrong gender">Wrong gender</option>
+            <option value="wrong role">Wrong role / rishta</option>
+            <option value="too long">Too long / too many actions</option>
+            <option value="family pitch">Unwanted family invite</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="full">
+          Extra note (optional)
+          <input id="report-note" type="text" maxlength="200" placeholder="Short detail…" />
+        </label>
+        <div class="pay-nav-row" style="margin-top: 12px">
+          <button type="button" id="report-cancel" class="btn-outline pay-nav-btn">Cancel</button>
+          <button type="button" id="report-send" class="auth-btn pay-nav-btn">Send report</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast-host" aria-live="polite"></div>
 
     <script>
@@ -529,6 +557,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=57" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=58" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

@@ -1265,10 +1265,105 @@
     bubble.className = "bubble " + type;
     bubble.innerHTML =
       formatRpHtml(text) + '<span class="meta">' + timeNow() + "</span>";
+    if (type === "incoming" && String(text || "").trim()) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "bubble-report-btn";
+      btn.textContent = "Report";
+      btn.title = "Report bad AI reply";
+      btn.addEventListener("click", function () {
+        openReportSheet(String(text || ""), btn);
+      });
+      bubble.appendChild(btn);
+    }
     messagesEl.appendChild(bubble);
     scrollMessagesToEnd(type === "outgoing" || type === "error");
     if (type === "incoming") playReplyFeedback();
   }
+
+  let reportTargetText = "";
+  let reportTargetBtn = null;
+  const reportSheet = document.getElementById("report-sheet");
+  const reportBackdrop = document.getElementById("report-backdrop");
+  const reportReasonEl = document.getElementById("report-reason");
+  const reportNoteEl = document.getElementById("report-note");
+  const reportSendBtn = document.getElementById("report-send");
+  const reportCancelBtn = document.getElementById("report-cancel");
+
+  function openReportSheet(aiText, btn) {
+    if (!authToken) {
+      toast("Login required", "err");
+      return;
+    }
+    reportTargetText = aiText;
+    reportTargetBtn = btn || null;
+    if (reportNoteEl) reportNoteEl.value = "";
+    if (reportReasonEl) reportReasonEl.value = "bad reply";
+    if (reportSheet) {
+      reportSheet.classList.remove("hidden");
+      reportSheet.setAttribute("aria-hidden", "false");
+    }
+  }
+
+  function closeReportSheet() {
+    if (reportSheet) {
+      reportSheet.classList.add("hidden");
+      reportSheet.setAttribute("aria-hidden", "true");
+    }
+    reportTargetText = "";
+    reportTargetBtn = null;
+  }
+
+  async function sendAiReport() {
+    if (!reportTargetText || !authToken) return;
+    const roles = typeof getRpRoles === "function" ? getRpRoles() : {};
+    const reason = reportReasonEl ? reportReasonEl.value : "bad reply";
+    const note = reportNoteEl ? reportNoteEl.value.trim() : "";
+    if (reportSendBtn) reportSendBtn.disabled = true;
+    try {
+      const res = await fetch("/api/chat/report", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          reason: reason,
+          note: note,
+          aiMessage: reportTargetText,
+          context: (history || []).slice(-12),
+          setup: rpSetup || (typeof buildRpSetupText === "function" ? buildRpSetupText() : ""),
+          characterName: roles.characterName || "",
+          botRole: roles.botRole || "",
+          userRole: roles.userRole || "",
+          botGender: roles.botGender || "",
+          userGender: roles.userGender || "",
+        }),
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+        toast(data.error || "Report failed", "err");
+        return;
+      }
+      if (reportTargetBtn) {
+        reportTargetBtn.textContent = "Reported";
+        reportTargetBtn.classList.add("done");
+      }
+      toast("Report sent — thanks", "ok");
+      closeReportSheet();
+    } catch (e) {
+      toast("Network error", "err");
+    } finally {
+      if (reportSendBtn) reportSendBtn.disabled = false;
+    }
+  }
+
+  if (reportSendBtn) reportSendBtn.addEventListener("click", sendAiReport);
+  if (reportCancelBtn) reportCancelBtn.addEventListener("click", closeReportSheet);
+  if (reportBackdrop) reportBackdrop.addEventListener("click", closeReportSheet);
 
   function addWorkedStatus(ms, steps) {
     const el = document.createElement("div");

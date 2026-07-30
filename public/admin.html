@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=8" />
+    <link rel="stylesheet" href="/admin.css?v=9" />
   </head>
   <body>
     <div class="admin-app">
@@ -91,6 +91,7 @@
           <div class="tabs">
             <button type="button" class="tab active" id="tab-users">Users</button>
             <button type="button" class="tab" id="tab-payments">Payments</button>
+            <button type="button" class="tab" id="tab-reports">AI reports</button>
             <button type="button" class="tab" id="tab-pay-setup">Pay setup</button>
           </div>
 
@@ -141,6 +142,25 @@
             </div>
             <p id="pay-money-line" class="meta pay-money-line"></p>
             <div id="payments" class="payments-grid"></div>
+          </div>
+
+          <div id="reports-view" class="panel hidden">
+            <div class="toolbar">
+              <span id="reports-count" class="meta">0 reports</span>
+              <button type="button" id="download-reports-btn" class="btn btn-sm">
+                Download all reports
+              </button>
+              <button type="button" id="clear-reports-btn" class="btn-danger btn-sm">
+                Clear all
+              </button>
+              <button type="button" id="refresh-reports-btn" class="btn-ghost btn-sm">
+                Refresh
+              </button>
+            </div>
+            <p class="meta setup-lead">
+              User-reported bad AI replies. Download JSON once and share for prompt debugging.
+            </p>
+            <div id="reports-list" class="reports-list"></div>
           </div>
 
           <div id="pay-setup-view" class="panel hidden">
@@ -208,6 +228,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=12"></script>
+    <script src="/admin.js?v=13"></script>
   </body>
 </html>
