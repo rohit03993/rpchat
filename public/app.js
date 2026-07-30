@@ -403,12 +403,6 @@
   }
 
   async function restoreChatSession() {
-    // No time left → never restore old chat
-    if (remainingHoursNow() <= 0.0001 && Number((currentUser && currentUser.hoursBalance) || 0) <= 0.0001) {
-      await clearSavedChatSession();
-      return false;
-    }
-
     const key = localSessionKey();
     let local = null;
     if (key) {
@@ -422,20 +416,20 @@
     let remote = null;
     if (authToken) {
       try {
-        const res = await fetch("/api/chat/session", { headers: authHeaders(false) });
+        const res = await fetch("/api/chat/session", {
+          headers: authHeaders(false),
+        });
         const data = await res.json();
-        if (res.ok) remote = data.session;
+        if (res.ok) remote = data.session || null;
       } catch (e) {
-        /* ignore */
+        remote = null;
       }
     }
 
-    // Prefer newer copy
+    // Prefer newer / richer copy (keep even at 0 hours for pay-to-continue)
     let chosen = null;
-    const localAt = local && local.history ? 1 : 0;
     const remoteAt = remote && remote.updatedAt ? remote.updatedAt : 0;
     if (remote && remote.setupLocked && remoteAt) {
-      // if local exists and has more messages, prefer local
       const localLen = (local && local.history && local.history.length) || 0;
       const remoteLen = (remote.history && remote.history.length) || 0;
       chosen = localLen > remoteLen ? local : remote;
@@ -447,6 +441,16 @@
 
     if (chosen && applySessionData(chosen)) {
       saveChatSessionLocal();
+      if (
+        remainingHoursNow() <= 0.0001 &&
+        Number((currentUser && currentUser.hoursBalance) || 0) <= 0.0001
+      ) {
+        setTimeout(function () {
+          handlePlanEnded(
+            "Time khatam 🔥 Scene yahin hai — Pay karke isi jagah se continue karo."
+          );
+        }, 400);
+      }
       return true;
     }
     return false;
@@ -523,28 +527,24 @@
   }
 
   async function handlePlanEnded(message) {
-    if (planEndedHandled) return;
+    if (planEndedHandled) {
+      openPaySheet();
+      return;
+    }
     planEndedHandled = true;
     hoursCounting = false;
     stopLiveTimer();
-    await clearSavedChatSession();
-    history = [];
-    setupLocked = false;
-    rpSetup = "";
+    // Keep history + setup + bubbles — cliffhanger until they pay
     if (messagesEl) {
-      messagesEl.innerHTML = "";
       addBubble(
         message ||
-          "Plan / time khatam ✓ Chat history server se clear ho gayi. Pay se naya package lo, phir Start chat se naya scene shuru karo.",
+          "Time khatam 🔥 Yeh scene yahin ruk gayi… Pay karo aur wahi se continue — naya chat nahi, same masti.",
         "error"
       );
     }
-    if (appShellEl) appShellEl.classList.remove("chat-ready");
-    updateSetupStatus();
-    // Let them read the message, then open setup
-    setTimeout(function () {
-      openSetupModal();
-    }, 1200);
+    scheduleSaveChatSession();
+    toast("Time over · Pay to continue this chat", "err");
+    openPaySheet();
   }
 
   function syncLocalClock(user) {
@@ -1108,10 +1108,13 @@
         showPendingBanner(approved);
         if (payMsg) {
           payMsg.className = "pay-msg ok";
-          payMsg.textContent = "Unlocked ✓ Hours added. You can close this and chat.";
+          payMsg.textContent =
+            "Unlocked ✓ Hours added. Close this — scene yahin se continue.";
         }
-        toast("Hours added · payment approved", "ok");
+        planEndedHandled = false;
+        toast("Unlocked · continue from where you left", "ok");
         stopPayPoll();
+        if (input) input.focus();
         return;
       }
       if (!stillPending) stopPayPoll();
@@ -2157,15 +2160,15 @@
           logout();
           return;
         }
-        addBubble(data.error || "Kuch error aa gaya", "error");
-        if (data.user) applyTimeFromResponse(data);
-        if (data.code === "NO_HOURS" || data.chatCleared || res.status === 402) {
+        if (data.code === "NO_HOURS" || res.status === 402) {
           await handlePlanEnded(
             data.error ||
-              "Plan khatam ✓ Chat history clear. Pay karke naya package lo."
+              "Time khatam 🔥 Scene pause hai — Pay karke isi chat se continue karo."
           );
-          openPaySheet();
+          return;
         }
+        addBubble(data.error || "Kuch error aa gaya", "error");
+        if (data.user) applyTimeFromResponse(data);
         return;
       }
 
