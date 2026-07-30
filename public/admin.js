@@ -1446,4 +1446,11 @@
     }
     await refreshAll();
   })();
+
+  // Live remaining time in admin — settle stale ONLINE rows every 20s
+  setInterval(function () {
+    if (!token) return;
+    if (document.hidden) return;
+    refreshAll().catch(function () {});
+  }, 20000);
 })();

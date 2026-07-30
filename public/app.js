@@ -823,6 +823,7 @@
       const res = await fetch("/api/billing/pause", {
         method: "POST",
         headers: authHeaders(),
+        keepalive: true,
       });
       const data = await res.json();
       if (data.user) {
@@ -832,6 +833,27 @@
     } catch (e) {
       /* ignore */
     }
+  }
+
+  function pauseOnLeave() {
+    if (!authToken || !hoursCounting) return;
+    stopLiveTimer();
+    try {
+      fetch("/api/billing/pause", {
+        method: "POST",
+        headers: authHeaders(),
+        body: "{}",
+        keepalive: true,
+      });
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  async function resumeOnReturn() {
+    if (!authToken || !hoursCounting) return;
+    await resumeSession();
+    if (hoursCounting && !timerRunning) startLiveTimer();
   }
 
   function formatTime(u) {
@@ -3068,4 +3090,10 @@
     showAuth();
     prefillLoginFromSaved();
   })();
+
+  window.addEventListener("pagehide", pauseOnLeave);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") pauseOnLeave();
+    else if (document.visibilityState === "visible") resumeOnReturn();
+  });
 })();
