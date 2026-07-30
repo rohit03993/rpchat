@@ -373,6 +373,25 @@
     }, 800);
   }
 
+  /** Flush chat to server now (used on time-out so scene is not lost). */
+  async function flushChatSessionNow() {
+    saveChatSessionLocal();
+    if (!authToken || restoringSession) return;
+    if (sessionSaveTimer) {
+      clearTimeout(sessionSaveTimer);
+      sessionSaveTimer = null;
+    }
+    try {
+      await fetch("/api/chat/session", {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify(buildSessionPayload()),
+      });
+    } catch (e) {
+      /* local copy remains */
+    }
+  }
+
   function renderHistoryBubbles() {
     messagesEl.innerHTML = "";
     history.forEach(function (m) {
@@ -450,7 +469,7 @@
       ) {
         setTimeout(function () {
           handlePlanEnded(
-            "Time khatam 🔥 Scene yahin hai — Pay karke isi jagah se continue karo."
+            "Time’s up. Your scene is saved here — pay to continue from this chat."
           );
         }, 400);
       }
@@ -530,6 +549,14 @@
   }
 
   async function handlePlanEnded(message) {
+    // Stay on THIS chat — never open model/role setup on time-out
+    closeSetupModal();
+    closeSidebar();
+    if (history.length || rpSetup) {
+      setupLocked = true;
+      if (appShellEl) appShellEl.classList.add("chat-ready");
+    }
+
     if (planEndedHandled) {
       openPaySheet();
       return;
@@ -537,16 +564,21 @@
     planEndedHandled = true;
     hoursCounting = false;
     stopLiveTimer();
-    // Keep history + setup + bubbles — cliffhanger until they pay
+
     if (messagesEl) {
-      addBubble(
+      var pauseMsg =
         message ||
-          "Time khatam 🔥 Yeh scene yahin ruk gayi… Pay karo aur wahi se continue — naya chat nahi, same masti.",
-        "error"
-      );
+        "Time’s up. Scene paused here — pay to continue this same chat.";
+      var last = messagesEl.lastElementChild;
+      var already =
+        last &&
+        last.classList.contains("error") &&
+        /Time.?s up|Time over|Scene paused/i.test(last.textContent || "");
+      if (!already) addBubble(pauseMsg, "error");
     }
-    scheduleSaveChatSession();
-    toast("Time over · Pay to continue this chat", "err");
+
+    await flushChatSessionNow();
+    toast("Time over · Pay to continue", "err");
     openPaySheet();
   }
 
@@ -578,16 +610,13 @@
         : "Time over — Pay to continue";
     hoursBadge.classList.toggle("hours-low", left > 0 && left < 5 / 60);
     hoursBadge.classList.toggle("hours-empty", left <= 0);
+    // As soon as time hits 0 → Pay popup on same chat (do not wait / do not open setup)
     if (left <= 0 && (timerRunning || hoursCounting || setupLocked)) {
       timerRunning = false;
-      refreshMe().then(function (ok) {
-        if (ok && remainingHoursNow() > 0) {
-          timerRunning = true;
-          planEndedHandled = false;
-        } else {
-          handlePlanEnded();
-        }
-      });
+      if (!planEndedHandled) {
+        handlePlanEnded();
+      }
+      refreshMe();
     }
   }
 
@@ -706,7 +735,7 @@
       }
       if (googlebot) googlebot.setAttribute("content", "index, follow");
       document.title =
-        "Best Roleplay Site | Desi Hinglish WhatsApp RP Chat – DesiChat";
+        "Best Roleplay Site | Private Desi WhatsApp-Style RP – DesiChat";
     } else {
       // Logged-in private chat must not be indexed
       if (robots) robots.setAttribute("content", "noindex, nofollow");
@@ -793,7 +822,7 @@
     if (step === 2 && !selectedPack()) {
       if (payMsg) {
         payMsg.className = "pay-msg err";
-        payMsg.textContent = "Pehle pack choose karo.";
+        payMsg.textContent = "Please choose a pack first.";
       }
       setPaySteps(1);
       return;
@@ -804,14 +833,14 @@
       var pack = selectedPack();
       var uid = (currentUser && currentUser.userId) || "";
       payProofSummary.textContent = pack
-        ? "Pay kiya ₹" +
+        ? "Paid ₹" +
           pack.priceInr +
           " (" +
           pack.label +
           ") · remark " +
           uid +
-          " — ab screenshot upload karo."
-        : "Screenshot upload karo.";
+          " — now upload the screenshot."
+        : "Upload your payment screenshot.";
     }
   }
 
@@ -855,7 +884,7 @@
         payment.amountInr +
         " · " +
         payment.packageId +
-        " add ho gaya. Timer mein time dikhega — chat continue karo.";
+        " hours added. Check the timer — you can continue chatting.";
       return;
     }
     if (payment.status === "rejected") {
@@ -863,18 +892,18 @@
         "<strong>Payment rejected</strong>" +
         "₹" +
         payment.amountInr +
-        " wala request reject hua. Sahi screenshot ke saath dubara submit karo.";
+        " request was rejected. Please submit again with a clear screenshot.";
       return;
     }
     payPendingBanner.innerHTML =
       "<strong>Pending admin approval</strong>" +
-      "Aapne <b>₹" +
+      "You submitted a screenshot for <b>₹" +
       payment.amountInr +
       "</b> (" +
       payment.packageId +
-      ") ka screenshot bhej diya.<br/>" +
-      "Status: <b>PENDING</b> — admin verify karke hours unlock karega.<br/>" +
-      "Is page ko open rakh sakte ho; approve hote hi yahan update aa jayega.";
+      ").<br/>" +
+      "Status: <b>PENDING</b> — admin will verify and unlock hours.<br/>" +
+      "You can keep this open; it updates automatically after approval.";
   }
 
   function syncPayUi() {
@@ -940,13 +969,13 @@
       }
       if (payInstructions) {
         payInstructions.innerHTML =
-          "UPI pe <b>₹" +
+          "Pay exactly <b>₹" +
           pack.priceInr +
-          "</b> pay karo" +
+          "</b> on UPI" +
           (pack.saveInr > 0 ? " (save ₹" + pack.saveInr + ")" : "") +
           " · Remark = <b>" +
           uid +
-          "</b> · Phir <b>I’ve paid</b> dabao.";
+          "</b> · Then tap <b>I’ve paid</b>.";
       }
       // stay on current wizard step — don't jump
     } else {
@@ -1112,7 +1141,7 @@
         if (payMsg) {
           payMsg.className = "pay-msg ok";
           payMsg.textContent =
-            "Unlocked ✓ Hours added. Close this — scene yahin se continue.";
+            "Unlocked ✓ Hours added. Close this sheet and continue from the same scene.";
         }
         planEndedHandled = false;
         toast("Unlocked · continue from where you left", "ok");
@@ -1180,13 +1209,13 @@
       const file = payScreenshot && payScreenshot.files && payScreenshot.files[0];
       if (!file) {
         payMsg.className = "pay-msg err";
-        payMsg.textContent = "Pehle payment screenshot add karo.";
+        payMsg.textContent = "Please add a payment screenshot first.";
         goPayStep(3);
         return;
       }
       if (!selectedPackId) {
         payMsg.className = "pay-msg err";
-        payMsg.textContent = "Pehle package choose karo.";
+        payMsg.textContent = "Please choose a package first.";
         goPayStep(1);
         return;
       }
@@ -1699,7 +1728,7 @@
     syncCustomRoleFields();
     syncTitle();
     if (rpSetupStatus) {
-      rpSetupStatus.textContent = smart.hint + (setupLocked ? " Save changes in sidebar." : " Start chat dabao.");
+      rpSetupStatus.textContent = smart.hint + (setupLocked ? " Save changes in sidebar." : " Tap Start chat.");
     }
     // Parent roles default to strict resistance (slow burn)
     if (rpResistanceEl && (key === "mummy" || key === "dad")) {
@@ -1950,7 +1979,7 @@
   function beginChatFromSetup() {
     if (isVeniceMode() && !selectedCharacter) {
       if (rpSetupStatus) {
-        rpSetupStatus.textContent = "Pehle Venice character select karo.";
+        rpSetupStatus.textContent = "Select a Venice character first.";
       }
       return;
     }
@@ -1979,10 +2008,10 @@
   function updateSetupStatus() {
     if (!rpSetupStatus) return;
     if (setupLocked) {
-      rpSetupStatus.textContent = "Live. Sidebar se edit · New chat se reset.";
+      rpSetupStatus.textContent = "Live. Edit in sidebar · New chat to reset.";
     } else {
       rpSetupStatus.textContent =
-        "Who is AI + optional RP note → Start. Place tum chat mein decide karo.";
+        "Choose who the AI is, optional note → Start. Place stays in your control in chat.";
     }
   }
 
@@ -1991,15 +2020,12 @@
       const roles = getRpRoles();
       return (
         roles.characterName +
-        ": Roles set karke pehla message bhejo.\n" +
-        "Main " +
-        roles.botRole +
-        " ban ke shy-flirty se start karungi/karunga — tumhari RP note + chat follow karungi. Place tum decide karo. 💕"
+        ": Roles locked. Send your first message when ready. 💕"
       );
     }
     if (isVeniceMode()) {
       if (!selectedCharacter) {
-        return "Pehle Venice character select karo (search karke), phir message bhejo.";
+        return "Select a Venice character first (search), then send a message.";
       }
       return (
         "Hey! Main " +
@@ -2058,7 +2084,7 @@
       if (!list.length) {
         characterSelect.innerHTML = '<option value="">No characters found</option>';
         if (charInfo) {
-          charInfo.textContent = "Koi character nahi mila. Dusra search try karo.";
+          charInfo.textContent = "No characters found. Try another search.";
         }
         return;
       }
@@ -2118,13 +2144,13 @@
 
   async function sendChat(text) {
     if (!setupLocked) {
-      addBubble("Pehle setup complete karo — Start chat dabao.", "error");
+      addBubble("Finish setup first — tap Start chat.", "error");
       openSetupModal();
       return;
     }
 
     if (isVeniceMode() && !selectedCharacter) {
-      addBubble("Pehle Venice character select karo.", "error");
+      addBubble("Select a Venice character first.", "error");
       return;
     }
 
@@ -2179,11 +2205,11 @@
         if (data.code === "NO_HOURS" || res.status === 402) {
           await handlePlanEnded(
             data.error ||
-              "Time khatam 🔥 Scene pause hai — Pay karke isi chat se continue karo."
+              "Time’s up. Scene paused — pay to continue this same chat."
           );
           return;
         }
-        addBubble(data.error || "Kuch error aa gaya", "error");
+        addBubble(data.error || "Something went wrong", "error");
         if (data.user) applyTimeFromResponse(data);
         return;
       }
@@ -2201,7 +2227,7 @@
       scheduleSaveChatSession();
     } catch (e) {
       hideTyping();
-      addBubble("Network issue hai, thodi der baad try karo.", "error");
+      addBubble("Network issue — try again in a moment.", "error");
     } finally {
       setBusy(false);
       input.focus();
@@ -2269,7 +2295,7 @@
       syncTitle();
       if (setupLocked && rpSetupStatus) {
         rpSetupStatus.textContent =
-          "Sidebar → Save changes, ya New chat for full reset.";
+          "Sidebar → Save changes, or New chat for a full reset.";
         return;
       }
       updateSetupStatus();
@@ -2555,11 +2581,11 @@
       authError.textContent = "";
       const dob = getRegisterDob();
       if (!dob) {
-        authError.textContent = "Date of birth complete karo (day / month / year).";
+        authError.textContent = "Please complete date of birth (day / month / year).";
         return;
       }
       if (registerAgeConfirm && !registerAgeConfirm.checked) {
-        authError.textContent = "18+ confirm checkbox tick karo.";
+        authError.textContent = "Please tick the 18+ confirmation checkbox.";
         return;
       }
       const pin = registerPinEl ? String(registerPinEl.value || "").trim() : "";
@@ -2634,7 +2660,7 @@
           loginIdEl.value = data.userId;
           if (loginPinEl) loginPinEl.value = "";
         }
-        toast("ID created: " + data.userId + " — ab PIN likho", "ok");
+        toast("ID created: " + data.userId + " — enter your PIN to login", "ok");
       } catch (e) {
         authError.textContent = "Network error";
       } finally {
@@ -2710,7 +2736,14 @@
         syncPanels();
         const restored = await restoreChatSession();
         if (!restored) {
-          resetChat();
+          // Only open setup when they still have time and no saved scene
+          if (remainingHoursNow() > 0.0001) {
+            resetChat();
+          } else {
+            closeSetupModal();
+            openPaySheet();
+            toast("Time over · Pay to unlock chat", "err");
+          }
         }
         updateSetupStatus();
         return;

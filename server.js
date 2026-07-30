@@ -514,6 +514,10 @@ app.get("/api/admin/users", requireAdmin, (_req, res) => {
   res.json({ users: billing.listUsers() });
 });
 
+app.get("/api/admin/analytics", requireAdmin, (_req, res) => {
+  res.json({ analytics: billing.getAnalytics() });
+});
+
 app.get("/api/admin/users/:id/chat", requireAdmin, (req, res) => {
   const result = billing.getChatSessionAdmin(req.params.id);
   res.json({

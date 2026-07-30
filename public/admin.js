@@ -34,6 +34,12 @@
   const statPending = document.getElementById("stat-pending");
   const statHours = document.getElementById("stat-hours");
   const statMoney = document.getElementById("stat-money");
+  const statPaid = document.getElementById("stat-paid");
+  const statActive = document.getElementById("stat-active");
+  const statHoursSold = document.getElementById("stat-hours-sold");
+  const statMsgs = document.getElementById("stat-msgs");
+  const statReports = document.getElementById("stat-reports");
+  const statToday = document.getElementById("stat-today");
   const userSearch = document.getElementById("user-search");
   const chatDrawer = document.getElementById("chat-drawer");
   const chatDrawerTitle = document.getElementById("chat-drawer-title");
@@ -277,31 +283,102 @@
     }
   }
 
-  function updateStats(users, allPayments) {
+  function updateStats(users, allPayments, analytics) {
+    const a = analytics || {};
     const list = users || [];
     const pays = allPayments || [];
-    statUsers.textContent = String(list.length);
-    statPending.textContent = String(
-      pays.filter(function (p) {
-        return p.status === "pending";
-      }).length
-    );
-    const hours = list.reduce(function (sum, u) {
-      return sum + Number(u.hoursBalance || 0);
-    }, 0);
-    statHours.textContent = hours.toFixed(1);
-    const collected = pays
-      .filter(function (p) {
-        return p.status === "approved";
-      })
-      .reduce(function (sum, p) {
-        return sum + Number(p.amountInr || 0);
-      }, 0);
+    if (statUsers) {
+      statUsers.textContent = String(
+        a.usersTotal != null ? a.usersTotal : list.length
+      );
+    }
+    if (statPending) {
+      statPending.textContent = String(
+        a.paymentsPending != null
+          ? a.paymentsPending
+          : pays.filter(function (p) {
+              return p.status === "pending";
+            }).length
+      );
+    }
+    if (statHours) {
+      const hours =
+        a.hoursLive != null
+          ? a.hoursLive
+          : list.reduce(function (sum, u) {
+              return sum + Number(u.hoursBalance || 0);
+            }, 0);
+      statHours.textContent = Number(hours).toFixed(1);
+    }
     if (statMoney) {
-      statMoney.textContent = "₹" + Math.round(collected).toLocaleString("en-IN");
+      const collected =
+        a.moneyInr != null
+          ? a.moneyInr
+          : pays
+              .filter(function (p) {
+                return p.status === "approved";
+              })
+              .reduce(function (sum, p) {
+                return sum + Number(p.amountInr || 0);
+              }, 0);
+      statMoney.textContent =
+        "₹" + Math.round(collected).toLocaleString("en-IN");
+    }
+    if (statPaid) {
+      statPaid.textContent = String(
+        a.paidUsers != null
+          ? a.paidUsers
+          : list.filter(function (u) {
+              return u.hasPaid;
+            }).length
+      );
+    }
+    if (statActive) {
+      statActive.textContent = String(
+        a.sessionActive != null
+          ? a.sessionActive
+          : list.filter(function (u) {
+              return u.sessionActive;
+            }).length
+      );
+    }
+    if (statHoursSold) {
+      statHoursSold.textContent = String(
+        a.hoursSold != null ? a.hoursSold : "—"
+      );
+    }
+    if (statMsgs) {
+      statMsgs.textContent = String(
+        a.chatMessages != null
+          ? a.chatMessages.toLocaleString("en-IN")
+          : list.reduce(function (sum, u) {
+              return sum + Number(u.chatMsgCount || 0);
+            }, 0)
+      );
+    }
+    if (statReports) {
+      statReports.textContent = String(a.aiReports != null ? a.aiReports : "—");
+    }
+    if (statToday) {
+      statToday.textContent = String(a.usersToday != null ? a.usersToday : "—");
     }
   }
 
+  async function loadAnalytics() {
+    try {
+      const res = await fetch("/api/admin/analytics", { headers: authHeaders() });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return null;
+        return null;
+      }
+      return data.analytics || null;
+    } catch (e) {
+      return null;
+    }
+  }
   function filterUsersList(list) {
     const q = String((userSearch && userSearch.value) || "")
       .trim()
@@ -800,7 +877,8 @@
   async function refreshAll() {
     const users = await loadUsers();
     const allPays = await loadPayments();
-    updateStats(users, allPays);
+    const analytics = await loadAnalytics();
+    updateStats(users, allPays, analytics);
   }
 
   async function adjustHours(userId, hours, mode) {
