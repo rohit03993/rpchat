@@ -904,16 +904,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         role: m.role,
         content: m.content,
       }));
-      const lastVoice = voiceHist[voiceHist.length - 1];
-      if (lastVoice && lastVoice.role === "user") {
-        lastVoice.content =
-          String(lastVoice.content || "") +
-          `\n\n(Remember silently: you are ${charOverrides.botRole || "role"}, ${charOverrides.botGender || "female"}, talking to your ${charOverrides.userRole || "partner"} — heat=${userHeat}` +
-          (stillResisting
-            ? `; RESIST sex yes — deny/tease only`
-            : ``) +
-          `; short unless asked long; no gender swap. Obey CHAT MEMORY CARD.)`;
-      }
+      // Do NOT append "Remember silently…" onto the user message — models often
+      // echo that paren block into the visible reply. Sticky rules stay in system.
 
       const voicePayload = [
         {
@@ -923,7 +915,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             "\n\n" +
             memoryCard +
             "\n\n" +
-            identitySticky,
+            identitySticky +
+            "\n\nOUTPUT RULE: Reply only as the character. Never quote, print, or mention CHAT MEMORY CARD, IDENTITY STICKY, SCENE CARD, or any 'Remember silently' notes.",
         },
         ...voiceHist,
       ];
