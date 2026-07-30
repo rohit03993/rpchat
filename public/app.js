@@ -1336,7 +1336,7 @@
 
   /** Smart defaults — opposite sex auto-pair (AI is → You are) */
   const ROLE_SMART = {
-    mummy: { userRole: "beta", name: "Maa", hint: "Maa↔beta · meri Maa(=Nani)/Mausi one-by-one." },
+    mummy: { userRole: "beta", name: "Maa", hint: "Maa↔beta · private 1-on-1 first; family only if you ask." },
     dad: { userRole: "beti", name: "Papa", hint: "Papa↔beti · correct address + guests." },
     mausi: { userRole: "bhanja", name: "Mausi", hint: "Mausi ↔ bhanja (F↔M)." },
     mausa: { userRole: "bhanji", name: "Mausa", hint: "Mausa ↔ bhanji (M↔F)." },
@@ -1596,7 +1596,7 @@
         name +
         ": Hello meri " +
         you +
-        "... Papa yahan hai. Aaj ghar pe thoda free hai... bol, kya soch rahi hai? 💕"
+        "... Papa yahan hai. Bol, kya haal hai? 💕"
       );
     }
     if (/^(mom|mummy|maa|mother)$/.test(bot)) {
@@ -1604,7 +1604,7 @@
         name +
         ": Hello " +
         you +
-        "... Mummy yahan hai. Chahe to meri Maa (teri Nani), meri bahan (teri Mausi), Bua ya Saas ji (teri Dadi) — ek-ek karke... pehle tu bata mood? 💕"
+        "... Mummy yahan hai. Bol, kya haal hai? 💕"
       );
     }
     if (/sasur/.test(bot)) {
@@ -1616,8 +1616,20 @@
     if (/bahu/.test(bot)) {
       return (
         name +
-        ": Hello Papa ji... bahu yahan hai. Bolie, kya hukm hai? 💕"
+        ": Hello Papa ji... bahu yahan hai. Bolie, kya haal hai? 💕"
       );
+    }
+    if (/nani/.test(bot)) {
+      return name + ": Hello " + you + "... Nani yahan hai. Bol, kya haal hai? 💕";
+    }
+    if (/dadi/.test(bot)) {
+      return name + ": Hello " + you + "... Dadi yahan hai. Bol, kya haal hai? 💕";
+    }
+    if (/mausi|maushi/.test(bot)) {
+      return name + ": Hello " + you + "... Mausi yahan hai. Bol, kya haal hai? 💕";
+    }
+    if (/bua/.test(bot)) {
+      return name + ": Hello " + you + "... Bua yahan hai. Bol, kya haal hai? 💕";
     }
     return (
       name +

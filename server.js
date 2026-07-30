@@ -10,6 +10,9 @@ const {
   buildMaaHinglishPolishPrompt,
   recentTranscript,
   sceneHeatIsDirty,
+  detectUserHeat,
+  patchSceneCardForMirror,
+  replyTokenBudget,
   fixMaaGenderSlips,
   wantsLongReply,
   looksIncompleteReply,
@@ -686,6 +689,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
 
       // --- Step 1: Brain ---
       let sceneCard = "";
+      const userHeat = detectUserHeat(lastUser);
       const brainPayload = [
         {
           role: "system",
@@ -695,8 +699,10 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           role: "user",
           content:
             `Recent chat:\n${transcript || "(start)"}\n\n` +
-            `Latest from user (decode typos): "${lastUser}"\n\n` +
-            `Write the SCENE CARD now. Prefer shy + flirty unless user pushed heat.`,
+            `Latest from user (decode typos): "${lastUser}"\n` +
+            `Detected USER_HEAT: ${userHeat} — set HEAT to this. Mirror it. Do not jump ahead.\n` +
+            `Default LENGTH=short and ACTIONS=none unless user asked for long/story/listen/guest.\n\n` +
+            `Write the SCENE CARD now.`,
         },
       ];
 
@@ -713,25 +719,31 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       if (!sceneCard) {
         sceneCard =
           `USER_SAID: ${lastUser}\n` +
+          `USER_HEAT: ${userHeat}\n` +
+          `MATCH: mirror user — same heat, do not jump ahead\n` +
           `INTENT: match user\n` +
           `IDENTITY: ${(charOverrides.characterName || "Character")} = ${(charOverrides.botRole || "role")} (${(charOverrides.botGender || "female")}) talking to ${(charOverrides.userRole || "user")} — never swap\n` +
-          `EMOTION: shy, soft flirty\n` +
+          `EMOTION: match ${userHeat}\n` +
           `SCENE: ${setupText || "ongoing private chat"}\n` +
           `MUST_ANSWER: react directly to his last words\n` +
-          `NEXT_BEATS: stay in role; shy smile or soft tease with USER only; no invented nani/mummy hookups\n` +
-          `HEAT: flirty\n` +
-          `AVOID: gender swap, forget role, invent relative hookups, lecture`;
+          `NEXT_BEATS: stay in role; same-heat hook with USER only\n` +
+          `LENGTH: short\n` +
+          `ACTIONS: none\n` +
+          `HEAT: ${userHeat}\n` +
+          `AVOID: long essay, action spam, gender swap, invent relative hookups, lecture`;
       }
+
+      sceneCard = patchSceneCardForMirror(sceneCard, lastUser);
 
       // --- Step 2: Voice ---
       const wantsHinglish = lang !== "english";
       const wantLong = wantsLongReply(lastUser, sceneCard);
-      const tokenBudget = wantLong ? 900 : 420;
+      const tokenBudget = replyTokenBudget(lastUser, sceneCard);
       const voiceModel = wantsHinglish ? CLEAR_MODEL : LUST_MODEL;
       const voiceTemp = wantsHinglish
         ? sceneHeatIsDirty(sceneCard)
           ? 0.75
-          : 0.55
+          : 0.5
         : 0.9;
 
       const identitySticky =
@@ -739,6 +751,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         `User is your ${charOverrides.userRole || "partner"} (${charOverrides.userGender || "male"}). ` +
         `Stay this gender+rishta. Masti with USER only unless they asked for a guest/confession. ` +
         `Never say you hooked up with "teri nani/mummy" as a third person. Never use opposite-gender grammar on yourself. ` +
+        `MIRROR: USER_HEAT=${userHeat}. Match that energy. Prefer short WhatsApp lines. No *action* spam unless SCENE CARD ACTIONS says light/full. ` +
         (String(charOverrides.botRole || "").toLowerCase().match(/^(mom|mummy|maa|mother)$/)
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
           : "");
@@ -751,7 +764,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       if (lastVoice && lastVoice.role === "user") {
         lastVoice.content =
           String(lastVoice.content || "") +
-          `\n\n(Remember silently: you are ${charOverrides.botRole || "role"}, ${charOverrides.botGender || "female"}, talking to your ${charOverrides.userRole || "partner"} — no gender swap, no fake relative hookups.)`;
+          `\n\n(Remember silently: you are ${charOverrides.botRole || "role"}, ${charOverrides.botGender || "female"}, talking to your ${charOverrides.userRole || "partner"} — heat=${userHeat}; short unless asked long; no gender swap.)`;
       }
 
       const voicePayload = [
@@ -883,7 +896,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 `Keep reaction to what user said. ${genderHint}\n` +
                 (wantLong
                   ? "Keep FULL phone dialogue — do not shorten.\n"
-                  : "") +
+                  : "Keep SHORT WhatsApp style — do not pad with extra *actions* or long paragraphs.\n") +
                 `Fix this ${metaForPolish.characterName} reply into Easy Hinglish:\n${reply}`,
             },
           ],
