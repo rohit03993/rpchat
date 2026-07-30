@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=51" />
+    <link rel="stylesheet" href="/styles.css?v=53" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -116,11 +116,19 @@
           <div id="login-form" class="auth-form">
             <label>User ID<input id="login-id" type="text" maxlength="32" placeholder="e.g. 4821" autocomplete="username" /></label>
             <label>PIN / Password<input id="login-pin" type="password" maxlength="64" placeholder="PIN or password" autocomplete="current-password" /></label>
+            <label class="age-check">
+              <input id="login-remember" type="checkbox" checked />
+              Remember ID &amp; PIN on this browser
+            </label>
             <button type="button" id="login-btn" class="auth-btn">Login</button>
+            <button type="button" id="forget-saved-login" class="btn-link hidden">Forget saved login on this device</button>
           </div>
           <div id="register-form" class="auth-form hidden">
             <p class="char-info">
               18+ only. Enter DOB, choose your own 4-digit PIN, then we create your User ID (5 min trial). One new ID per device / 24 hours.
+            </p>
+            <p class="auth-remember-note">
+              <strong>Remember:</strong> note down your User ID and PIN. We also save them on this browser so login stays easy.
             </p>
             <div class="dob-field">
               <span class="dob-label">Date of birth</span>
@@ -175,6 +183,23 @@
               />
             </label>
             <button type="button" id="register-btn" class="auth-btn">Create User ID</button>
+            <div id="register-creds" class="creds-card hidden" role="status">
+              <p class="creds-title">Save your login</p>
+              <p class="creds-row">
+                User ID
+                <b id="register-creds-id">—</b>
+                <button type="button" class="chip-btn" id="copy-new-id" data-copy="id">Copy</button>
+              </p>
+              <p class="creds-row">
+                PIN
+                <b id="register-creds-pin">—</b>
+                <button type="button" class="chip-btn" id="copy-new-pin" data-copy="pin">Copy</button>
+              </p>
+              <p class="creds-note">
+                Written down? Good. Also saved on this browser. We cannot recover a forgotten PIN.
+              </p>
+              <button type="button" id="creds-continue-login" class="auth-btn">Continue to Login</button>
+            </div>
             <pre id="register-result" class="reg-result hidden"></pre>
           </div>
           <p id="auth-error" class="auth-error"></p>
@@ -213,13 +238,12 @@
     >
       <header class="chat-header">
         <button type="button" id="menu-btn" class="icon-btn" title="Settings">☰</button>
-        <div class="avatar" aria-hidden="true">CH</div>
         <div class="header-text">
           <p id="chat-title" class="chat-title-text">Chat</p>
-          <p id="status">online</p>
+          <p id="status" class="chat-status-line">online</p>
         </div>
         <div class="header-actions">
-          <span id="user-id-chip" class="user-chip" title="Your User ID"></span>
+          <button type="button" id="user-id-chip" class="user-chip" title="Tap to copy User ID" aria-label="Your User ID"></button>
           <span id="hours-badge" class="hours-badge" title="Time left">--:--</span>
           <button type="button" id="billing-toggle" class="reset-btn">Pay</button>
           <button type="button" id="logout-btn" class="reset-btn logout-btn">Logout</button>
@@ -436,6 +460,14 @@
             <h3>Settings</h3>
             <button type="button" id="sidebar-close" class="chip-btn">✕</button>
           </div>
+          <div id="account-box" class="account-box">
+            <p class="account-label">Your User ID</p>
+            <p class="account-id-row">
+              <b id="sidebar-user-id">—</b>
+              <button type="button" id="copy-sidebar-id" class="chip-btn">Copy ID</button>
+            </p>
+            <p class="account-hint">Keep your ID &amp; PIN safe. Saved on this browser for next login.</p>
+          </div>
           <div id="sidebar-form-slot"></div>
           <div class="sidebar-actions">
             <label class="sound-toggle">
@@ -458,6 +490,17 @@
             </div>
             <button type="button" id="pay-close-btn" class="chip-btn">Close</button>
           </div>
+
+          <div id="pay-id-banner" class="pay-id-banner" role="status">
+            <div>
+              <span class="pay-id-label">Your User ID</span>
+              <strong id="pay-id-value">—</strong>
+            </div>
+            <button type="button" id="copy-pay-id" class="chip-btn">Copy</button>
+          </div>
+          <p class="pay-remember-note">
+            Put this User ID in the UPI remark. Remember your ID &amp; PIN — both are saved on this browser.
+          </p>
 
           <div class="pay-steps" role="tablist">
             <button type="button" class="pay-step active" data-step="1" id="pay-step-btn-1">1 Pack</button>
@@ -565,6 +608,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=67" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=69" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

@@ -99,12 +99,28 @@
   const registerPinConfirmEl = document.getElementById("register-pin-confirm");
   const loginIdEl = document.getElementById("login-id");
   const loginPinEl = document.getElementById("login-pin");
+  const loginRememberEl = document.getElementById("login-remember");
+  const forgetSavedLoginBtn = document.getElementById("forget-saved-login");
   const registerResult = document.getElementById("register-result");
+  const registerCredsEl = document.getElementById("register-creds");
+  const registerCredsIdEl = document.getElementById("register-creds-id");
+  const registerCredsPinEl = document.getElementById("register-creds-pin");
+  const credsContinueLoginBtn = document.getElementById("creds-continue-login");
+  const copyNewIdBtn = document.getElementById("copy-new-id");
+  const copyNewPinBtn = document.getElementById("copy-new-pin");
+  const sidebarUserIdEl = document.getElementById("sidebar-user-id");
+  const copySidebarIdBtn = document.getElementById("copy-sidebar-id");
+  const payIdValueEl = document.getElementById("pay-id-value");
+  const copyPayIdBtn = document.getElementById("copy-pay-id");
   const authError = document.getElementById("auth-error");
   const jumpLatestBtn = document.getElementById("jump-latest");
   const soundToggle = document.getElementById("sound-toggle");
   const sendIcon = sendBtn && sendBtn.querySelector(".send-icon");
   const sendSpinner = sendBtn && sendBtn.querySelector(".send-spinner");
+
+  const SAVED_ID_KEY = "savedUserId";
+  const SAVED_PIN_KEY = "savedUserPin";
+  let pendingNewCreds = null;
 
   const DOB_MONTHS = [
     "Jan",
@@ -517,10 +533,104 @@
     return id;
   }
 
+  function getSavedCredentials() {
+    try {
+      return {
+        userId: localStorage.getItem(SAVED_ID_KEY) || "",
+        pin: localStorage.getItem(SAVED_PIN_KEY) || "",
+      };
+    } catch (e) {
+      return { userId: "", pin: "" };
+    }
+  }
+
+  function saveCredentials(userId, pin) {
+    const id = String(userId || "").trim();
+    const p = String(pin || "").trim();
+    if (!id) return;
+    try {
+      localStorage.setItem(SAVED_ID_KEY, id);
+      localStorage.setItem("userId", id);
+      if (p) localStorage.setItem(SAVED_PIN_KEY, p);
+    } catch (e) {}
+  }
+
+  function clearSavedCredentials() {
+    try {
+      localStorage.removeItem(SAVED_ID_KEY);
+      localStorage.removeItem(SAVED_PIN_KEY);
+    } catch (e) {}
+    pendingNewCreds = null;
+    syncForgetSavedBtn();
+  }
+
+  function syncForgetSavedBtn() {
+    if (!forgetSavedLoginBtn) return;
+    const saved = getSavedCredentials();
+    forgetSavedLoginBtn.classList.toggle("hidden", !(saved.userId || saved.pin));
+  }
+
+  function prefillLoginFromSaved() {
+    const saved = getSavedCredentials();
+    if (loginIdEl && saved.userId && !loginIdEl.value) {
+      loginIdEl.value = saved.userId;
+    }
+    if (loginPinEl && saved.pin && !loginPinEl.value) {
+      loginPinEl.value = saved.pin;
+    }
+    syncForgetSavedBtn();
+  }
+
+  async function copyText(value, label) {
+    const text = String(value || "");
+    if (!text) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      toast((label || "Copied") + ": " + text, "ok");
+    } catch (e) {
+      toast("Copy failed — select manually", "err");
+    }
+  }
+
+  function displayUserId(user) {
+    return (
+      (user && user.userId) ||
+      localStorage.getItem("userId") ||
+      getSavedCredentials().userId ||
+      ""
+    );
+  }
+
   function setUserChip(user) {
-    if (!userIdChip) return;
-    var id = (user && user.userId) || localStorage.getItem("userId") || "";
-    userIdChip.textContent = id ? "ID " + id : "";
+    var id = displayUserId(user);
+    if (userIdChip) {
+      userIdChip.textContent = id ? "ID " + id : "";
+      userIdChip.title = id ? "Tap to copy User ID " + id : "Your User ID";
+    }
+    if (sidebarUserIdEl) sidebarUserIdEl.textContent = id || "—";
+    if (payIdValueEl) payIdValueEl.textContent = id || "—";
+    if (statusEl) {
+      var base = "online";
+      statusEl.textContent = id ? base + " · ID " + id : base;
+    }
+  }
+
+  function showRegisterCreds(userId, pin) {
+    pendingNewCreds = { userId: userId, pin: pin };
+    saveCredentials(userId, pin);
+    if (registerCredsIdEl) registerCredsIdEl.textContent = userId;
+    if (registerCredsPinEl) registerCredsPinEl.textContent = pin;
+    if (registerCredsEl) registerCredsEl.classList.remove("hidden");
+    if (registerBtn) registerBtn.classList.add("hidden");
   }
 
   function authHeaders(json) {
@@ -777,8 +887,10 @@
     currentUser = null;
     localHours = 0;
     localStorage.removeItem("userToken");
-    localStorage.removeItem("userId");
+    // Keep saved ID/PIN on this browser for next login
     showAuth();
+    prefillLoginFromSaved();
+    setUserChip(null);
   }
 
   async function refreshMe() {
@@ -1437,10 +1549,13 @@
     if (sendIcon) sendIcon.classList.toggle("hidden", !!busy);
     if (sendSpinner) sendSpinner.classList.toggle("hidden", !busy);
     sendBtn.classList.toggle("is-busy", !!busy);
-    statusEl.textContent = busy
-      ? label ||
-        ((charNameEl && charNameEl.value.trim()) || "Chat") + " typing…"
-      : "online";
+    if (busy) {
+      statusEl.textContent =
+        label ||
+        ((charNameEl && charNameEl.value.trim()) || "Chat") + " typing…";
+    } else {
+      setUserChip(currentUser);
+    }
   }
 
   function source() {
@@ -2332,13 +2447,16 @@
     if (!billingPanel) return;
     billingPanel.classList.remove("hidden");
     billingPanel.setAttribute("aria-hidden", "false");
+    var uid = displayUserId(currentUser);
+    setUserChip(currentUser);
     if (billingUserEl) {
       billingUserEl.textContent =
-        "ID " +
-        ((currentUser && currentUser.userId) || "—") +
+        "User ID " +
+        (uid || "—") +
         " · Left " +
         formatCountdown(remainingHoursNow());
     }
+    if (payIdValueEl) payIdValueEl.textContent = uid || "—";
     if (payUploadBlock) payUploadBlock.classList.remove("hidden");
     if (payProofNav) payProofNav.classList.remove("hidden");
     goPayStep(1);
@@ -2496,17 +2614,83 @@
     window.__showLoginTab = showLoginTab;
   }
 
+  if (credsContinueLoginBtn) {
+    credsContinueLoginBtn.addEventListener("click", function () {
+      var id =
+        (pendingNewCreds && pendingNewCreds.userId) ||
+        (registerCredsIdEl && registerCredsIdEl.textContent) ||
+        "";
+      var pin =
+        (pendingNewCreds && pendingNewCreds.pin) ||
+        (registerCredsPinEl && registerCredsPinEl.textContent) ||
+        "";
+      if (typeof window.__showLoginTab === "function") {
+        window.__showLoginTab({
+          userId: id,
+          pin: pin,
+          focusPin: true,
+          sub:
+            "Your User ID is " +
+            id +
+            ". PIN is filled from this browser — tap Login.",
+        });
+      }
+    });
+  }
+
+  if (copyNewIdBtn) {
+    copyNewIdBtn.addEventListener("click", function () {
+      copyText(
+        (pendingNewCreds && pendingNewCreds.userId) ||
+          (registerCredsIdEl && registerCredsIdEl.textContent),
+        "User ID"
+      );
+    });
+  }
+  if (copyNewPinBtn) {
+    copyNewPinBtn.addEventListener("click", function () {
+      copyText(
+        (pendingNewCreds && pendingNewCreds.pin) ||
+          (registerCredsPinEl && registerCredsPinEl.textContent),
+        "PIN"
+      );
+    });
+  }
+  if (forgetSavedLoginBtn) {
+    forgetSavedLoginBtn.addEventListener("click", function () {
+      clearSavedCredentials();
+      if (loginIdEl) loginIdEl.value = "";
+      if (loginPinEl) loginPinEl.value = "";
+      toast("Saved login cleared on this browser", "ok");
+    });
+  }
+  if (userIdChip) {
+    userIdChip.addEventListener("click", function () {
+      copyText(displayUserId(currentUser), "User ID");
+    });
+  }
+  if (copySidebarIdBtn) {
+    copySidebarIdBtn.addEventListener("click", function () {
+      copyText(displayUserId(currentUser), "User ID");
+    });
+  }
+  if (copyPayIdBtn) {
+    copyPayIdBtn.addEventListener("click", function () {
+      copyText(displayUserId(currentUser), "User ID");
+    });
+  }
+
   if (loginBtn) {
     loginBtn.addEventListener("click", async function () {
       authError.textContent = "";
       const userId = loginIdEl ? loginIdEl.value.trim() : "";
       const pin = loginPinEl ? loginPinEl.value.trim() : "";
       if (!userId) {
-        authError.textContent = "User ID likho.";
+        authError.textContent = "Enter your User ID.";
         return;
       }
       if (!pin) {
-        authError.textContent = "Apna PIN likho.";
+        authError.textContent = "Enter your PIN.";
         if (loginPinEl) loginPinEl.focus();
         return;
       }
@@ -2538,6 +2722,12 @@
         if (currentUser && currentUser.userId) {
           localStorage.setItem("userId", currentUser.userId);
         }
+        if (!loginRememberEl || loginRememberEl.checked) {
+          saveCredentials(
+            (currentUser && currentUser.userId) || userId,
+            pin
+          );
+        }
         setHoursBadge(currentUser);
         setUserChip(currentUser);
         await showApp();
@@ -2548,7 +2738,7 @@
         }
         updateSetupStatus();
         await loadBillingInfo();
-        toast("Logged in", "ok");
+        toast("Logged in · ID " + ((currentUser && currentUser.userId) || userId), "ok");
       } catch (e) {
         authError.textContent = "Network error";
       }
@@ -2593,11 +2783,11 @@
         ? String(registerPinConfirmEl.value || "").trim()
         : "";
       if (!/^\d{4}$/.test(pin)) {
-        authError.textContent = "PIN exactly 4 digits hona chahiye.";
+        authError.textContent = "PIN must be exactly 4 digits.";
         return;
       }
       if (pin !== pin2) {
-        authError.textContent = "PIN aur Confirm PIN match nahi kar rahe.";
+        authError.textContent = "PIN and Confirm PIN do not match.";
         return;
       }
       // Client-side age check (server also enforces)
@@ -2634,7 +2824,7 @@
               userId: data.existingUserId,
               clearPin: true,
               focusPin: true,
-              sub: "Is device pe pehle se ID hai — apna PIN likho.",
+              sub: "This device already has an ID — enter your PIN to login.",
               error: data.error || "Register failed",
             });
           }
@@ -2644,23 +2834,10 @@
           registerResult.classList.add("hidden");
           registerResult.textContent = "";
         }
-        if (registerPinEl) registerPinEl.value = "";
-        if (registerPinConfirmEl) registerPinConfirmEl.value = "";
-        if (typeof window.__showLoginTab === "function") {
-          window.__showLoginTab({
-            userId: data.userId,
-            clearPin: true,
-            focusPin: true,
-            sub:
-              "Your User ID is " +
-              data.userId +
-              ". Enter the 4-digit PIN you just created.",
-          });
-        } else if (loginIdEl) {
-          loginIdEl.value = data.userId;
-          if (loginPinEl) loginPinEl.value = "";
-        }
-        toast("ID created: " + data.userId + " — enter your PIN to login", "ok");
+        showRegisterCreds(data.userId, pin);
+        if (loginIdEl) loginIdEl.value = data.userId;
+        if (loginPinEl) loginPinEl.value = pin;
+        toast("ID " + data.userId + " created · saved on this browser", "ok");
       } catch (e) {
         authError.textContent = "Network error";
       } finally {
@@ -2749,6 +2926,13 @@
         return;
       }
     }
+    try {
+      var legacyId = localStorage.getItem("userId");
+      if (legacyId && !localStorage.getItem(SAVED_ID_KEY)) {
+        localStorage.setItem(SAVED_ID_KEY, legacyId);
+      }
+    } catch (e) {}
     showAuth();
+    prefillLoginFromSaved();
   })();
 })();
