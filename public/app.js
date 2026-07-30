@@ -702,7 +702,16 @@
 
   function syncLocalClock(user) {
     if (!user) return;
-    localHours = Number(user.hoursBalance != null ? user.hoursBalance : 0);
+    let next = Number(user.hoursBalance != null ? user.hoursBalance : 0);
+    // While the live timer runs, never rewind from a stale server snapshot
+    // (e.g. chat response captured hours at request start before a long AI wait).
+    if (timerRunning) {
+      const clientLeft = remainingHoursNow();
+      if (next > clientLeft + 1 / 3600) {
+        next = clientLeft;
+      }
+    }
+    localHours = Math.max(0, next);
     localSyncedAt = Date.now();
     if (currentUser) {
       currentUser.hoursBalance = localHours;
@@ -798,10 +807,14 @@
 
   /** Timer starts only after user's first message (not on login / open chat). */
   async function ensureHoursCounting() {
-    if (hoursCounting) return;
+    const already = hoursCounting;
     hoursCounting = true;
+    // Always resume + ensure the interval is running (early-return used to leave
+    // hoursCounting=true while timerRunning stayed false after a pause/race).
     await resumeSession();
-    startLiveTimer();
+    if (!already || !timerRunning) {
+      startLiveTimer();
+    }
   }
 
   async function pauseBillingQuiet() {

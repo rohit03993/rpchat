@@ -390,6 +390,19 @@ function requireHours(req, res, next) {
   next();
 }
 
+/** Fresh wallet fields after a long Venice call (req.billingUser is from request start). */
+function liveBillingFields(userId) {
+  const tick = billing.tickUserHours(userId);
+  const u = tick.user || billing.publicUser(billing.getUser(userId));
+  return {
+    hoursBalance: u?.hoursBalance,
+    hasPaid: u?.hasPaid,
+    timeLabel: u?.timeLabel,
+    minutesLeft: u?.minutesLeft,
+    secondsLeft: u?.secondsLeft,
+  };
+}
+
 // ---------- Auth & billing ----------
 app.post("/api/auth/register", (req, res) => {
   try {
@@ -1097,10 +1110,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         workedMs,
         steps,
         mode: "maa-agent",
-        hoursBalance: req.billingUser?.hoursBalance,
-        hasPaid: req.billingUser?.hasPaid,
-        timeLabel: req.billingUser?.timeLabel,
-        minutesLeft: req.billingUser?.minutesLeft,
+        ...liveBillingFields(req.userId),
       });
     }
 
@@ -1171,10 +1181,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       return res.json({
         reply,
         mode: "venice-character",
-        hoursBalance: req.billingUser?.hoursBalance,
-        hasPaid: req.billingUser?.hasPaid,
-        timeLabel: req.billingUser?.timeLabel,
-        minutesLeft: req.billingUser?.minutesLeft,
+        ...liveBillingFields(req.userId),
       });
     }
 
@@ -1271,10 +1278,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
     res.json({
       reply,
       mode: "custom",
-      hoursBalance: req.billingUser?.hoursBalance,
-      hasPaid: req.billingUser?.hasPaid,
-      timeLabel: req.billingUser?.timeLabel,
-      minutesLeft: req.billingUser?.minutesLeft,
+      ...liveBillingFields(req.userId),
     });
   } catch (err) {
     console.error(err);
