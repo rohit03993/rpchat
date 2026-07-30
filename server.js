@@ -1212,20 +1212,56 @@ app.post("/api/tts", requireUser, requireHours, async (req, res) => {
       return res.status(400).json({ error: "text required" });
     }
 
-    // Speak dialogue only — drop *actions* and "Name:" labels
+    // Dialogue only — drop *actions* and "Name:" labels
     let spoken = raw
       .replace(/\*[^*]*\*/g, " ")
       .replace(/^\s*[A-Za-z][\w .'-]{0,40}:\s*/gm, "")
+      .replace(/[—–]/g, ", ")
+      .replace(/\.{3,}/g, ", ")
       .replace(/\s+/g, " ")
-      .trim()
+      .trim();
+
+    // Light Hinglish pronunciation hints (Roman text → clearer speech)
+    spoken = spoken
+      .replace(/\bbeta\b/gi, "bayta")
+      .replace(/\bbeti\b/gi, "baytee")
+      .replace(/\bmaa\b/gi, "maa")
+      .replace(/\bmummy\b/gi, "mummy")
+      .replace(/\bnahi\b/gi, "nahee")
+      .replace(/\bhaan\b/gi, "haan")
+      .replace(/\baccha\b/gi, "acchaa")
+      .replace(/\btheek\b/gi, "theek")
+      .replace(/\bchut\b/gi, "choot")
+      .replace(/\blund\b/gi, "lund")
+      .replace(/\bchod\b/gi, "chod")
+      .replace(/\bmadarchod\b/gi, "madarchod")
+      .replace(/\bbhenchod\b/gi, "bhenchod")
+      .replace(/\brandi\b/gi, "randee")
+      .replace(/\bkutti\b/gi, "kuttee")
+      .replace(/\bgaand\b/gi, "gaand")
       .slice(0, 3500);
 
     if (spoken.length < 2) {
       return res.status(400).json({ error: "Nothing to speak in that message." });
     }
 
-    const model = process.env.VENICE_TTS_MODEL || "tts-kokoro";
-    const voice = process.env.VENICE_TTS_VOICE || "af_sky";
+    // Default: Indian female (Inworld Priya) — better on Roman Hinglish than US English voices
+    // Alt: tts-kokoro + hf_alpha / hf_beta (Hindi-native Kokoro women)
+    const model =
+      process.env.VENICE_TTS_MODEL || "tts-inworld-1-5-max";
+    const voice = process.env.VENICE_TTS_VOICE || "Priya";
+    const language =
+      String(req.body?.language || process.env.VENICE_TTS_LANGUAGE || "").trim() ||
+      undefined;
+
+    const payload = {
+      model,
+      voice,
+      input: spoken,
+      response_format: "mp3",
+      speed: Number(process.env.VENICE_TTS_SPEED || 0.95) || 0.95,
+    };
+    if (language) payload.language = language;
 
     const response = await fetch(`${VENICE_BASE_URL}/audio/speech`, {
       method: "POST",
@@ -1233,12 +1269,7 @@ app.post("/api/tts", requireUser, requireHours, async (req, res) => {
         Authorization: `Bearer ${VENICE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        voice,
-        input: spoken,
-        response_format: "mp3",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
