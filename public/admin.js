@@ -31,6 +31,10 @@
   const chatDrawerTitle = document.getElementById("chat-drawer-title");
   const chatDrawerMeta = document.getElementById("chat-drawer-meta");
   const chatDrawerBody = document.getElementById("chat-drawer-body");
+  const chatSessionTabs = document.getElementById("chat-session-tabs");
+  const chatDeleteBtn = document.getElementById("chat-delete-btn");
+  const purgeOldChatsBtn = document.getElementById("purge-old-chats-btn");
+  let openChatUserId = "";
   const setUpiId = document.getElementById("set-upi-id");
   const setUpiName = document.getElementById("set-upi-name");
   const setQrPreview = document.getElementById("set-qr-preview");
@@ -353,15 +357,131 @@
     if (!chatDrawer) return;
     chatDrawer.classList.add("hidden");
     chatDrawer.setAttribute("aria-hidden", "true");
+    openChatUserId = "";
+    if (chatDeleteBtn) chatDeleteBtn.classList.add("hidden");
+    if (chatSessionTabs) {
+      chatSessionTabs.classList.add("hidden");
+      chatSessionTabs.innerHTML = "";
+    }
+  }
+
+  function renderSessionMessages(session, source, keepDays) {
+    if (!session || !Array.isArray(session.history) || !session.history.length) {
+      chatDrawerMeta.textContent = "No saved chat yet for this user.";
+      chatDrawerBody.innerHTML =
+        "<div class='empty'>Empty — user has not chatted, or history was never saved.</div>";
+      return;
+    }
+
+    const form = session.form || {};
+    const char =
+      form.characterName ||
+      (session.selectedCharacter && session.selectedCharacter.name) ||
+      "—";
+    const role = form.botRole || "—";
+    const when = session.updatedAt || session.archivedAt;
+    chatDrawerMeta.textContent =
+      (source === "archived" ? "Archived · " : "Live · ") +
+      "Kept " +
+      (keepDays || 5) +
+      " days · Character: " +
+      char +
+      " · Role: " +
+      role +
+      (when ? " · " + new Date(when).toLocaleString() : "");
+
+    const msgs = session.history.filter(function (m) {
+      return (
+        m &&
+        m.content &&
+        !/^Setup locked for this chat:/i.test(String(m.content))
+      );
+    });
+
+    if (!msgs.length) {
+      chatDrawerBody.innerHTML =
+        "<div class='empty'>Only setup data — no dialogue yet.</div>";
+      return;
+    }
+
+    chatDrawerBody.innerHTML = msgs
+      .map(function (m) {
+        const who = m.role === "user" ? "User" : "AI";
+        const cls = m.role === "user" ? "user" : "ai";
+        return (
+          "<div class='chat-bubble " +
+          cls +
+          "'><span class='chat-who'>" +
+          who +
+          "</span><p>" +
+          escapeHtml(m.content) +
+          "</p></div>"
+        );
+      })
+      .join("");
+  }
+
+  function renderChatSessions(sessions, keepDays) {
+    if (!chatSessionTabs) return;
+    if (!sessions || sessions.length <= 1) {
+      chatSessionTabs.classList.add("hidden");
+      chatSessionTabs.innerHTML = "";
+      return;
+    }
+    chatSessionTabs.classList.remove("hidden");
+    chatSessionTabs.innerHTML = sessions
+      .map(function (item, idx) {
+        const s = item.session || {};
+        const when = s.updatedAt || s.archivedAt;
+        const label =
+          (item.source === "live" ? "Live" : "Old") +
+          (when ? " · " + new Date(when).toLocaleString() : "") +
+          " · #" +
+          (idx + 1);
+        return (
+          "<button type='button' class='chat-session-tab" +
+          (idx === 0 ? " active" : "") +
+          "' data-session-idx='" +
+          idx +
+          "'>" +
+          escapeHtml(label) +
+          "</button>"
+        );
+      })
+      .join("");
+
+    chatSessionTabs.onclick = function (e) {
+      const btn = e.target.closest("[data-session-idx]");
+      if (!btn) return;
+      const idx = Number(btn.getAttribute("data-session-idx"));
+      const item = sessions[idx];
+      if (!item) return;
+      Array.prototype.forEach.call(
+        chatSessionTabs.querySelectorAll(".chat-session-tab"),
+        function (el) {
+          el.classList.toggle(
+            "active",
+            el.getAttribute("data-session-idx") === String(idx)
+          );
+        }
+      );
+      renderSessionMessages(item.session, item.source, keepDays);
+    };
   }
 
   async function openUserChat(userId) {
     if (!chatDrawer) return;
+    openChatUserId = String(userId || "");
     chatDrawer.classList.remove("hidden");
     chatDrawer.setAttribute("aria-hidden", "false");
     chatDrawerTitle.textContent = "User " + userId;
     chatDrawerMeta.textContent = "Loading chat…";
     chatDrawerBody.innerHTML = "<p class='meta'>Loading…</p>";
+    if (chatDeleteBtn) chatDeleteBtn.classList.remove("hidden");
+    if (chatSessionTabs) {
+      chatSessionTabs.classList.add("hidden");
+      chatSessionTabs.innerHTML = "";
+    }
 
     try {
       const res = await fetch(
@@ -381,59 +501,27 @@
         return;
       }
 
-      const session = data.session;
-      const source = data.source;
-      if (!session || !Array.isArray(session.history) || !session.history.length) {
+      const sessions =
+        Array.isArray(data.sessions) && data.sessions.length
+          ? data.sessions
+          : data.session
+            ? [{ source: data.source || "live", session: data.session }]
+            : [];
+      const keepDays = data.keepDays || 5;
+
+      if (!sessions.length) {
         chatDrawerMeta.textContent = "No saved chat yet for this user.";
         chatDrawerBody.innerHTML =
           "<div class='empty'>Empty — user has not chatted, or history was never saved.</div>";
         return;
       }
 
-      const form = session.form || {};
-      const char =
-        form.characterName ||
-        (session.selectedCharacter && session.selectedCharacter.name) ||
-        "—";
-      const role = form.botRole || "—";
-      const when = session.updatedAt || session.archivedAt;
-      chatDrawerMeta.textContent =
-        (source === "archived" ? "Archived (plan ended) · " : "Live · ") +
-        "Character: " +
-        char +
-        " · Role: " +
-        role +
-        (when ? " · " + new Date(when).toLocaleString() : "");
-
-      const msgs = session.history.filter(function (m) {
-        return (
-          m &&
-          m.content &&
-          !/^Setup locked for this chat:/i.test(String(m.content))
-        );
-      });
-
-      if (!msgs.length) {
-        chatDrawerBody.innerHTML =
-          "<div class='empty'>Only setup data — no dialogue yet.</div>";
-        return;
-      }
-
-      chatDrawerBody.innerHTML = msgs
-        .map(function (m) {
-          const who = m.role === "user" ? "User" : "AI";
-          const cls = m.role === "user" ? "user" : "ai";
-          return (
-            "<div class='chat-bubble " +
-            cls +
-            "'><span class='chat-who'>" +
-            who +
-            "</span><p>" +
-            escapeHtml(m.content) +
-            "</p></div>"
-          );
-        })
-        .join("");
+      renderChatSessions(sessions, keepDays);
+      renderSessionMessages(
+        sessions[0].session,
+        sessions[0].source,
+        keepDays
+      );
     } catch (e) {
       chatDrawerMeta.textContent = "";
       chatDrawerBody.innerHTML = "<div class='empty'>Network error</div>";
@@ -459,7 +547,9 @@
       .map(function (u) {
         const clock = formatClock(u.hoursBalance);
         const chatLabel = u.chatMsgCount
-          ? u.chatMsgCount + (u.chatArchived ? " (old)" : "")
+          ? u.chatMsgCount +
+            (u.chatSessionCount > 1 ? " / " + u.chatSessionCount + " chats" : "") +
+            (u.chatArchived && !u.chatLive ? " (old)" : "")
           : "—";
         const scene =
           (u.characterName || "—") +
@@ -521,6 +611,12 @@
           "<button type='button' class='btn-ghost btn-sm' data-reset-pin='" +
           escapeHtml(u.userId) +
           "'>Reset PIN</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Delete live + archived chats' data-delete-chats='" +
+          escapeHtml(u.userId) +
+          "'>Del chats</button>" +
+          "<button type='button' class='btn-danger btn-sm' title='Delete account forever' data-delete-user='" +
+          escapeHtml(u.userId) +
+          "'>Del account</button>" +
           (u.isLegacy || u.needsFourDigit
             ? "<button type='button' class='btn btn-sm' data-migrate='" +
               escapeHtml(u.userId) +
@@ -713,7 +809,9 @@
 
   usersEl.addEventListener("click", async function (e) {
     const t = e.target.closest
-      ? e.target.closest("[data-view-chat], [data-add-hours], [data-add-hours5], [data-clear-hours], [data-reset-pin], [data-migrate]")
+      ? e.target.closest(
+          "[data-view-chat], [data-add-hours], [data-add-hours5], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
+        )
       : e.target;
     if (!t) return;
 
@@ -734,12 +832,78 @@
         !confirm(
           "Clear time for " +
             id +
-            "?\n\nSets hours to 0 and ends their live chat (copy kept in admin archive)."
+            "?\n\nSets hours to 0 and ends their live chat (copy kept in admin archive for 5 days)."
         )
       ) {
         return;
       }
       adjustHours(id, 0, "set");
+    }
+    const deleteChats = t.getAttribute("data-delete-chats");
+    if (deleteChats) {
+      if (
+        !confirm(
+          "Delete ALL chats for " +
+            deleteChats +
+            "?\n\nLive + archived chats removed forever (not recoverable)."
+        )
+      ) {
+        return;
+      }
+      const res = await fetch(
+        "/api/admin/users/" + encodeURIComponent(deleteChats) + "/chats",
+        { method: "DELETE", headers: authHeaders() }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Delete chats failed", "err");
+      } else {
+        toast(
+          "Chats deleted (" + (data.removedSessions || 0) + " sessions)",
+          "ok"
+        );
+        if (openChatUserId === deleteChats) closeChatDrawer();
+      }
+      await refreshAll();
+      return;
+    }
+    const deleteUser = t.getAttribute("data-delete-user");
+    if (deleteUser) {
+      if (
+        !confirm(
+          "DELETE ACCOUNT " +
+            deleteUser +
+            " forever?\n\nRemoves user, chats, login tokens, and payment records/screenshots."
+        )
+      ) {
+        return;
+      }
+      if (
+        !confirm(
+          "Final confirm: permanently delete user " + deleteUser + "?"
+        )
+      ) {
+        return;
+      }
+      const res = await fetch(
+        "/api/admin/users/" + encodeURIComponent(deleteUser),
+        { method: "DELETE", headers: authHeaders() }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Delete account failed", "err");
+      } else {
+        toast("Account " + deleteUser + " deleted", "ok");
+        if (openChatUserId === deleteUser) closeChatDrawer();
+      }
+      await refreshAll();
+      return;
     }
     const resetPin = t.getAttribute("data-reset-pin");
     if (resetPin) {
@@ -778,6 +942,68 @@
     }
   });
 
+  if (chatDeleteBtn) {
+    chatDeleteBtn.addEventListener("click", async function () {
+      if (!openChatUserId) return;
+      if (
+        !confirm(
+          "Delete ALL chats for " +
+            openChatUserId +
+            "?\n\nRemoved forever from server."
+        )
+      ) {
+        return;
+      }
+      const res = await fetch(
+        "/api/admin/users/" + encodeURIComponent(openChatUserId) + "/chats",
+        { method: "DELETE", headers: authHeaders() }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Delete chats failed", "err");
+        return;
+      }
+      toast("Chats deleted", "ok");
+      closeChatDrawer();
+      await refreshAll();
+    });
+  }
+
+  if (purgeOldChatsBtn) {
+    purgeOldChatsBtn.addEventListener("click", async function () {
+      if (
+        !confirm(
+          "Purge chats older than 5 days?\n\nFrees store space. Newer chats stay."
+        )
+      ) {
+        return;
+      }
+      const res = await fetch("/api/admin/chats/purge-old", {
+        method: "POST",
+        headers: authHeaders(),
+        body: "{}",
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Purge failed", "err");
+        return;
+      }
+      toast(
+        "Purged live " +
+          (data.removedLive || 0) +
+          " · archived " +
+          (data.removedArchived || 0),
+        "ok"
+      );
+      await refreshAll();
+    });
+  }
   paymentsEl.addEventListener("click", async function (e) {
     const approveId = e.target.getAttribute("data-approve");
     const rejectId = e.target.getAttribute("data-reject");

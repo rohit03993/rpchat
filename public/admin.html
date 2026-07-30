@@ -14,7 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=6" />
+    <link rel="stylesheet" href="/admin.css?v=8" />
   </head>
   <body>
     <div class="admin-app">
@@ -108,6 +108,9 @@
                 <option value="no-time">No time</option>
               </select>
               <span id="users-count" class="meta"></span>
+              <button type="button" id="purge-old-chats-btn" class="btn-ghost btn-sm" title="Delete chats older than 5 days">
+                Purge old chats
+              </button>
               <button type="button" id="refresh-users-btn" class="btn-ghost btn-sm">
                 Refresh
               </button>
@@ -187,14 +190,20 @@
             <h2 id="chat-drawer-title">—</h2>
             <p id="chat-drawer-meta" class="meta"></p>
           </div>
-          <button type="button" class="btn-ghost btn-sm" data-close-chat>Close</button>
+          <div class="chat-drawer-actions">
+            <button type="button" id="chat-delete-btn" class="btn-danger btn-sm hidden">
+              Delete chats
+            </button>
+            <button type="button" class="btn-ghost btn-sm" data-close-chat>Close</button>
+          </div>
         </header>
+        <div id="chat-session-tabs" class="chat-session-tabs hidden"></div>
         <div id="chat-drawer-body" class="chat-drawer-body">
           <p class="meta">Loading…</p>
         </div>
       </aside>
     </div>
 
-    <script src="/admin.js?v=10"></script>
+    <script src="/admin.js?v=12"></script>
   </body>
 </html>

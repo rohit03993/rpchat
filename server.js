@@ -501,6 +501,8 @@ app.get("/api/admin/users/:id/chat", requireAdmin, (req, res) => {
     userId: req.params.id,
     source: result.source,
     session: result.session,
+    sessions: result.sessions || [],
+    keepDays: result.keepDays || 5,
   });
 });
 
@@ -517,6 +519,23 @@ app.post("/api/admin/users/:id/hours", requireAdmin, (req, res) => {
 app.post("/api/admin/users/:id/reset-pin", requireAdmin, (req, res) => {
   const result = billing.adminResetPin(req.params.id);
   if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+app.delete("/api/admin/users/:id/chats", requireAdmin, (req, res) => {
+  const result = billing.adminDeleteUserChats(req.params.id);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
+  const result = billing.adminDeleteUser(req.params.id);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+app.post("/api/admin/chats/purge-old", requireAdmin, (_req, res) => {
+  const result = billing.adminPurgeOldChats();
   res.json(result);
 });
 
