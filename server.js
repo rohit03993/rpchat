@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -293,13 +293,10 @@ function splitAgentBubbles(text) {
   return parts.slice(0, 6);
 }
 
-function extractPhotoPrompt(text) {
-  const m = String(text).match(/\[\[PHOTO:\s*([^\]]+)\]\]/i);
-  if (!m) return { text, photoPrompt: null };
-  return {
-    text: String(text).replace(m[0], "").trim(),
-    photoPrompt: m[1].trim(),
-  };
+function stripPhotoTags(text) {
+  return String(text || "")
+    .replace(/\[\[PHOTO:\s*[^\]]+\]\]/gi, "")
+    .trim();
 }
 
 app.use(cors());
@@ -884,7 +881,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         return res.status(502).json({ error: "Empty reply from Maa agent" });
       }
 
-      const { text: cleaned, photoPrompt } = extractPhotoPrompt(reply);
+      const cleaned = stripPhotoTags(reply);
       const asOne = fixMaaGenderSlips(
         splitAgentBubbles(cleaned).join("\n") || cleaned,
         charOverrides
@@ -893,7 +890,6 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
 
       return res.json({
         reply: asOne,
-        photoPrompt: photoPrompt || null,
         sceneCard,
         workedMs,
         steps,
@@ -1083,108 +1079,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
   }
 });
 
-const IMAGE_MODEL = process.env.VENICE_IMAGE_MODEL || "lustify-v8";
-const GENERATED_DIR = path.join(__dirname, "public", "generated");
-
-function ensureGeneratedDir() {
-  if (!fs.existsSync(GENERATED_DIR)) {
-    fs.mkdirSync(GENERATED_DIR, { recursive: true });
-  }
-}
-
-function detectImageExt(buf) {
-  if (buf[0] === 0x89 && buf[1] === 0x50) return "png";
-  if (buf[0] === 0xff && buf[1] === 0xd8) return "jpg";
-  if (buf[0] === 0x52 && buf[1] === 0x49) return "webp";
-  return "png";
-}
-
-app.post("/api/image", requireUser, requireHours, async (req, res) => {
-  try {
-    if (!VENICE_API_KEY) {
-      return res.status(500).json({
-        error: "VENICE_API_KEY missing. Add it to your .env file.",
-      });
-    }
-
-    const prompt = String(req.body?.prompt || "").trim();
-    if (!prompt) {
-      return res.status(400).json({ error: "prompt required" });
-    }
-
-    ensureGeneratedDir();
-
-    const response = await fetch(`${VENICE_BASE_URL}/image/generate`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${VENICE_API_KEY}`,
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      body: JSON.stringify({
-        model: IMAGE_MODEL,
-        prompt,
-        width: 1024,
-        height: 1024,
-        format: "png",
-        safe_mode: false,
-        return_binary: false,
-        variants: 1,
-      }),
-    });
-
-    const blurred = response.headers.get("x-venice-is-blurred") === "true";
-    const violated =
-      response.headers.get("x-venice-is-content-violation") === "true" ||
-      response.headers.get("x-venice-is-adult-model-content-violation") ===
-        "true";
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const message =
-        data?.error?.message || data?.error || "Image generation failed";
-      return res.status(response.status).json({ error: String(message) });
-    }
-
-    if (violated) {
-      return res.status(422).json({
-        error: "Venice blocked this image prompt. Try a different prompt.",
-      });
-    }
-
-    const b64 = data?.images?.[0];
-    if (!b64) {
-      return res.status(502).json({ error: "No image returned from Venice" });
-    }
-
-    const raw = b64.includes(",") ? b64.split(",").pop() : b64;
-    const buf = Buffer.from(raw, "base64");
-    if (!buf.length) {
-      return res.status(502).json({ error: "Image data empty/invalid" });
-    }
-
-    const ext = detectImageExt(buf);
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const filename = `${id}.${ext}`;
-    fs.writeFileSync(path.join(GENERATED_DIR, filename), buf);
-
-    res.json({
-      imageUrl: `/generated/${filename}`,
-      prompt,
-      blurred: blurred || false,
-      warning: blurred
-        ? "Image may be blurred by Venice filter."
-        : undefined,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error while generating image." });
-  }
-});
-
 app.listen(PORT, () => {
   billing.ensureDirs();
-  ensureGeneratedDir();
   console.log(`Chat running at http://localhost:${PORT}`);
   console.log(`Admin panel: http://localhost:${PORT}/admin.html`);
 });

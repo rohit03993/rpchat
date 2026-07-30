@@ -13,6 +13,7 @@ module.exports = {
       exp_backoff_restart_delay: 200,
       env: {
         NODE_ENV: "production",
+        PORT: 3000,
       },
     },
   ],

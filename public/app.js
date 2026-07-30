@@ -3,7 +3,6 @@
   const form = document.getElementById("chat-form");
   const input = document.getElementById("message-input");
   const sendBtn = document.getElementById("send-btn");
-  const imageBtn = document.getElementById("image-btn");
   const statusEl = document.getElementById("status");
   const titleEl = document.getElementById("chat-title");
   const resetBtn = document.getElementById("reset-btn");
@@ -1252,28 +1251,6 @@
     scrollMessagesToEnd(true);
   }
 
-
-  function addImageBubble(imageUrl) {
-    const bubble = document.createElement("div");
-    bubble.className = "bubble incoming image-only";
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.alt = "generated";
-    img.loading = "lazy";
-    img.onerror = function () {
-      bubble.className = "bubble error";
-      bubble.textContent = "Image load fail hui. Dobara /img try karo.";
-    };
-    const meta = document.createElement("span");
-    meta.className = "meta";
-    meta.textContent = timeNow();
-    bubble.appendChild(img);
-    bubble.appendChild(meta);
-    messagesEl.appendChild(bubble);
-    scrollMessagesToEnd(true);
-    playReplyFeedback();
-  }
-
   function showTyping() {
     hideTyping();
     const name =
@@ -1299,7 +1276,6 @@
 
   function setBusy(busy, label) {
     sendBtn.disabled = busy;
-    if (imageBtn) imageBtn.disabled = busy;
     input.disabled = busy;
     if (sendIcon) sendIcon.classList.toggle("hidden", !!busy);
     if (sendSpinner) sendSpinner.classList.toggle("hidden", !busy);
@@ -1813,56 +1789,6 @@
     resetChat();
   }
 
-  function parseImageCommand(text) {
-    const match = text.match(/^\/(?:img|image)\s+(.+)$/i);
-    return match ? match[1].trim() : null;
-  }
-
-  async function generateImage(prompt, silent) {
-    await ensureHoursCounting();
-    if (!silent) addBubble("🖼 " + prompt, "outgoing");
-    setBusy(true, "creating image...");
-    showTyping();
-
-    try {
-      const res = await fetch("/api/image", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ prompt: prompt }),
-      });
-      const data = await res.json();
-      hideTyping();
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          logout();
-          return;
-        }
-        addBubble(data.error || "Image generate nahi hui", "error");
-        if (data.user) applyTimeFromResponse(data);
-        if (data.code === "NO_HOURS" || data.chatCleared || res.status === 402) {
-          await handlePlanEnded(
-            data.error ||
-              "Plan khatam ✓ Chat history clear. Pay karke naya package lo."
-          );
-          openPaySheet();
-        }
-        return;
-      }
-
-      if (typeof data.hoursBalance === "number") applyTimeFromResponse(data);
-      if (data.warning) addBubble(data.warning, "error");
-      addBubble("Sent photo", "incoming");
-      addImageBubble(data.imageUrl);
-    } catch (e) {
-      hideTyping();
-      addBubble("Image network error. Dobara try karo.", "error");
-    } finally {
-      setBusy(false);
-      input.focus();
-    }
-  }
-
   async function sendChat(text) {
     if (!setupLocked) {
       addBubble("Pehle setup complete karo — Start chat dabao.", "error");
@@ -1946,10 +1872,6 @@
       history.push({ role: "assistant", content: reply });
       addBubble(reply, "incoming");
       scheduleSaveChatSession();
-
-      if (data.photoPrompt) {
-        await generateImage(data.photoPrompt, true);
-      }
     } catch (e) {
       hideTyping();
       addBubble("Network issue hai, thodi der baad try karo.", "error");
@@ -2045,30 +1967,11 @@
     characterSelect.addEventListener("change", onCharacterPicked);
   }
 
-  if (imageBtn) {
-    imageBtn.addEventListener("click", function () {
-      const prompt = input.value.trim();
-      if (!prompt) {
-        input.placeholder = "/img a girl smiling in rain";
-        input.focus();
-        return;
-      }
-      const fromCmd = parseImageCommand(prompt);
-      input.value = "";
-      generateImage(fromCmd || prompt);
-    });
-  }
-
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
-    const imagePrompt = parseImageCommand(text);
-    if (imagePrompt) {
-      await generateImage(imagePrompt);
-      return;
-    }
     await sendChat(text);
   });
 
