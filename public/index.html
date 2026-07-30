@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=49" />
+    <link rel="stylesheet" href="/styles.css?v=50" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -246,8 +246,8 @@
           Character name
           <input id="char-name" type="text" value="Maa" maxlength="40" placeholder="Neetu Mom, Priya…" />
         </label>
-        <label>
-          AI is
+        <label class="full">
+          Who is AI?
           <select id="rp-bot-role">
             <optgroup label="Parents">
               <option value="mummy" selected>Mummy / Maa</option>
@@ -258,34 +258,34 @@
               <option value="mausa">Mausa (Mausi ke pati)</option>
               <option value="mama">Mama (Maa ka bhai)</option>
               <option value="mami">Mami (Mama ki wife)</option>
-              <option value="nani">Nani (Nana ji)</option>
+              <option value="nani">Nani</option>
               <option value="nana">Nana</option>
             </optgroup>
             <optgroup label="Father's side">
-              <option value="chachi">Chachi (Chacha ki wife)</option>
-              <option value="chacha">Chacha (Papa ka chhota bhai)</option>
-              <option value="tai">Tai (Tau ki wife)</option>
-              <option value="tau">Tau (Papa ka bada bhai)</option>
-              <option value="bua">Bua (Papa ki behen)</option>
-              <option value="phupha">Phupha (Bua ke pati)</option>
+              <option value="chachi">Chachi</option>
+              <option value="chacha">Chacha</option>
+              <option value="tai">Tai</option>
+              <option value="tau">Tau</option>
+              <option value="bua">Bua</option>
+              <option value="phupha">Phupha</option>
               <option value="dadi">Dadi</option>
               <option value="dada">Dada</option>
             </optgroup>
             <optgroup label="Siblings / cousins">
               <option value="sister">Didi / Bahan</option>
               <option value="brother">Bhai</option>
-              <option value="bhabhi">Bhabhi (Bhai ki wife)</option>
-              <option value="jija">Jija (Behen ke pati)</option>
+              <option value="bhabhi">Bhabhi</option>
+              <option value="jija">Jija</option>
             </optgroup>
             <optgroup label="In-laws (sasural)">
-              <option value="saas">Saas (Mother-in-law)</option>
-              <option value="sasur">Sasur (Father-in-law)</option>
-              <option value="bahu">Bahu (Daughter-in-law)</option>
-              <option value="nanad">Nanad (Husband ki behen)</option>
-              <option value="devar">Devar (Husband ka chhota bhai)</option>
-              <option value="jeth">Jeth (Husband ka bada bhai)</option>
-              <option value="sali">Sali (Wife ki behen)</option>
-              <option value="sala">Sala (Wife ka bhai)</option>
+              <option value="saas">Saas</option>
+              <option value="sasur">Sasur</option>
+              <option value="bahu">Bahu</option>
+              <option value="nanad">Nanad</option>
+              <option value="devar">Devar</option>
+              <option value="jeth">Jeth</option>
+              <option value="sali">Sali</option>
+              <option value="sala">Sala</option>
             </optgroup>
             <optgroup label="Romantic / friends">
               <option value="girlfriend">Girlfriend</option>
@@ -298,124 +298,123 @@
             <option value="custom">Custom…</option>
           </select>
         </label>
-        <label>
-          You are
-          <select id="rp-user-role">
-            <optgroup label="Children / nephew">
-              <option value="beta" selected>Beta (Mummy ka beta)</option>
-              <option value="son">Beta / Son (same sex as papa)</option>
-              <option value="beti">Beti / Daughter (Papa ki beti)</option>
-              <option value="bhatija">Bhatija (Chacha/Bua ka)</option>
-              <option value="bhanja">Bhanja (Mausi/Mama ka)</option>
-              <option value="bhanji">Bhanji</option>
-              <option value="pota">Pota / Grandson</option>
-              <option value="poti">Poti / Granddaughter</option>
-            </optgroup>
-            <optgroup label="Siblings">
-              <option value="brother">Brother / Bhai</option>
-              <option value="sister">Sister / Didi</option>
-              <option value="devar">Devar</option>
-              <option value="jeth">Jeth</option>
-              <option value="nanad">Nanad</option>
-              <option value="bhabhi">Bhabhi</option>
-            </optgroup>
-            <optgroup label="In-laws">
-              <option value="bahu">Bahu (Daughter-in-law)</option>
-              <option value="jamai">Jamai / Damad (Son-in-law)</option>
-              <option value="sasur">Sasur (Father-in-law)</option>
-              <option value="saas">Saas (Mother-in-law)</option>
-              <option value="sala">Sala</option>
-              <option value="sali">Sali</option>
-            </optgroup>
-            <optgroup label="Partner / friend">
-              <option value="boyfriend">Boyfriend</option>
-              <option value="girlfriend">Girlfriend</option>
-              <option value="husband">Husband</option>
-              <option value="wife">Wife</option>
-              <option value="friend">Friend</option>
-            </optgroup>
-            <option value="custom">Custom…</option>
-          </select>
-        </label>
         <label class="full hidden" id="rp-custom-roles">
           Custom roles
-          <input id="rp-custom-bot" type="text" maxlength="40" placeholder="AI role" />
-          <input id="rp-custom-user" type="text" maxlength="40" placeholder="Your role" style="margin-top:6px" />
-        </label>
-        <label>
-          Place
-          <select id="rp-place">
-            <option value="home bedroom at night" selected>Bedroom (night)</option>
-            <option value="home living room alone">Living room</option>
-            <option value="late night phone/WhatsApp chat">Phone chat</option>
-            <option value="home kitchen morning">Kitchen</option>
-            <option value="custom">Custom</option>
-          </select>
-        </label>
-        <label>
-          Language
-          <select id="language">
-            <option value="hinglish" selected>Hinglish</option>
-            <option value="hindi">Hindi (Roman)</option>
-            <option value="english">English</option>
-            <option value="auto">Auto</option>
-          </select>
-        </label>
-        <label>
-          Start vibe
-          <select id="rp-vibe">
-            <option value="shy and flirty" selected>Shy + flirty</option>
-            <option value="soft romantic">Soft romantic</option>
-            <option value="already heated">Already heated</option>
-          </select>
-        </label>
-        <label>
-          Pace
-          <select id="rp-pace">
-            <option value="slow: shy then flirty then more only if user pushes" selected>Slow seduce</option>
-            <option value="match user heat">Match you</option>
-            <option value="can go dirty faster">Faster dirty</option>
-          </select>
+          <input id="rp-custom-bot" type="text" maxlength="40" placeholder="AI role (e.g. baap)" />
+          <input id="rp-custom-user" type="text" maxlength="40" placeholder="Your role (e.g. beti)" style="margin-top:6px" />
         </label>
         <label class="full">
-          Extra (optional)
-          <input id="rp-note" type="text" maxlength="200" placeholder="alone at home…" />
+          What kind of RP do you want? (optional)
+          <textarea
+            id="rp-note"
+            maxlength="400"
+            rows="3"
+            placeholder="Example: Main beti hu. Soft flirty se start. Main push karungi tab dirty. Place chat mein decide karenge…"
+          ></textarea>
         </label>
-        <label class="full">
-          Engine
-          <select id="chat-source">
-            <option value="maa" selected>Smart RP Agent</option>
-            <option value="venice">Venice Character</option>
-            <option value="custom">Custom roles</option>
-          </select>
-        </label>
-        <div id="venice-panel" class="full venice-panel hidden">
-          <label>Search<input id="char-search" type="text" placeholder="mom, girlfriend…" /></label>
-          <div class="char-row">
-            <button type="button" id="char-search-btn" class="mini-btn">Search</button>
-            <label class="check"><input id="char-adult" type="checkbox" checked /> Adult</label>
-          </div>
-          <select id="character-select" size="3"><option value="">Select…</option></select>
-          <p id="char-info" class="char-info"></p>
-        </div>
-        <div id="custom-panel" class="full custom-panel hidden">
-          <label>AI role<input id="bot-role" type="text" value="mummy" maxlength="40" /></label>
-          <label>Your role<input id="user-role" type="text" value="beta" maxlength="40" /></label>
-          <label>Mode
-            <select id="chat-mode">
-              <option value="normal" selected>Normal</option>
-              <option value="flirty">Flirty</option>
-              <option value="lust">Lust</option>
+        <p id="rp-setup-status" class="char-info full"></p>
+
+        <div class="setup-advanced full">
+          <p class="setup-advanced-title">More options (optional)</p>
+          <label>
+            You are
+            <select id="rp-user-role">
+              <optgroup label="Children / nephew">
+                <option value="beta" selected>Beta</option>
+                <option value="son">Beta / Son</option>
+                <option value="beti">Beti / Daughter</option>
+                <option value="bhatija">Bhatija</option>
+                <option value="bhanja">Bhanja</option>
+                <option value="bhanji">Bhanji</option>
+                <option value="pota">Pota</option>
+                <option value="poti">Poti</option>
+              </optgroup>
+              <optgroup label="Siblings">
+                <option value="brother">Brother / Bhai</option>
+                <option value="sister">Sister / Didi</option>
+                <option value="devar">Devar</option>
+                <option value="jeth">Jeth</option>
+                <option value="nanad">Nanad</option>
+                <option value="bhabhi">Bhabhi</option>
+              </optgroup>
+              <optgroup label="In-laws">
+                <option value="bahu">Bahu</option>
+                <option value="jamai">Jamai</option>
+                <option value="sasur">Sasur</option>
+                <option value="saas">Saas</option>
+                <option value="sala">Sala</option>
+                <option value="sali">Sali</option>
+              </optgroup>
+              <optgroup label="Partner / friend">
+                <option value="boyfriend">Boyfriend</option>
+                <option value="girlfriend">Girlfriend</option>
+                <option value="husband">Husband</option>
+                <option value="wife">Wife</option>
+                <option value="friend">Friend</option>
+              </optgroup>
+              <option value="custom">Custom…</option>
             </select>
           </label>
+          <label>
+            Language
+            <select id="language">
+              <option value="hinglish" selected>Hinglish</option>
+              <option value="hindi">Hindi (Roman)</option>
+              <option value="english">English</option>
+              <option value="auto">Auto</option>
+            </select>
+          </label>
+          <label>
+            Start vibe
+            <select id="rp-vibe">
+              <option value="shy and flirty" selected>Shy + flirty</option>
+              <option value="soft romantic">Soft romantic</option>
+              <option value="already heated">Already heated</option>
+            </select>
+          </label>
+          <label>
+            Pace
+            <select id="rp-pace">
+              <option value="slow: shy then flirty then more only if user pushes" selected>Slow seduce</option>
+              <option value="match user heat">Match you</option>
+              <option value="can go dirty faster">Faster dirty</option>
+            </select>
+          </label>
+          <label class="full">
+            Engine
+            <select id="chat-source">
+              <option value="maa" selected>Smart RP Agent</option>
+              <option value="venice">Venice Character</option>
+              <option value="custom">Custom roles</option>
+            </select>
+          </label>
+          <div id="venice-panel" class="full venice-panel hidden">
+            <label>Search<input id="char-search" type="text" placeholder="mom, girlfriend…" /></label>
+            <div class="char-row">
+              <button type="button" id="char-search-btn" class="mini-btn">Search</button>
+              <label class="check"><input id="char-adult" type="checkbox" checked /> Adult</label>
+            </div>
+            <select id="character-select" size="3"><option value="">Select…</option></select>
+            <p id="char-info" class="char-info"></p>
+          </div>
+          <div id="custom-panel" class="full custom-panel hidden">
+            <label>AI role<input id="bot-role" type="text" value="mummy" maxlength="40" /></label>
+            <label>Your role<input id="user-role" type="text" value="beta" maxlength="40" /></label>
+            <label>Mode
+              <select id="chat-mode">
+                <option value="normal" selected>Normal</option>
+                <option value="flirty">Flirty</option>
+                <option value="lust">Lust</option>
+              </select>
+            </label>
+          </div>
         </div>
-        <p id="rp-setup-status" class="char-info full"></p>
       </div>
 
       <div id="setup-modal" class="setup-modal">
         <div class="setup-card">
-          <h2>Set up your chat</h2>
-          <p class="setup-sub">Choose character &amp; roles — then start. Edit anytime from ☰</p>
+          <h2>Start your chat</h2>
+          <p class="setup-sub">Pick who the AI is, optional name + what you want — place &amp; scene tum chat mein decide karo.</p>
           <div id="setup-form-slot"></div>
           <button type="button" id="start-chat-btn" class="auth-btn">Start chat</button>
         </div>
@@ -557,6 +556,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=62" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=63" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

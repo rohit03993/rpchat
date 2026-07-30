@@ -19,7 +19,7 @@
   const charAdultEl = document.getElementById("char-adult");
   const characterSelect = document.getElementById("character-select");
   const charInfo = document.getElementById("char-info");
-  const rpPlaceEl = document.getElementById("rp-place");
+  const rpPlaceEl = null; // place removed — user decides in chat / RP brief
   const rpVibeEl = document.getElementById("rp-vibe");
   const rpPaceEl = document.getElementById("rp-pace");
   const rpNoteEl = document.getElementById("rp-note");
@@ -297,7 +297,6 @@
       userRole: rpUserRoleEl ? rpUserRoleEl.value : "beta",
       customBot: rpCustomBot ? rpCustomBot.value : "",
       customUser: rpCustomUser ? rpCustomUser.value : "",
-      place: rpPlaceEl ? rpPlaceEl.value : "",
       language: languageEl ? languageEl.value : "hinglish",
       vibe: rpVibeEl ? rpVibeEl.value : "",
       pace: rpPaceEl ? rpPaceEl.value : "",
@@ -316,7 +315,6 @@
     if (rpUserRoleEl && form.userRole) rpUserRoleEl.value = form.userRole;
     if (rpCustomBot && form.customBot != null) rpCustomBot.value = form.customBot;
     if (rpCustomUser && form.customUser != null) rpCustomUser.value = form.customUser;
-    if (rpPlaceEl && form.place) rpPlaceEl.value = form.place;
     if (languageEl && form.language) languageEl.value = form.language;
     if (rpVibeEl && form.vibe) rpVibeEl.value = form.vibe;
     if (rpPaceEl && form.pace) rpPaceEl.value = form.pace;
@@ -1726,20 +1724,20 @@
 
   function buildRpSetupText() {
     const roles = getRpRoles();
-    const placeVal = rpPlaceEl ? rpPlaceEl.value : "home bedroom at night";
-    const note = rpNoteEl ? rpNoteEl.value.trim() : "";
-    const place =
-      placeVal === "custom" ? note || "private custom place" : placeVal;
+    const brief = rpNoteEl ? rpNoteEl.value.trim() : "";
     const vibe = rpVibeEl ? rpVibeEl.value : "shy and flirty";
     const pace = rpPaceEl
       ? rpPaceEl.value
       : "slow: shy then flirty then more only if user pushes";
-    const extra = placeVal === "custom" ? "none" : note || "none";
     const relationship =
       roles.botRole +
       " primary with " +
       roles.userRole +
       " — NEVER swap gender or rishta; masti with user only unless user asks to add a relative or wants a confession; never invent 'I hooked up with your nani/mummy'.";
+    const briefBlock = brief
+      ? "USER RP BRIEF (OBEY carefully — scene, place, pace, boundaries, address): " +
+        brief
+      : "USER RP BRIEF: none — ask lightly in chat where you are; do NOT assume bedroom-at-night.";
     return (
       "Character name: " +
       roles.characterName +
@@ -1759,15 +1757,13 @@
       roles.botRole +
       " named " +
       roles.characterName +
-      " every message. Rishta lock: speak with correct Indian addressing (Mummy says meri Maa not Nani; Bahu says Papa ji to Sasur). Family: one relative at a time only if asked. Place: " +
-      place +
-      ". Start vibe: " +
+      " every message. Rishta lock: speak with correct Indian addressing (Mummy says meri Maa not Nani; Bahu says Papa ji to Sasur). Family: one relative at a time only if asked. Place: NOT fixed — follow USER RP BRIEF and chat; never force night bedroom. Start vibe: " +
       vibe +
       ". Pace: " +
       pace +
-      ". All adults 18+. Extra: " +
-      extra +
-      ". Default shy + flirty first unless vibe says otherwise."
+      ". All adults 18+. " +
+      briefBlock +
+      ". Default shy + flirty first unless brief/vibe says otherwise."
     );
   }
 
@@ -1779,8 +1775,7 @@
       return "Custom chat";
     }
     const roles = getRpRoles();
-    const place = rpPlaceEl ? rpPlaceEl.selectedOptions[0].textContent : "Scene";
-    return "✓ " + roles.characterName + " · " + roles.botRole + " · " + place;
+    return "✓ " + roles.characterName + " · " + roles.botRole;
   }
 
   function parkSceneForm(where) {
@@ -1967,7 +1962,8 @@
     if (setupLocked) {
       rpSetupStatus.textContent = "Live. Sidebar se edit · New chat se reset.";
     } else {
-      rpSetupStatus.textContent = "Details choose karke Start chat dabao.";
+      rpSetupStatus.textContent =
+        "Who is AI + optional RP note → Start. Place tum chat mein decide karo.";
     }
   }
 
@@ -1976,10 +1972,10 @@
       const roles = getRpRoles();
       return (
         roles.characterName +
-        ": Pehle name + roles + place set karo upar, phir pehla message bhejo.\n" +
+        ": Roles set karke pehla message bhejo.\n" +
         "Main " +
         roles.botRole +
-        " ban ke shy-flirty se start karungi/karunga — details ke hisaab se. 💕"
+        " ban ke shy-flirty se start karungi/karunga — tumhari RP note + chat follow karungi. Place tum decide karo. 💕"
       );
     }
     if (isVeniceMode()) {
@@ -2242,7 +2238,7 @@
       if (!setupLocked) resetChat();
     });
   }
-  [rpPlaceEl, rpVibeEl, rpPaceEl, rpNoteEl, charNameEl, rpBotRoleEl, rpUserRoleEl, rpCustomBot, rpCustomUser].forEach(function (el) {
+  [rpVibeEl, rpPaceEl, rpNoteEl, charNameEl, rpBotRoleEl, rpUserRoleEl, rpCustomBot, rpCustomUser].forEach(function (el) {
     if (!el) return;
     el.addEventListener("change", function () {
       if (el === rpBotRoleEl) {

@@ -1595,7 +1595,8 @@ body {
 }
 
 .setup-grid input,
-.setup-grid select {
+.setup-grid select,
+.setup-grid textarea {
   width: 100%;
   border: 1px solid var(--line);
   outline: none;
@@ -1605,6 +1606,34 @@ body {
   padding: 11px 12px;
   font: inherit;
   font-size: 0.9rem;
+}
+
+.setup-grid textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.setup-advanced {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.setup-advanced-title {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* First-time modal: keep it simple — hide advanced options */
+#setup-modal .setup-advanced {
+  display: none !important;
 }
 
 .btn-outline {
