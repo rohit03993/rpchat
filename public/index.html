@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=53" />
+    <link rel="stylesheet" href="/styles.css?v=54" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -255,6 +255,16 @@
         ↓ New
       </button>
 
+      <div id="welcome-tip" class="welcome-tip hidden" role="status">
+        <p class="welcome-tip-title">Quick tips</p>
+        <ul>
+          <li>Your <b>User ID</b> stays in the header — tap it to copy</li>
+          <li>When time ends, tap <b>Pay</b> — your scene stays saved</li>
+          <li>ID &amp; PIN are saved on this browser for easy login</li>
+        </ul>
+        <button type="button" id="welcome-tip-dismiss" class="auth-btn">Got it</button>
+      </div>
+
       <form id="chat-form" class="composer">
         <input id="message-input" type="text" placeholder="Message..." maxlength="2000" required autocomplete="off" />
         <button type="submit" id="send-btn" aria-label="Send">
@@ -340,7 +350,7 @@
         <label class="full">
           Resistance (how slow before intimacy)
           <select id="rp-resistance">
-            <option value="strict" selected>Strict — slow burn (Maa/Papa shy, ready late)</option>
+            <option value="strict" selected>Strict — seedhi-saadi slow burn (hard to seduce)</option>
             <option value="normal">Normal — tease, then slowly heat up</option>
             <option value="easy">Easy — less resistance, heats up sooner</option>
           </select>
@@ -522,6 +532,9 @@
           <section id="pay-pane-2" class="pay-pane" data-pane="2">
             <h3 class="pay-section-title">Pay on UPI</h3>
             <p id="pay-amount-line" class="pay-amount-line">Select a pack first</p>
+            <button type="button" id="copy-pay-details-btn" class="auth-btn pay-copy-details">
+              Copy amount + User ID
+            </button>
             <div class="pay-qr-wrap"><img id="upi-qr" class="upi-qr" alt="UPI QR" /></div>
             <div class="pay-upi-row">
               <code id="upi-id-display" class="upi-id-display">—</code>
@@ -554,6 +567,9 @@
               <button type="button" id="submit-pay-btn" class="auth-btn">Submit for admin approval</button>
             </div>
             <div id="pay-pending-banner" class="pay-pending-banner hidden" role="status" aria-live="polite"></div>
+            <button type="button" id="pay-refresh-status" class="auth-btn pay-refresh-btn hidden">
+              Refresh status
+            </button>
             <p id="pay-msg" class="pay-msg"></p>
             <div class="pay-nav-row" id="pay-proof-nav">
               <button type="button" id="pay-back-2" class="btn-outline pay-nav-btn">← Pay again</button>
@@ -608,6 +624,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=69" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=71" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

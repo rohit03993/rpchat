@@ -17,6 +17,8 @@ const {
   wantsLongReply,
   looksIncompleteReply,
   parseSetupMeta,
+  looksLikeEarlySexYes,
+  strictStillResisting,
 } = require("./lib/maaAgent");
 const { roleIs } = require("./lib/roles");
 const billing = require("./lib/billing");
@@ -790,7 +792,10 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           content:
             `Recent chat:\n${transcript || "(start)"}\n\n` +
             `Latest from user (decode typos): "${lastUser}"\n` +
-            `Detected USER_HEAT: ${userHeat} — set HEAT to this. Mirror it. Do not jump ahead.\n` +
+            `Detected USER_HEAT: ${userHeat} — language dirtiness can match this.\n` +
+            (strictStillResisting(setupText, hist)
+              ? `RESISTANCE OVERRIDE (strict/normal still resisting): HEAT dirty talk OK, but NEXT_BEATS must DENY sex consent — no "aaja" / panty off / sex yes yet. Make them push more.\n`
+              : `Mirror heat. Do not jump ahead of user.\n`) +
             `Default LENGTH=short and ACTIONS=none unless user asked for long/story/listen/guest.\n\n` +
             `Write the SCENE CARD now.`,
         },
@@ -823,7 +828,10 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           `AVOID: long essay, action spam, gender swap, invent relative hookups, lecture`;
       }
 
-      sceneCard = patchSceneCardForMirror(sceneCard, lastUser);
+      sceneCard = patchSceneCardForMirror(sceneCard, lastUser, {
+        rpSetup: setupText,
+        messages: hist,
+      });
 
       // --- Step 2: Voice ---
       const wantsHinglish = lang !== "english";
@@ -836,12 +844,17 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           : 0.5
         : 0.9;
 
+      const stillResisting = strictStillResisting(setupText, hist);
       const identitySticky =
         `IDENTITY STICKY: You are "${charOverrides.characterName || "Character"}" = ${charOverrides.botRole || "role"} (${charOverrides.botGender || "female"}). ` +
         `User is your ${charOverrides.userRole || "partner"} (${charOverrides.userGender || "male"}). ` +
         `Stay this gender+rishta. Masti with USER only unless they asked for a guest/confession. ` +
         `Never say you hooked up with "teri nani/mummy" as a third person. Never use opposite-gender grammar on yourself. ` +
-        `MIRROR: USER_HEAT=${userHeat}. Match that energy. Prefer short WhatsApp lines. No *action* spam unless SCENE CARD ACTIONS says light/full. ` +
+        `USER_HEAT=${userHeat}. ` +
+        (stillResisting
+          ? `RESISTANCE ACTIVE: dirty talk OK, but DENY body-yes — no "Theek hai aaja", panty off, or sex start. Use shy deny / galat hai beta / make them beg. `
+          : `Match heat; short WhatsApp lines. `) +
+        `Prefer short WhatsApp lines. No *action* spam unless SCENE CARD ACTIONS says light/full. ` +
         (String(charOverrides.botRole || "").toLowerCase().match(/^(mom|mummy|maa|mother)$/)
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
           : "");
@@ -854,7 +867,11 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       if (lastVoice && lastVoice.role === "user") {
         lastVoice.content =
           String(lastVoice.content || "") +
-          `\n\n(Remember silently: you are ${charOverrides.botRole || "role"}, ${charOverrides.botGender || "female"}, talking to your ${charOverrides.userRole || "partner"} — heat=${userHeat}; short unless asked long; no gender swap.)`;
+          `\n\n(Remember silently: you are ${charOverrides.botRole || "role"}, ${charOverrides.botGender || "female"}, talking to your ${charOverrides.userRole || "partner"} — heat=${userHeat}` +
+          (stillResisting
+            ? `; RESIST sex yes — deny/tease only`
+            : ``) +
+          `; short unless asked long; no gender swap.)`;
       }
 
       const voicePayload = [
@@ -963,6 +980,34 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         if (rewrite.response.ok) {
           const fresh = extractText(rewrite.data?.choices?.[0]?.message);
           if (fresh && fresh.length > 40) reply = fresh;
+        }
+      }
+
+      // Strict resistance safety net: rewrite early "aaja / panty / sex yes"
+      if (reply && stillResisting && looksLikeEarlySexYes(reply)) {
+        const resistFix = await callVenice(
+          CLEAR_MODEL,
+          [
+            {
+              role: "system",
+              content:
+                `You are ${charOverrides.characterName || "Character"} (${charOverrides.botRole || "mummy"}). ` +
+                `Rewrite as seedhi-saadi desi Maa: daily/natural tone, change topic or soft resist, tiny hooked tease only. ` +
+                `RESISTANCE stays STRICT — FORBIDDEN: "theek hai aaja", panty off, starting sex, "main ready". ` +
+                `Easy Hinglish WhatsApp short. Output ONLY the chat reply.`,
+            },
+            {
+              role: "user",
+              content:
+                `User said: "${lastUser}"\n\nDraft (too eager — rewrite to resist):\n${reply}`,
+            },
+          ],
+          { temperature: 0.35, max_tokens: tokenBudget }
+        );
+        steps += 1;
+        if (resistFix.response.ok) {
+          const fixed = extractText(resistFix.data?.choices?.[0]?.message);
+          if (fixed && fixed.length > 8) reply = fixed;
         }
       }
 

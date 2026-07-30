@@ -84,6 +84,10 @@
   const payProofSummary = document.getElementById("pay-proof-summary");
   const payUploadBlock = document.getElementById("pay-upload-block");
   const payProofNav = document.getElementById("pay-proof-nav");
+  const payRefreshStatusBtn = document.getElementById("pay-refresh-status");
+  const copyPayDetailsBtn = document.getElementById("copy-pay-details-btn");
+  const welcomeTipEl = document.getElementById("welcome-tip");
+  const welcomeTipDismissBtn = document.getElementById("welcome-tip-dismiss");
   let payWizardStep = 1;
   const tabLogin = document.getElementById("tab-login");
   const tabRegister = document.getElementById("tab-register");
@@ -293,6 +297,8 @@
   let sessionSaveTimer = null;
   let restoringSession = false;
   let planEndedHandled = false;
+  let warnedAt60 = false;
+  let warnedAt30 = false;
 
   function currentUserId() {
     return (
@@ -488,6 +494,8 @@
             "Time’s up. Your scene is saved here — pay to continue from this chat."
           );
         }, 400);
+      } else {
+        maybeShowWelcomeTip();
       }
       return true;
     }
@@ -703,6 +711,10 @@
     }
     if (localHours > 0.0001) {
       planEndedHandled = false;
+      if (localHours > 1 / 60) {
+        warnedAt60 = false;
+        warnedAt30 = false;
+      }
     }
     paintLiveBadge();
   }
@@ -710,6 +722,7 @@
   function paintLiveBadge() {
     if (!hoursBadge) return;
     const left = remainingHoursNow();
+    const leftSec = Math.max(0, Math.floor(left * 3600));
     hoursBadge.textContent = formatCountdown(left);
     hoursBadge.title = timerRunning
       ? left > 0
@@ -720,6 +733,20 @@
         : "Time over — Pay to continue";
     hoursBadge.classList.toggle("hours-low", left > 0 && left < 5 / 60);
     hoursBadge.classList.toggle("hours-empty", left <= 0);
+
+    // Warn before time ends (once each)
+    if (timerRunning && left > 0) {
+      if (!warnedAt60 && leftSec <= 60 && leftSec > 30) {
+        warnedAt60 = true;
+        toast("1 minute left · Pay soon to keep this scene", "err");
+      }
+      if (!warnedAt30 && leftSec <= 30) {
+        warnedAt30 = true;
+        warnedAt60 = true;
+        toast("30 seconds left · Tap Pay to continue after time ends", "err");
+      }
+    }
+
     // As soon as time hits 0 → Pay popup on same chat (do not wait / do not open setup)
     if (left <= 0 && (timerRunning || hoursCounting || setupLocked)) {
       timerRunning = false;
@@ -985,6 +1012,7 @@
     if (!payment) {
       payPendingBanner.classList.add("hidden");
       payPendingBanner.innerHTML = "";
+      if (payRefreshStatusBtn) payRefreshStatusBtn.classList.add("hidden");
       return;
     }
     payPendingBanner.classList.remove("hidden", "approved");
@@ -997,6 +1025,7 @@
         " · " +
         payment.packageId +
         " hours added. Check the timer — you can continue chatting.";
+      if (payRefreshStatusBtn) payRefreshStatusBtn.classList.add("hidden");
       return;
     }
     if (payment.status === "rejected") {
@@ -1005,6 +1034,7 @@
         "₹" +
         payment.amountInr +
         " request was rejected. Please submit again with a clear screenshot.";
+      if (payRefreshStatusBtn) payRefreshStatusBtn.classList.add("hidden");
       return;
     }
     payPendingBanner.innerHTML =
@@ -1014,8 +1044,79 @@
       "</b> (" +
       payment.packageId +
       ").<br/>" +
-      "Status: <b>PENDING</b> — admin will verify and unlock hours.<br/>" +
-      "You can keep this open; it updates automatically after approval.";
+      "Usually unlocked in a few minutes after admin verifies.<br/>" +
+      "Keep this open — it updates automatically, or tap Refresh status.";
+    if (payRefreshStatusBtn) payRefreshStatusBtn.classList.remove("hidden");
+  }
+
+  async function refreshPayStatus() {
+    if (payRefreshStatusBtn) {
+      payRefreshStatusBtn.disabled = true;
+      payRefreshStatusBtn.textContent = "Checking…";
+    }
+    try {
+      await refreshMe();
+      const list = await loadMyPayments();
+      const pending = (list || []).find(function (p) {
+        return p.status === "pending";
+      });
+      const approved = (list || []).find(function (p) {
+        return p.status === "approved";
+      });
+      if (pending) showPendingBanner(pending);
+      else if (
+        approved &&
+        remainingHoursNow() > 0.05
+      ) {
+        showPendingBanner(approved);
+        toast("Hours unlocked · continue chatting", "ok");
+      } else {
+        toast("Still pending · try again in a minute", "ok");
+      }
+      paintLiveBadge();
+    } catch (e) {
+      toast("Could not refresh — try again", "err");
+    } finally {
+      if (payRefreshStatusBtn) {
+        payRefreshStatusBtn.disabled = false;
+        payRefreshStatusBtn.textContent = "Refresh status";
+      }
+    }
+  }
+
+  function copyPayDetails() {
+    const pack = selectedPack();
+    const uid = displayUserId(currentUser);
+    if (!pack) {
+      toast("Choose a pack first", "err");
+      return;
+    }
+    const text =
+      "Pay ₹" +
+      pack.priceInr +
+      " · User ID (UPI remark): " +
+      (uid || "—");
+    copyText(text, "Payment details");
+  }
+
+  const WELCOME_TIP_KEY = "welcomeTipDismissed";
+
+  function maybeShowWelcomeTip() {
+    if (!welcomeTipEl) return;
+    try {
+      if (localStorage.getItem(WELCOME_TIP_KEY) === "1") {
+        welcomeTipEl.classList.add("hidden");
+        return;
+      }
+    } catch (e) {}
+    welcomeTipEl.classList.remove("hidden");
+  }
+
+  function dismissWelcomeTip() {
+    try {
+      localStorage.setItem(WELCOME_TIP_KEY, "1");
+    } catch (e) {}
+    if (welcomeTipEl) welcomeTipEl.classList.add("hidden");
   }
 
   function syncPayUi() {
@@ -1034,6 +1135,7 @@
     if (packageSelect) packageSelect.value = selectedPackId;
 
     if (pack) {
+      if (copyPayDetailsBtn) copyPayDetailsBtn.classList.remove("hidden");
       var saveHtml =
         pack.saveInr > 0
           ? " · <span class='sum-save'>You save ₹" + pack.saveInr + "</span>"
@@ -1091,6 +1193,7 @@
       }
       // stay on current wizard step — don't jump
     } else {
+      if (copyPayDetailsBtn) copyPayDetailsBtn.classList.add("hidden");
       if (payAmountLine) payAmountLine.textContent = "Select a pack first";
       if (paySelectedSummary) {
         paySelectedSummary.classList.add("hidden");
@@ -1511,8 +1614,14 @@
   if (reportBackdrop) reportBackdrop.addEventListener("click", closeReportSheet);
 
   function addWorkedStatus(ms, steps) {
+    // Hidden for normal users (immersion). Enable with ?debug=1 or localStorage debugWorked=1
+    var debug =
+      /(?:\?|&)debug=1(?:&|$)/.test(location.search) ||
+      localStorage.getItem("debugWorked") === "1";
+    if (!debug) return;
     const el = document.createElement("div");
     el.className = "worked-status";
+    el.style.display = "block";
     const sec = Math.max(1, Math.round((ms || 0) / 1000));
     const n = steps || 1;
     el.textContent = "Worked for " + sec + "s · " + n + " step" + (n === 1 ? "" : "s") + " ›";
@@ -1889,7 +1998,7 @@
         ? "Resistance: easy — soft denials short; can heat up faster when user pushes; still never jump soft→sex in one line."
         : resistance === "normal"
           ? "Resistance: normal — tease and shy first; sex only after several clear pushes; no instant yes to papa-wali baat."
-          : "Resistance: strict — STRONG slow burn (especially Mummy/Papa). Many shy/deny/tease beats before any sex yes. NEVER agree quickly to 'jo papa ko deti ho' / first dirty ask. Make user work for it (push, slap talk, beg) across many messages. Shame + nakhre + 'galat hai… lekin' then still delay actual sex. Easy yes FORBIDDEN.";
+          : "Resistance: strict — seedhi-saadi saree Maa/Papa. Real daily talk first. Change topic + resist + tiny hook. Hard to seduce. Many shy/deny beats before any sex yes. NEVER 'Theek hai aaja' early. Body describe only when heated (full/bulky actress vibe). Easy yes FORBIDDEN.";
     const relationship =
       roles.botRole +
       " primary with " +
@@ -2117,6 +2226,7 @@
       content: "Setup locked for this chat: " + rpSetup,
     });
     scheduleSaveChatSession();
+    maybeShowWelcomeTip();
     input.focus();
   }
 
@@ -2547,6 +2657,16 @@
         toast("Copy failed — select UPI manually", "err");
       }
     });
+  }
+
+  if (copyPayDetailsBtn) {
+    copyPayDetailsBtn.addEventListener("click", copyPayDetails);
+  }
+  if (payRefreshStatusBtn) {
+    payRefreshStatusBtn.addEventListener("click", refreshPayStatus);
+  }
+  if (welcomeTipDismissBtn) {
+    welcomeTipDismissBtn.addEventListener("click", dismissWelcomeTip);
   }
 
   if (payScreenshot) {

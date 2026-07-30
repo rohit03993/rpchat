@@ -1130,6 +1130,65 @@ body {
   color: #b8f5d8;
 }
 
+.pay-refresh-btn {
+  margin-top: 4px;
+}
+
+.pay-copy-details {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+}
+
+.welcome-tip {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 28;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 201, 160, 0.35);
+  background: rgba(13, 23, 28, 0.96);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+}
+
+.welcome-tip.hidden {
+  display: none !important;
+}
+
+.welcome-tip-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--ok);
+}
+
+.welcome-tip ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.welcome-tip li {
+  margin-bottom: 4px;
+}
+
+.welcome-tip b {
+  color: var(--text);
+}
+
+.welcome-tip .auth-btn {
+  margin-top: 0;
+  padding: 10px 12px;
+}
+
+.worked-status {
+  display: none !important;
+}
+
 .pay-history {
   display: grid;
   gap: 6px;
