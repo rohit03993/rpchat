@@ -1321,40 +1321,6 @@ body {
   margin-top: 4px;
 }
 
-.bubble-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.bubble-speak-btn {
-  border: 1px solid rgba(30, 201, 160, 0.35);
-  background: rgba(30, 201, 160, 0.12);
-  color: var(--accent);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.bubble-speak-btn:hover:not(:disabled) {
-  background: rgba(30, 201, 160, 0.22);
-}
-
-.bubble-speak-btn.is-playing {
-  border-color: rgba(255, 120, 120, 0.45);
-  background: rgba(255, 80, 80, 0.12);
-  color: #ffb4b4;
-}
-
-.bubble-speak-btn:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
 .bubble-report-btn {
   margin-top: 8px;
   border: 1px solid var(--line);

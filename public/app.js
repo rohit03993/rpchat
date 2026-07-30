@@ -1266,19 +1266,6 @@
     bubble.innerHTML =
       formatRpHtml(text) + '<span class="meta">' + timeNow() + "</span>";
     if (type === "incoming" && String(text || "").trim()) {
-      const actions = document.createElement("div");
-      actions.className = "bubble-actions";
-
-      const speakBtn = document.createElement("button");
-      speakBtn.type = "button";
-      speakBtn.className = "bubble-speak-btn";
-      speakBtn.textContent = "🔊 Play";
-      speakBtn.title = "Hear this reply";
-      speakBtn.addEventListener("click", function () {
-        playBubbleVoice(String(text || ""), speakBtn);
-      });
-      actions.appendChild(speakBtn);
-
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "bubble-report-btn";
@@ -1287,96 +1274,11 @@
       btn.addEventListener("click", function () {
         openReportSheet(String(text || ""), btn);
       });
-      actions.appendChild(btn);
-      bubble.appendChild(actions);
+      bubble.appendChild(btn);
     }
     messagesEl.appendChild(bubble);
     scrollMessagesToEnd(type === "outgoing" || type === "error");
     if (type === "incoming") playReplyFeedback();
-  }
-
-  let ttsAudio = null;
-  let ttsObjectUrl = null;
-
-  function stopBubbleVoice() {
-    if (ttsAudio) {
-      try {
-        ttsAudio.pause();
-      } catch (_) {}
-      ttsAudio = null;
-    }
-    if (ttsObjectUrl) {
-      URL.revokeObjectURL(ttsObjectUrl);
-      ttsObjectUrl = null;
-    }
-    document.querySelectorAll(".bubble-speak-btn.is-playing").forEach(function (el) {
-      el.classList.remove("is-playing", "is-loading");
-      el.textContent = "🔊 Play";
-      el.disabled = false;
-    });
-  }
-
-  async function playBubbleVoice(text, btn) {
-    if (!authToken) {
-      toast("Login required", "err");
-      return;
-    }
-    if (btn && btn.classList.contains("is-playing")) {
-      stopBubbleVoice();
-      return;
-    }
-    stopBubbleVoice();
-    if (btn) {
-      btn.disabled = true;
-      btn.classList.add("is-loading");
-      btn.textContent = "…";
-    }
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ text: text }),
-      });
-      if (!res.ok) {
-        let errMsg = "Voice fail";
-        try {
-          const data = await res.json();
-          errMsg = data.error || errMsg;
-        } catch (_) {}
-        if (res.status === 401) logout();
-        else if (res.status === 402) {
-          toast(errMsg, "err");
-          openPaySheet();
-        } else toast(errMsg, "err");
-        return;
-      }
-      const blob = await res.blob();
-      ttsObjectUrl = URL.createObjectURL(blob);
-      ttsAudio = new Audio(ttsObjectUrl);
-      if (btn) {
-        btn.disabled = false;
-        btn.classList.remove("is-loading");
-        btn.classList.add("is-playing");
-        btn.textContent = "⏹ Stop";
-      }
-      ttsAudio.onended = function () {
-        stopBubbleVoice();
-      };
-      ttsAudio.onerror = function () {
-        toast("Audio play fail", "err");
-        stopBubbleVoice();
-      };
-      await ttsAudio.play();
-    } catch (e) {
-      toast("Voice network error", "err");
-      stopBubbleVoice();
-    } finally {
-      if (btn && !btn.classList.contains("is-playing")) {
-        btn.disabled = false;
-        btn.classList.remove("is-loading");
-        btn.textContent = "🔊 Play";
-      }
-    }
   }
 
   let reportTargetText = "";
