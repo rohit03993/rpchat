@@ -1159,9 +1159,12 @@ body {
 
 .welcome-tip {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(360px, calc(100% - 24px));
   z-index: 28;
   padding: 14px 16px;
   border-radius: 16px;
@@ -1904,7 +1907,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 22px;
   padding: 22px 20px 18px;
-  animation: sheetUp 0.22s ease-out;
+  animation: sheetIn 0.22s ease-out;
   box-shadow: var(--shadow);
 }
 
@@ -2026,7 +2029,7 @@ body {
   inset: 0;
   z-index: 35;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .sidebar-backdrop {
@@ -2041,7 +2044,7 @@ body {
   width: min(400px, 94%);
   height: 100%;
   background: #122028;
-  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
   padding: 12px;
   padding-top: max(12px, env(safe-area-inset-top));
   padding-bottom: max(12px, env(safe-area-inset-bottom));
@@ -2049,7 +2052,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  animation: slideIn 0.2s ease-out;
+  animation: slideInLeft 0.2s ease-out;
 }
 
 .sidebar-scroll {
@@ -2087,9 +2090,9 @@ body {
   box-shadow: 0 6px 16px rgba(30, 201, 160, 0.22);
 }
 
-@keyframes slideIn {
+@keyframes slideInLeft {
   from {
-    transform: translateX(24px);
+    transform: translateX(-24px);
     opacity: 0.7;
   }
   to {
@@ -2393,39 +2396,43 @@ body {
     font-size: 0.7rem;
   }
 
-  .setup-modal {
-    align-items: flex-end;
-    padding: 10px;
-  }
-
-  .setup-card {
-    width: 100%;
-    border-radius: 20px 20px 14px 14px;
-  }
-
+  /* All overlays centered in the phone — never bottom-sheet */
+  .setup-modal,
+  .sheet,
+  #pay-sheet.sheet,
+  #report-sheet.sheet,
   #support-sheet.sheet {
     align-items: center;
     justify-content: center;
     padding: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .setup-card,
+  .sheet-card,
+  .sheet-card.pay-card,
+  .sheet-card.report-card,
+  .sheet-card.support-card,
+  .sheet-card.setup-card {
+    width: min(100%, 420px);
+    max-width: 100%;
+    max-height: min(90dvh, 720px);
+    border-radius: 20px;
+    margin: 0 auto;
+  }
+
+  .setup-card {
+    width: min(100%, 420px);
+    padding: 18px 16px 16px;
+  }
+
+  .sheet-handle {
+    display: none;
   }
 
   .sheet-card.support-card {
-    width: min(100%, 420px);
-    max-width: 100%;
     height: auto;
-    max-height: min(90dvh, 720px);
-    border-radius: 20px;
-    margin: 0 auto;
     padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
-  }
-
-  .sheet-card.pay-card,
-  .sheet-card.report-card,
-  .sheet-card.setup-card {
-    width: min(100%, 420px);
-    max-height: min(90dvh, 720px);
-    border-radius: 20px;
-    margin: 0 auto;
   }
 
   .support-compose {
