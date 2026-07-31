@@ -215,57 +215,90 @@
   function renderPackageEditor(packages) {
     if (!setPackages) return;
     const list = packages && packages.length ? packages : [];
+    if (!list.length) {
+      setPackages.innerHTML =
+        "<div class='empty'>No packs yet. Tap + Add pack.</div>";
+      return;
+    }
     setPackages.innerHTML = list
       .map(function (p, i) {
+        const sell = p.priceInr != null ? p.priceInr : "";
+        const listP =
+          p.listPriceInr != null ? p.listPriceInr : p.priceInr != null ? p.priceInr : "";
         return (
-          '<div class="pkg-row" data-i="' +
+          '<article class="pkg-card" data-i="' +
           i +
           '">' +
-          '<input data-f="label" type="text" value="' +
-          String(p.label || "").replace(/"/g, "&quot;") +
-          '" placeholder="Label" />' +
-          '<input data-f="hours" type="number" min="0.1" step="0.1" value="' +
-          p.hours +
-          '" title="Hours" />' +
-          '<input data-f="priceInr" type="number" min="0" step="1" value="' +
-          p.priceInr +
-          '" title="Price ₹" />' +
-          '<input data-f="listPriceInr" type="number" min="0" step="1" value="' +
-          (p.listPriceInr != null ? p.listPriceInr : p.priceInr) +
-          '" title="List ₹" />' +
-          '<input data-f="badge" type="text" value="' +
-          String(p.badge || "").replace(/"/g, "&quot;") +
-          '" placeholder="Badge" />' +
-          '<label class="pkg-pop"><input data-f="popular" type="checkbox" ' +
-          (p.popular ? "checked" : "") +
-          "/> Pop</label>" +
+          '<div class="pkg-card-head">' +
+          "<strong>Pack " +
+          (i + 1) +
+          "</strong>" +
           '<button type="button" class="btn-danger btn-sm" data-del-pkg="' +
           i +
-          '">Del</button>' +
+          '">Delete</button>' +
+          "</div>" +
+          '<label class="pkg-field"><span>Name (shown to user)</span>' +
+          '<input data-f="label" type="text" value="' +
+          String(p.label || "").replace(/"/g, "&quot;") +
+          '" placeholder="e.g. 1 Hour" /></label>' +
+          '<div class="pkg-field-row">' +
+          '<label class="pkg-field"><span>Hours</span>' +
+          '<input data-f="hours" type="number" min="0.1" step="0.1" inputmode="decimal" value="' +
+          p.hours +
+          '" /></label>' +
+          '<label class="pkg-field"><span>Sell price ₹</span>' +
+          '<input data-f="priceInr" type="number" min="0" step="1" inputmode="numeric" value="' +
+          sell +
+          '" /></label>' +
+          "</div>" +
+          '<div class="pkg-field-row">' +
+          '<label class="pkg-field"><span>Old / list price ₹</span>' +
+          '<input data-f="listPriceInr" type="number" min="0" step="1" inputmode="numeric" value="' +
+          listP +
+          '" /></label>' +
+          '<label class="pkg-field"><span>Badge text</span>' +
+          '<input data-f="badge" type="text" value="' +
+          String(p.badge || "").replace(/"/g, "&quot;") +
+          '" placeholder="e.g. Save 8%" /></label>' +
+          "</div>" +
+          '<label class="pkg-pop">' +
+          '<input data-f="popular" type="checkbox" ' +
+          (p.popular ? "checked" : "") +
+          "/> Mark as Popular</label>" +
           '<input data-f="id" type="hidden" value="' +
           String(p.id || "").replace(/"/g, "&quot;") +
           '" />' +
-          "</div>"
+          "</article>"
         );
       })
       .join("");
   }
 
   function collectPackagesFromEditor() {
-    const rows = setPackages ? setPackages.querySelectorAll(".pkg-row") : [];
+    const rows = setPackages
+      ? setPackages.querySelectorAll(".pkg-card, .pkg-row")
+      : [];
     const out = [];
     rows.forEach(function (row) {
       const get = function (f) {
         return row.querySelector('[data-f="' + f + '"]');
       };
+      const idEl = get("id");
+      const labelEl = get("label");
+      const hoursEl = get("hours");
+      const priceEl = get("priceInr");
+      const listEl = get("listPriceInr");
+      const badgeEl = get("badge");
+      const popEl = get("popular");
+      if (!labelEl || !hoursEl || !priceEl) return;
       out.push({
-        id: get("id").value,
-        label: get("label").value,
-        hours: Number(get("hours").value),
-        priceInr: Number(get("priceInr").value),
-        listPriceInr: Number(get("listPriceInr").value),
-        badge: get("badge").value,
-        popular: get("popular").checked,
+        id: idEl ? idEl.value : "",
+        label: labelEl.value,
+        hours: Number(hoursEl.value),
+        priceInr: Number(priceEl.value),
+        listPriceInr: Number(listEl ? listEl.value : priceEl.value),
+        badge: badgeEl ? badgeEl.value : "",
+        popular: popEl ? popEl.checked : false,
       });
     });
     return out;

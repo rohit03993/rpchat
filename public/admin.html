@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=13" />
+    <link rel="stylesheet" href="/admin.css?v=14" />
   </head>
   <body>
     <div class="admin-app">
@@ -280,10 +280,14 @@
               <p id="set-qr-msg" class="meta"></p>
             </div>
             <h4 class="setup-heading">Packages (hours &amp; cost)</h4>
+            <p class="meta setup-lead pkg-help">
+              <b>Sell price</b> = what user pays · <b>List price</b> = old price (for “save” line).
+              Leave list = sell if no discount.
+            </p>
             <div id="set-packages" class="pkg-editor"></div>
-            <div class="row-actions" style="margin-top: 12px">
-              <button type="button" id="set-pkg-add" class="btn-ghost btn-sm">+ Add pack</button>
-              <button type="button" id="set-save-btn" class="btn btn-sm">Save UPI &amp; prices</button>
+            <div class="row-actions pkg-actions">
+              <button type="button" id="set-pkg-add" class="btn-ghost">+ Add pack</button>
+              <button type="button" id="set-save-btn" class="btn">Save UPI &amp; prices</button>
             </div>
             <p id="set-save-msg" class="meta"></p>
           </div>
@@ -314,6 +318,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=17"></script>
+    <script src="/admin.js?v=18"></script>
   </body>
 </html>
