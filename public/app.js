@@ -2383,9 +2383,11 @@
     brother: { userRole: "sister", name: "Bhai", hint: "Bhai ↔ didi (M↔F)." },
     bhabhi: { userRole: "devar", name: "Bhabhi", hint: "Bhabhi ↔ devar (F↔M)." },
     jija: { userRole: "sali", name: "Jija", hint: "Jija ↔ sali (M↔F)." },
-    saas: { userRole: "bahu", name: "Saas", hint: "Saas↔bahu · bahu says Mummy ji." },
+    saas: { userRole: "jamai", name: "Saas", hint: "Saas↔damad ji · he says Mummy ji (not bahu)." },
     sasur: { userRole: "bahu", name: "Sasur", hint: "Sasur↔bahu · bahu says Papa ji." },
     bahu: { userRole: "sasur", name: "Bahu", hint: "Bahu↔sasur · you say Papa ji." },
+    jamai: { userRole: "saas", name: "Jamai", hint: "Jamai↔saas · you say Mummy ji." },
+    damad: { userRole: "saas", name: "Damad", hint: "Damad↔saas · you say Mummy ji." },
     nanad: { userRole: "jamai", name: "Nanad", hint: "Nanad ↔ jamai (F↔M)." },
     devar: { userRole: "bhabhi", name: "Devar", hint: "Devar ↔ bhabhi (M↔F)." },
     jeth: { userRole: "bhabhi", name: "Jeth", hint: "Jeth ↔ bhabhi (M↔F)." },
@@ -2610,7 +2612,8 @@
       nanad: "nanad",
       bhabhi: "bhabhi",
       bahu: "bahu",
-      jamai: "jamai",
+      jamai: "damad ji",
+      damad: "damad ji",
       sala: "sala",
       sali: "sali",
       boyfriend: "jaan",
@@ -2651,6 +2654,16 @@
       );
     }
     if (roleIsClient(bot, "saas")) {
+      const u = String(roles.userRole || "")
+        .toLowerCase()
+        .trim();
+      const maleDamad = u === "jamai" || u === "damad";
+      if (maleDamad) {
+        return (
+          name +
+          ": Hello damad ji... aao. Mujhe Mummy ji bolna — samjhe? Bol, kya haal hai? 💕"
+        );
+      }
       return (
         name +
         ": Hello bahu... aao. Mujhe Mummy ji bolna — samjhi? Bol, kya haal hai? 💕"
