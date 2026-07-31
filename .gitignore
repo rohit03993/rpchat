@@ -10,3 +10,14 @@ public/payment-uploads/*
 data/store.json
 data/store.json.tmp
 data/*.bak
+
+# Android Studio / Gradle (local machine only)
+android-admin-sms/.gradle/
+android-admin-sms/.idea/
+android-admin-sms/**/build/
+android-admin-sms/local.properties
+android-admin-sms/captures/
+*.iml
+android-admin-sms/gradle/
+android-admin-sms/gradlew
+android-admin-sms/gradlew.bat
