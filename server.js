@@ -773,6 +773,7 @@ app.put("/api/admin/settings", requireAdmin, (req, res) => {
       upiId: req.body?.upiId,
       upiName: req.body?.upiName,
       packages: req.body?.packages,
+      trialMinutes: req.body?.trialMinutes,
     });
     res.json(result);
   } catch (err) {

@@ -278,7 +278,22 @@
                 <span>Display name</span>
                 <input id="set-upi-name" type="text" placeholder="Chat Service" autocomplete="off" />
               </label>
+              <label class="field">
+                <span>Free trial (minutes)</span>
+                <input
+                  id="set-trial-minutes"
+                  type="number"
+                  min="1"
+                  max="120"
+                  step="1"
+                  placeholder="5"
+                  autocomplete="off"
+                />
+              </label>
             </div>
+            <p class="meta setup-lead">
+              Trial minutes apply to <b>new signups</b> only (1–120). Existing users keep their current balance.
+            </p>
             <div class="qr-admin-block">
               <p class="field"><span>UPI QR image</span></p>
               <img id="set-qr-preview" class="admin-qr-preview" alt="UPI QR" />
@@ -333,6 +348,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=22"></script>
+    <script src="/admin.js?v=23"></script>
   </body>
 </html>

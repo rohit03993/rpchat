@@ -89,6 +89,7 @@
   let openChatUserId = "";
   const setUpiId = document.getElementById("set-upi-id");
   const setUpiName = document.getElementById("set-upi-name");
+  const setTrialMinutes = document.getElementById("set-trial-minutes");
   const setQrPreview = document.getElementById("set-qr-preview");
   const setQrFile = document.getElementById("set-qr-file");
   const setQrUploadBtn = document.getElementById("set-qr-upload-btn");
@@ -319,6 +320,12 @@
       const s = data.settings || {};
       if (setUpiId) setUpiId.value = s.upiId || "";
       if (setUpiName) setUpiName.value = s.upiName || "";
+      if (setTrialMinutes) {
+        setTrialMinutes.value =
+          s.trialMinutes != null && s.trialMinutes !== ""
+            ? String(s.trialMinutes)
+            : "5";
+      }
       if (setQrPreview) {
         setQrPreview.src = s.qrImageUrl || "/upi-qr.svg";
       }
@@ -1775,6 +1782,7 @@
           body: JSON.stringify({
             upiId: setUpiId ? setUpiId.value : "",
             upiName: setUpiName ? setUpiName.value : "",
+            trialMinutes: setTrialMinutes ? setTrialMinutes.value : 5,
             packages: collectPackagesFromEditor(),
           }),
         });
@@ -1788,8 +1796,13 @@
           return;
         }
         if (setSaveMsg) setSaveMsg.textContent = "Saved.";
-        toast("UPI & prices saved", "ok");
-        if (data.settings) renderPackageEditor(data.settings.packages || []);
+        toast("Pay setup & trial saved", "ok");
+        if (data.settings) {
+          renderPackageEditor(data.settings.packages || []);
+          if (setTrialMinutes && data.settings.trialMinutes != null) {
+            setTrialMinutes.value = String(data.settings.trialMinutes);
+          }
+        }
       } catch (e) {
         toast("Network error", "err");
       }
