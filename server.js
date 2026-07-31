@@ -511,6 +511,16 @@ app.post("/api/billing/pause", requireUser, (req, res) => {
   res.json({ user });
 });
 
+app.post("/api/billing/pay-intent", requireUser, (req, res) => {
+  const result = billing.recordPayIntent({
+    userId: req.userId,
+    packageId: req.body?.packageId,
+    source: req.body?.source,
+  });
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
 app.post("/api/billing/submit", requireUser, (req, res) => {
   try {
     const payment = billing.submitPayment({

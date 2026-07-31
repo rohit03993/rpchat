@@ -110,6 +110,38 @@ assert(
     utr: "",
     packAmounts: packs,
     pendingPayments: [],
+    activePayIntents: [
+      {
+        userId: "7824",
+        packageId: "1h",
+        amountInr: 130,
+        hours: 1,
+      },
+    ],
+  }).action === "approve_intent",
+  "unique pay-intent approves without screenshot"
+);
+
+assert(
+  decidePaymentMatch({
+    amountInr: 130,
+    utr: "",
+    packAmounts: packs,
+    pendingPayments: [],
+    activePayIntents: [
+      { userId: "1111", packageId: "1h", amountInr: 130, hours: 1 },
+      { userId: "2222", packageId: "1h", amountInr: 130, hours: 1 },
+    ],
+  }).action === "needs_review",
+  "two pay-intents need review"
+);
+
+assert(
+  decidePaymentMatch({
+    amountInr: 130,
+    utr: "",
+    packAmounts: packs,
+    pendingPayments: [],
   }).action === "no_match",
   "no pending → no_match"
 );

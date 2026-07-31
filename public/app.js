@@ -3108,14 +3108,30 @@
   }
   if (submitPayBtn) submitPayBtn.addEventListener("click", submitPayment);
 
+  async function pingPayIntent(source) {
+    if (!authToken || !selectedPackId) return;
+    try {
+      await fetch("/api/billing/pay-intent", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          packageId: selectedPackId,
+          source: source || "pay",
+        }),
+      });
+    } catch (e) {}
+  }
+
   if (payGoto2) {
     payGoto2.addEventListener("click", function () {
       goPayStep(2);
+      pingPayIntent("choose_pack");
     });
   }
   if (payGoto3) {
     payGoto3.addEventListener("click", function () {
       markPayProofHold();
+      pingPayIntent("ive_paid");
       focusPayProofUpload();
     });
   }
@@ -3134,6 +3150,7 @@
   if (upiOpenBtn) {
     upiOpenBtn.addEventListener("click", function () {
       markPayProofHold();
+      pingPayIntent("open_upi");
       // Next visible return → upload step (UPI apps background this tab)
       setTimeout(function () {
         goPayStep(3);
