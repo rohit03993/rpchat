@@ -1,18 +1,20 @@
 :root {
-  --bg: #071014;
-  --panel: #101c22;
-  --card: #15252d;
-  --line: rgba(255, 255, 255, 0.07);
-  --text: #eef3f5;
-  --muted: #8aa0ab;
-  --accent: #1ec9a0;
-  --accent-dim: #149a78;
-  --danger: #e35d6a;
-  --ok: #c9f5df;
-  --warn: #f0d28a;
+  /* Match user app — light, trustworthy */
+  --bg: #eef3f6;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --line: rgba(21, 37, 45, 0.1);
+  --text: #15252d;
+  --muted: #5a7180;
+  --accent: #0d9f7e;
+  --accent-dim: #0b8268;
+  --danger: #c94a57;
+  --ok: #0b8268;
+  --warn: #b8860b;
+  --on-accent: #042018;
   --font-display: "Syne", sans-serif;
   --font-body: "Figtree", sans-serif;
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  --shadow: 0 18px 48px rgba(21, 40, 50, 0.12);
 }
 
 * {
@@ -24,13 +26,14 @@
 html,
 body {
   min-height: 100%;
+  color-scheme: light;
 }
 
 body {
   background:
-    radial-gradient(900px 420px at 8% -10%, rgba(30, 201, 160, 0.1), transparent 55%),
-    radial-gradient(700px 380px at 100% 0%, rgba(53, 140, 180, 0.08), transparent 50%),
-    linear-gradient(165deg, #050a0d 0%, #0a1419 45%, #071016 100%);
+    radial-gradient(900px 420px at 8% -10%, rgba(13, 159, 126, 0.12), transparent 55%),
+    radial-gradient(700px 380px at 100% 0%, rgba(53, 120, 160, 0.08), transparent 50%),
+    linear-gradient(165deg, #f7fafb 0%, #eef3f6 45%, #e8eef2 100%);
   color: var(--text);
   font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
@@ -56,7 +59,7 @@ body {
   gap: 16px;
   padding: 22px 4px 16px;
   padding-top: max(22px, env(safe-area-inset-top));
-  background: linear-gradient(180deg, rgba(7, 16, 20, 0.96) 60%, rgba(7, 16, 20, 0.75) 100%);
+  background: linear-gradient(180deg, rgba(247, 250, 251, 0.96) 60%, rgba(238, 243, 246, 0.88) 100%);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -172,7 +175,7 @@ button {
 
 .btn {
   background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-  color: #042018;
+  color: var(--on-accent);
   padding: 12px 16px;
   width: 100%;
   font-size: 0.95rem;
@@ -183,7 +186,7 @@ button {
 }
 
 .btn-ghost {
-  background: #2a3942;
+  background: var(--input, #f2f6f8);
   color: var(--text);
   padding: 10px 14px;
   border: 1px solid var(--line);
@@ -276,7 +279,7 @@ button {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
-  background: #0f1a20;
+  background: var(--panel);
   color: inherit;
   padding: 10px 12px;
   font: inherit;
@@ -314,7 +317,7 @@ button {
   padding: 12px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #122028;
+  background: var(--card);
 }
 
 .notice-admin-card.is-unseen {
@@ -359,7 +362,7 @@ button {
   display: inline-flex;
   gap: 6px;
   padding: 4px;
-  background: #0b151a;
+  background: var(--input, #f2f6f8);
   border-radius: 14px;
   margin-bottom: 16px;
   border: 1px solid var(--line);
@@ -379,7 +382,7 @@ button {
 
 .tab.active {
   background: var(--accent);
-  color: #042018;
+  color: var(--on-accent);
 }
 
 .panel {
@@ -470,7 +473,7 @@ button {
   min-width: 72px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #0f171c;
+  background: var(--panel);
   text-align: center;
 }
 
@@ -563,7 +566,7 @@ button {
   text-transform: uppercase;
   color: var(--muted);
   padding: 12px 14px;
-  background: #0f1a20;
+  background: var(--panel);
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
@@ -585,7 +588,7 @@ button {
 
 .id-pill {
   display: inline-block;
-  background: #0f171c;
+  background: var(--panel);
   color: var(--ok);
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -715,7 +718,7 @@ button.id-pill.id-link:hover {
 }
 
 .chat-session-tab.active {
-  color: #042018;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: transparent;
 }
@@ -780,7 +783,7 @@ button.id-pill.id-link:hover {
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 999px;
-  background: #2a3942;
+  background: var(--input, #f2f6f8);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -843,7 +846,7 @@ button.id-pill.id-link:hover {
   max-height: 220px;
   object-fit: contain;
   border-radius: 12px;
-  background: #0f171c;
+  background: var(--panel);
   border: 1px solid var(--line);
   cursor: zoom-in;
 }
@@ -865,7 +868,7 @@ button.id-pill.id-link:hover {
 }
 
 code {
-  background: #0f171c;
+  background: var(--panel);
   padding: 2px 6px;
   border-radius: 6px;
   font-size: 0.85em;
@@ -928,7 +931,7 @@ code {
     gap: 0;
     margin: 0;
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    background: rgba(7, 16, 20, 0.96);
+    background: rgba(247, 250, 251, 0.96);
     border-top: 1px solid var(--line);
     backdrop-filter: blur(12px);
   }
@@ -1062,7 +1065,7 @@ code {
 }
 
 .toast {
-  background: #1a2c34;
+  background: var(--card);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1195,7 +1198,7 @@ code {
   font-size: 1rem;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: #0f171c;
+  background: var(--panel);
   color: var(--text);
   font-family: inherit;
 }
@@ -1461,7 +1464,7 @@ code {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #0f171c;
+  background: var(--panel);
   color: var(--text);
   padding: 12px;
   font: inherit;
@@ -1516,7 +1519,7 @@ code {
     border-radius: 0;
     border: none;
     padding: 12px 12px calc(78px + env(safe-area-inset-bottom));
-    background: #0a1419;
+    background: var(--bg);
   }
 
   #support-view.is-thread .support-thread-list,
