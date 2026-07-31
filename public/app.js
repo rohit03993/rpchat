@@ -2365,8 +2365,8 @@
   const ROLE_SMART = {
     mummy: { userRole: "beta", name: "Maa", hint: "Maa↔beta · private 1-on-1 first; family only if you ask." },
     dad: { userRole: "beti", name: "Papa", hint: "Papa↔beti · correct address + guests." },
-    mausi: { userRole: "bhanja", name: "Mausi", hint: "Mausi ↔ bhanja (F↔M)." },
-    mausa: { userRole: "bhanji", name: "Mausa", hint: "Mausa ↔ bhanji (M↔F)." },
+    mausi: { userRole: "beta", name: "Mausi", hint: "Mausi ↔ beta (F↔M)." },
+    mausa: { userRole: "beti", name: "Mausa", hint: "Mausa ↔ beti (M↔F)." },
     mama: { userRole: "bhanji", name: "Mama", hint: "Mama ↔ bhanji (M↔F)." },
     mami: { userRole: "bhanja", name: "Mami", hint: "Mami ↔ bhanja (F↔M)." },
     nani: { userRole: "pota", name: "Nani", hint: "Nani ↔ pota (F↔M)." },
