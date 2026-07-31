@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=65" />
+    <link rel="stylesheet" href="/styles.css?v=66" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -125,7 +125,7 @@
           </div>
           <div id="register-form" class="auth-form hidden">
             <p class="char-info">
-              18+ only. Enter DOB, choose your own 4-digit PIN, then we create your User ID (5 min trial). One new ID per device / 24 hours.
+              18+ only. Enter DOB, choose your own 4-digit PIN, then we create your User ID (free trial). Save your ID + PIN.
             </p>
             <p class="auth-remember-note">
               <strong>Remember:</strong> note down your User ID and PIN. We also save them on this browser so login stays easy.
@@ -183,23 +183,6 @@
               />
             </label>
             <button type="button" id="register-btn" class="auth-btn">Create User ID</button>
-            <div id="register-creds" class="creds-card hidden" role="status">
-              <p class="creds-title">Save your login</p>
-              <p class="creds-row">
-                User ID
-                <b id="register-creds-id">—</b>
-                <button type="button" class="chip-btn" id="copy-new-id" data-copy="id">Copy</button>
-              </p>
-              <p class="creds-row">
-                PIN
-                <b id="register-creds-pin">—</b>
-                <button type="button" class="chip-btn" id="copy-new-pin" data-copy="pin">Copy</button>
-              </p>
-              <p class="creds-note">
-                Written down? Good. Also saved on this browser. We cannot recover a forgotten PIN.
-              </p>
-              <button type="button" id="creds-continue-login" class="auth-btn">Continue to Login</button>
-            </div>
             <pre id="register-result" class="reg-result hidden"></pre>
           </div>
           <p id="auth-error" class="auth-error"></p>
@@ -672,6 +655,46 @@
       </div>
     </div>
 
+    <div
+      id="register-creds-sheet"
+      class="sheet register-creds-sheet hidden"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="register-creds-title"
+    >
+      <div class="sheet-backdrop" id="register-creds-backdrop"></div>
+      <div class="sheet-card register-creds-card">
+        <div class="sheet-head">
+          <div>
+            <h2 id="register-creds-title">Account created</h2>
+            <p class="meta">Save your User ID and PIN now</p>
+          </div>
+        </div>
+        <p class="creds-success-banner" role="status">
+          Your new login is ready. Copy both before you continue.
+        </p>
+        <div id="register-creds" class="creds-card creds-card-popup" role="status">
+          <p class="creds-row">
+            User ID
+            <b id="register-creds-id">—</b>
+            <button type="button" class="chip-btn" id="copy-new-id" data-copy="id">Copy</button>
+          </p>
+          <p class="creds-row">
+            PIN
+            <b id="register-creds-pin">—</b>
+            <button type="button" class="chip-btn" id="copy-new-pin" data-copy="pin">Copy</button>
+          </p>
+          <p class="creds-note">
+            Also saved on this browser. We cannot recover a forgotten PIN.
+          </p>
+        </div>
+        <button type="button" id="creds-continue-login" class="auth-btn">
+          Got it — Continue to Login
+        </button>
+      </div>
+    </div>
+
     <div id="toast-host" aria-live="polite"></div>
 
     <script>
@@ -683,6 +706,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=79" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=81" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

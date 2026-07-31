@@ -113,6 +113,7 @@
   const loginRememberEl = document.getElementById("login-remember");
   const forgetSavedLoginBtn = document.getElementById("forget-saved-login");
   const registerResult = document.getElementById("register-result");
+  const registerCredsSheet = document.getElementById("register-creds-sheet");
   const registerCredsEl = document.getElementById("register-creds");
   const registerCredsIdEl = document.getElementById("register-creds-id");
   const registerCredsPinEl = document.getElementById("register-creds-pin");
@@ -639,13 +640,30 @@
     }
   }
 
+  function openRegisterCredsSheet() {
+    if (!registerCredsSheet) return;
+    registerCredsSheet.classList.remove("hidden");
+    registerCredsSheet.setAttribute("aria-hidden", "false");
+    document.body.classList.add("sheet-open");
+  }
+
+  function closeRegisterCredsSheet() {
+    if (!registerCredsSheet) return;
+    registerCredsSheet.classList.add("hidden");
+    registerCredsSheet.setAttribute("aria-hidden", "true");
+    if (!document.querySelector(".sheet:not(.hidden)")) {
+      document.body.classList.remove("sheet-open");
+    }
+  }
+
   function showRegisterCreds(userId, pin) {
     pendingNewCreds = { userId: userId, pin: pin };
     saveCredentials(userId, pin);
     if (registerCredsIdEl) registerCredsIdEl.textContent = userId;
     if (registerCredsPinEl) registerCredsPinEl.textContent = pin;
     if (registerCredsEl) registerCredsEl.classList.remove("hidden");
-    if (registerBtn) registerBtn.classList.add("hidden");
+    openRegisterCredsSheet();
+    toast("Account created · save your ID & PIN", "ok");
   }
 
   function authHeaders(json) {
@@ -3267,6 +3285,7 @@
         (pendingNewCreds && pendingNewCreds.pin) ||
         (registerCredsPinEl && registerCredsPinEl.textContent) ||
         "";
+      closeRegisterCredsSheet();
       if (typeof window.__showLoginTab === "function") {
         window.__showLoginTab({
           userId: id,
@@ -3275,7 +3294,7 @@
           sub:
             "Your User ID is " +
             id +
-            ". PIN is filled from this browser — tap Login.",
+            ". PIN is filled — tap Login.",
         });
       }
     });
