@@ -93,6 +93,7 @@
   const adminNoticeTitleEl = document.getElementById("admin-notice-title");
   const adminNoticeTextEl = document.getElementById("admin-notice-text");
   const adminNoticeGotItBtn = document.getElementById("admin-notice-got-it");
+  const adminNoticeReplyBtn = document.getElementById("admin-notice-reply");
   let openAdminNoticeId = null;
   let payWizardStep = 1;
   const tabLogin = document.getElementById("tab-login");
@@ -982,35 +983,33 @@
         " · Left: " +
         formatCountdown(remainingHoursNow());
     }
-    showAdminNotices(data.notices || []);
+    showSupportPopup(data.supportPopup || null);
     return true;
   }
 
-  function showAdminNotices(list) {
+  function showSupportPopup(popup) {
     if (!adminNoticeEl) return;
-    const unread = (list || []).filter(function (n) {
-      return n && !n.seen;
-    });
-    if (!unread.length) {
+    if (!popup || !popup.text) {
       adminNoticeEl.classList.add("hidden");
       openAdminNoticeId = null;
       return;
     }
-    const n = unread[0];
-    openAdminNoticeId = n.noticeId;
-    if (adminNoticeTitleEl) adminNoticeTitleEl.textContent = n.title || "Message from admin";
-    if (adminNoticeTextEl) adminNoticeTextEl.textContent = n.text || "";
+    openAdminNoticeId = popup.messageId || "1";
+    if (adminNoticeTitleEl) {
+      adminNoticeTitleEl.textContent =
+        popup.title ||
+        (popup.unreadCount > 1
+          ? "Support (" + popup.unreadCount + " new)"
+          : "Support · Admin");
+    }
+    if (adminNoticeTextEl) adminNoticeTextEl.textContent = popup.text || "";
     adminNoticeEl.classList.remove("hidden");
   }
 
-  async function dismissAdminNotice() {
-    if (!openAdminNoticeId || !authToken) {
-      if (adminNoticeEl) adminNoticeEl.classList.add("hidden");
-      return;
-    }
-    const id = openAdminNoticeId;
+  async function markSupportPopupSeen() {
+    if (!authToken) return;
     try {
-      await fetch("/api/notices/" + encodeURIComponent(id) + "/seen", {
+      await fetch("/api/support/seen", {
         method: "POST",
         headers: authHeaders(),
         body: "{}",
@@ -1018,7 +1017,15 @@
     } catch (e) {}
     openAdminNoticeId = null;
     if (adminNoticeEl) adminNoticeEl.classList.add("hidden");
-    await refreshMe();
+  }
+
+  async function dismissAdminNotice() {
+    await markSupportPopupSeen();
+  }
+
+  async function replyAdminNotice() {
+    await markSupportPopupSeen();
+    if (typeof openSupportSheet === "function") openSupportSheet();
   }
 
   let payCatalog = { packages: [], payment: {} };
@@ -1941,6 +1948,7 @@
       return;
     }
     closeSidebar();
+    await markSupportPopupSeen();
     if (supportUserIdEl) supportUserIdEl.textContent = displayUserId(currentUser) || "—";
     if (supportMsgEl) {
       supportMsgEl.className = "pay-msg";
@@ -3162,6 +3170,9 @@
   }
   if (adminNoticeGotItBtn) {
     adminNoticeGotItBtn.addEventListener("click", dismissAdminNotice);
+  }
+  if (adminNoticeReplyBtn) {
+    adminNoticeReplyBtn.addEventListener("click", replyAdminNotice);
   }
 
   if (payScreenshot) {

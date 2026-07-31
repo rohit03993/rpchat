@@ -1218,6 +1218,18 @@ body {
   white-space: pre-wrap;
 }
 
+.admin-notice-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 8px;
+}
+
+.admin-notice-actions .btn-outline,
+.admin-notice-actions .auth-btn {
+  width: 100%;
+  padding: 11px 12px;
+}
+
 .welcome-tip.hidden {
   display: none !important;
 }

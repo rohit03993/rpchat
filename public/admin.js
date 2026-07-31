@@ -20,17 +20,9 @@
   const tabPayments = document.getElementById("tab-payments");
   const tabSupport = document.getElementById("tab-support");
   const tabReports = document.getElementById("tab-reports");
-  const tabNotices = document.getElementById("tab-notices");
   const tabPaySetup = document.getElementById("tab-pay-setup");
   const usersView = document.getElementById("users-view");
   const paymentsView = document.getElementById("payments-view");
-  const noticesView = document.getElementById("notices-view");
-  const noticesList = document.getElementById("notices-list");
-  const noticesCount = document.getElementById("notices-count");
-  const noticeUserIdEl = document.getElementById("notice-user-id");
-  const noticeTextEl = document.getElementById("notice-text");
-  const noticeSendBtn = document.getElementById("notice-send-btn");
-  const refreshNoticesBtn = document.getElementById("refresh-notices-btn");
   const supportView = document.getElementById("support-view");
   const reportsView = document.getElementById("reports-view");
   const paySetupView = document.getElementById("pay-setup-view");
@@ -166,12 +158,10 @@
     tabUsers.classList.remove("active");
     tabPayments.classList.remove("active");
     if (tabSupport) tabSupport.classList.remove("active");
-    if (tabNotices) tabNotices.classList.remove("active");
     if (tabReports) tabReports.classList.remove("active");
     if (tabPaySetup) tabPaySetup.classList.remove("active");
     usersView.classList.add("hidden");
     paymentsView.classList.add("hidden");
-    if (noticesView) noticesView.classList.add("hidden");
     if (supportView) supportView.classList.add("hidden");
     if (reportsView) reportsView.classList.add("hidden");
     if (paySetupView) paySetupView.classList.add("hidden");
@@ -191,13 +181,6 @@
     hideAllTabs();
     tabPayments.classList.add("active");
     paymentsView.classList.remove("hidden");
-  }
-
-  function showNoticesTab() {
-    hideAllTabs();
-    if (tabNotices) tabNotices.classList.add("active");
-    if (noticesView) noticesView.classList.remove("hidden");
-    loadNotices();
   }
 
   function showSupportTab() {
@@ -822,7 +805,7 @@
           "<div class='user-card-actions'>" +
           "<button type='button' class='btn btn-sm' data-msg-user='" +
           escapeHtml(u.userId) +
-          "'>Msg</button>" +
+          "'>Support</button>" +
           "<button type='button' class='btn btn-sm' data-add-hours='" +
           escapeHtml(u.userId) +
           "'>+1h</button>" +
@@ -847,13 +830,11 @@
               "'>→ 4-digit</button>"
             : "") +
           "</div>" +
-          (Number(u.noticeUnread || 0) > 0
-            ? "<p class='user-notice-flag unread'>Notice: Unseen (" +
-              u.noticeUnread +
+          (Number(u.supportUnseen || 0) > 0
+            ? "<p class='user-notice-flag unread'>Support: waiting for user (" +
+              u.supportUnseen +
               ")</p>"
-            : u.lastNoticeAt
-              ? "<p class='user-notice-flag seen'>Last notice: Seen</p>"
-              : "") +
+            : "") +
           "</article>"
         );
       })
@@ -1048,23 +1029,31 @@
     }
     const msgUser = t.getAttribute("data-msg-user");
     if (msgUser) {
-      const text = prompt("Message / offer for User " + msgUser + ":");
+      const text = prompt(
+        "Support message / offer for User " +
+          msgUser +
+          "\n(They get a popup; can Got it or Reply in Support)"
+      );
       if (text == null) return;
       if (!String(text).trim()) {
         toast("Empty message", "err");
         return;
       }
-      const res = await fetch("/api/admin/notices", {
+      const res = await fetch("/api/admin/support/" + encodeURIComponent(msgUser) + "/reply", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ userId: msgUser, text: String(text).trim() }),
+        body: JSON.stringify({ text: String(text).trim() }),
       });
       const data = await res.json().catch(function () {
         return {};
       });
       if (!res.ok) toast(data.error || "Send failed", "err");
-      else toast("Notice sent · waiting for Seen", "ok");
+      else toast("Sent in Support · popup on user", "ok");
       await refreshAll();
+      if (typeof showSupportTab === "function") {
+        showSupportTab();
+        if (typeof openSupportThread === "function") openSupportThread(msgUser);
+      }
       return;
     }
     if (t.getAttribute("data-add-hours")) {
@@ -1339,93 +1328,6 @@
     });
   }
 
-  async function loadNotices() {
-    if (!noticesList) return;
-    try {
-      const res = await fetch("/api/admin/notices", { headers: authHeaders() });
-      const data = await res.json();
-      if (!res.ok) {
-        noticesList.innerHTML = "<div class='empty'>Could not load notices</div>";
-        return;
-      }
-      const list = data.notices || [];
-      if (noticesCount) {
-        const unseen = list.filter(function (n) {
-          return !n.seen;
-        }).length;
-        noticesCount.textContent =
-          list.length + " msgs · " + unseen + " unseen";
-      }
-      if (!list.length) {
-        noticesList.innerHTML =
-          "<div class='empty'>No notices yet.<br/>Use Msg on a user, or send above.</div>";
-        return;
-      }
-      noticesList.innerHTML = list
-        .map(function (n) {
-          return (
-            "<article class='notice-admin-card" +
-            (n.seen ? " is-seen" : " is-unseen") +
-            "'>" +
-            "<div class='notice-admin-top'>" +
-            "<b>" +
-            escapeHtml(n.userId) +
-            "</b>" +
-            "<span class='badge " +
-            (n.seen ? "approved" : "pending") +
-            "'>" +
-            (n.seen ? "SEEN" : "UNSEEN") +
-            "</span>" +
-            "</div>" +
-            "<p class='notice-admin-title'>" +
-            escapeHtml(n.title || "Message") +
-            "</p>" +
-            "<p class='notice-admin-text'>" +
-            escapeHtml(n.text || "") +
-            "</p>" +
-            "<p class='meta'>Sent " +
-            new Date(n.createdAt).toLocaleString() +
-            (n.seenAt
-              ? " · Seen " + new Date(n.seenAt).toLocaleString()
-              : " · Waiting…") +
-            "</p>" +
-            "</article>"
-          );
-        })
-        .join("");
-    } catch (e) {
-      noticesList.innerHTML = "<div class='empty'>Network error</div>";
-    }
-  }
-
-  async function sendNoticeFromForm() {
-    const userId = noticeUserIdEl ? noticeUserIdEl.value.trim() : "";
-    const text = noticeTextEl ? noticeTextEl.value.trim() : "";
-    if (!userId || !text) {
-      toast("User ID + message required", "err");
-      return;
-    }
-    const res = await fetch("/api/admin/notices", {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ userId: userId, text: text }),
-    });
-    const data = await res.json().catch(function () {
-      return {};
-    });
-    if (!res.ok) {
-      toast(data.error || "Send failed", "err");
-      return;
-    }
-    toast("Notice sent to " + userId, "ok");
-    if (noticeTextEl) noticeTextEl.value = "";
-    await loadNotices();
-    await refreshAll();
-  }
-
-  if (noticeSendBtn) noticeSendBtn.addEventListener("click", sendNoticeFromForm);
-  if (refreshNoticesBtn) refreshNoticesBtn.addEventListener("click", loadNotices);
-
   loginBtn.addEventListener("click", login);
   passEl.addEventListener("keydown", function (e) {
     if (e.key === "Enter") login();
@@ -1454,7 +1356,6 @@
   tabUsers.addEventListener("click", showUsersTab);
   tabPayments.addEventListener("click", showPaymentsTab);
   if (tabSupport) tabSupport.addEventListener("click", showSupportTab);
-  if (tabNotices) tabNotices.addEventListener("click", showNoticesTab);
   if (tabReports) tabReports.addEventListener("click", showReportsTab);
   if (tabPaySetup) tabPaySetup.addEventListener("click", showPaySetupTab);
 
@@ -1470,6 +1371,18 @@
         const active = String(t.userId) === String(openSupportUserId) ? " active" : "";
         const needs = t.needsAdmin ? " needs-admin" : "";
         const when = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : "";
+        const badgeClass = t.needsAdmin
+          ? "pending"
+          : t.awaitingUserSeen
+            ? "pending"
+            : t.status === "closed"
+              ? ""
+              : "approved";
+        const badgeText = t.needsAdmin
+          ? "new"
+          : t.awaitingUserSeen
+            ? "unseen by user"
+            : escapeHtml(t.status || "open");
         return (
           "<button type='button' class='support-thread-card" +
           active +
@@ -1482,9 +1395,9 @@
           escapeHtml(t.userId) +
           "</span>" +
           "<span class='badge " +
-          (t.needsAdmin ? "pending" : t.status === "closed" ? "" : "approved") +
+          badgeClass +
           "'>" +
-          (t.needsAdmin ? "new" : escapeHtml(t.status || "open")) +
+          badgeText +
           "</span>" +
           "</div>" +
           "<div class='sth-preview'>" +

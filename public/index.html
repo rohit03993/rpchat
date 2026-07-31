@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=64" />
+    <link rel="stylesheet" href="/styles.css?v=65" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -266,10 +266,13 @@
       </div>
 
       <div id="admin-notice" class="admin-notice hidden" role="dialog" aria-labelledby="admin-notice-title">
-        <p class="admin-notice-kicker">Message from admin</p>
+        <p class="admin-notice-kicker">Support · Admin</p>
         <p id="admin-notice-title" class="admin-notice-title"></p>
         <p id="admin-notice-text" class="admin-notice-text"></p>
-        <button type="button" id="admin-notice-got-it" class="auth-btn">Got it</button>
+        <div class="admin-notice-actions">
+          <button type="button" id="admin-notice-got-it" class="btn-outline">Got it</button>
+          <button type="button" id="admin-notice-reply" class="auth-btn">Reply in Support</button>
+        </div>
       </div>
 
       <form id="chat-form" class="composer">
@@ -680,6 +683,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=77" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=78" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>
