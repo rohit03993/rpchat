@@ -1035,22 +1035,26 @@
     if (selectedPackId == null && getPayProofHold() && getPayProofHold().packId) {
       selectedPackId = getPayProofHold().packId;
     }
+    // Never keep an old "Approved" banner while asking for a new screenshot
+    if (remainingHoursNow() <= 0.0001) {
+      showPendingBanner(null);
+    }
     goPayStep(3);
-    if (payMsg && (!payMsg.textContent || payMsg.className.indexOf("ok") < 0)) {
+    if (payMsg) {
       payMsg.className = "pay-msg";
       payMsg.textContent =
-        "Back from UPI? Upload your payment screenshot below to unlock hours.";
+        "Upload your payment screenshot below. Hours unlock only after admin approves.";
     }
     if (payProofSummary) {
       var pack = selectedPack();
       var uid = (currentUser && currentUser.userId) || "";
       payProofSummary.textContent = pack
-        ? "Upload screenshot of your ₹" +
+        ? "Step 3 — Upload screenshot of your ₹" +
           pack.priceInr +
-          " payment (remark " +
+          " UPI payment (remark " +
           uid +
-          "). Admin unlocks after verify."
-        : "Upload your payment screenshot — admin will verify and unlock hours.";
+          "). Do not close until submitted."
+        : "Step 3 — Upload your payment screenshot for admin approval.";
     }
     try {
       if (payUploadLabel) {
@@ -1170,14 +1174,50 @@
     }
     payPendingBanner.innerHTML =
       "<strong>Pending admin approval</strong>" +
-      "You submitted a screenshot for <b>₹" +
+      "Screenshot received for <b>₹" +
       payment.amountInr +
       "</b> (" +
       payment.packageId +
-      ").<br/>" +
-      "Usually unlocked in a few minutes after admin verifies.<br/>" +
-      "Keep this open — it updates automatically, or tap Refresh status.";
+      "). Admin has not unlocked hours yet.<br/>" +
+      "Usually done in a few minutes — keep this open or tap Refresh status.";
     if (payRefreshStatusBtn) payRefreshStatusBtn.classList.remove("hidden");
+  }
+
+  /** Pick the right status banner — never show old APPROVED while buying again. */
+  function syncPayStatusFromList(list) {
+    const rows = list || [];
+    const pending = rows.find(function (p) {
+      return p.status === "pending";
+    });
+    if (pending) {
+      showPendingBanner(pending);
+      if (payUploadBlock) payUploadBlock.classList.add("hidden");
+      if (payProofNav) payProofNav.classList.add("hidden");
+      return "pending";
+    }
+
+    const rejected = rows.find(function (p) {
+      return p.status === "rejected";
+    });
+    // Buying again (no time left) — don't show old approved success
+    if (remainingHoursNow() <= 0.0001 || getPayProofHold()) {
+      showPendingBanner(rejected || null);
+      if (!pending && payUploadBlock) payUploadBlock.classList.remove("hidden");
+      if (!pending && payProofNav) payProofNav.classList.remove("hidden");
+      return rejected ? "rejected" : "upload";
+    }
+
+    const latest = rows[0];
+    if (latest && latest.status === "approved" && remainingHoursNow() > 0.05) {
+      showPendingBanner(latest);
+      return "approved";
+    }
+    if (rejected) {
+      showPendingBanner(rejected);
+      return "rejected";
+    }
+    showPendingBanner(null);
+    return "none";
   }
 
   async function refreshPayStatus() {
@@ -1188,21 +1228,15 @@
     try {
       await refreshMe();
       const list = await loadMyPayments();
-      const pending = (list || []).find(function (p) {
-        return p.status === "pending";
-      });
-      const approved = (list || []).find(function (p) {
-        return p.status === "approved";
-      });
-      if (pending) showPendingBanner(pending);
-      else if (
-        approved &&
-        remainingHoursNow() > 0.05
-      ) {
-        showPendingBanner(approved);
+      const state = syncPayStatusFromList(list);
+      if (state === "approved") {
         toast("Hours unlocked · continue chatting", "ok");
+      } else if (state === "pending") {
+        toast("Still waiting for admin approval", "ok");
+      } else if (state === "upload") {
+        toast("Upload your payment screenshot", "ok");
       } else {
-        toast("Still pending · try again in a minute", "ok");
+        toast("No pending payment found", "ok");
       }
       paintLiveBadge();
     } catch (e) {
@@ -1436,10 +1470,12 @@
       .map(function (p) {
         var statusLabel =
           p.status === "pending"
-            ? "PENDING ADMIN"
+            ? "WAITING ADMIN"
             : p.status === "approved"
               ? "APPROVED"
-              : String(p.status || "").toUpperCase();
+              : p.status === "rejected"
+                ? "REJECTED"
+                : String(p.status || "").toUpperCase();
         return (
           "<div class='pay-history-item'><span>" +
           p.packageId +
@@ -1454,10 +1490,7 @@
       })
       .join("");
 
-    var latest = list[0];
-    if (latest && (latest.status === "pending" || latest.status === "approved" || latest.status === "rejected")) {
-      showPendingBanner(latest);
-    }
+    syncPayStatusFromList(list);
     return list;
   }
 

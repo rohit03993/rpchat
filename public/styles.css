@@ -1261,7 +1261,11 @@ body {
   z-index: 40;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
 .sheet-backdrop {
@@ -1273,17 +1277,28 @@ body {
 .sheet-card {
   position: relative;
   z-index: 1;
-  max-height: min(92dvh, 720px);
-  overflow: hidden;
+  width: min(100%, 420px);
+  max-height: min(88dvh, 720px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   background: #15252d;
-  border-radius: 20px 20px 0 0;
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
-  animation: sheetUp 0.22s ease-out;
+  border-radius: 20px;
+  padding: 14px 16px 16px;
+  animation: sheetIn 0.22s ease-out;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-top: 1px solid var(--line);
-  width: 100%;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  margin: 0 auto;
+}
+
+.sheet-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .sheet-handle {
@@ -1327,6 +1342,17 @@ body {
   padding: 11px 12px;
   font: inherit;
   font-size: 0.9rem;
+}
+
+@keyframes sheetIn {
+  from {
+    transform: translateY(12px) scale(0.98);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
 }
 
 @keyframes sheetUp {
@@ -2097,6 +2123,7 @@ body {
   .sheet {
     justify-content: center;
     align-items: center;
+    padding: 20px;
   }
 
   .sheet-card {
@@ -2104,7 +2131,8 @@ body {
     border-radius: 20px;
     max-height: min(88vh, 640px);
     padding: 16px 18px 18px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .sheet-card.pay-card {
@@ -2214,18 +2242,28 @@ body {
   }
 
   #support-sheet.sheet {
-    align-items: stretch;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
   }
 
   .sheet-card.support-card {
-    width: 100%;
-    max-width: none;
-    height: 100dvh;
-    max-height: 100dvh;
-    border-radius: 0;
-    margin: 0;
-    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    width: min(100%, 420px);
+    max-width: 100%;
+    height: auto;
+    max-height: min(90dvh, 720px);
+    border-radius: 20px;
+    margin: 0 auto;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .sheet-card.pay-card,
+  .sheet-card.report-card,
+  .sheet-card.setup-card {
+    width: min(100%, 420px);
+    max-height: min(90dvh, 720px);
+    border-radius: 20px;
+    margin: 0 auto;
   }
 
   .support-compose {
