@@ -343,6 +343,7 @@ app.use((req, res, next) => {
     p === "/admin.css" ||
     p.startsWith("/payment-uploads/") ||
     p.startsWith("/upi-uploads/") ||
+    p.startsWith("/support-uploads/") ||
     p.startsWith("/api/")
   ) {
     res.setHeader("X-Robots-Tag", "noindex, nofollow");
@@ -647,6 +648,59 @@ app.get("/api/admin/reports/download", requireAdmin, (_req, res) => {
 
 app.delete("/api/admin/reports", requireAdmin, (_req, res) => {
   const result = billing.clearAiReports();
+  res.json(result);
+});
+
+// ---------- Support chat (user ↔ admin) ----------
+app.get("/api/support", requireUser, (req, res) => {
+  const result = billing.getSupportThread(req.userId);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json({ thread: result.thread });
+});
+
+app.post("/api/support/message", requireUser, (req, res) => {
+  try {
+    const result = billing.addSupportMessage({
+      userId: req.userId,
+      from: "user",
+      text: req.body?.text,
+      screenshotBase64: req.body?.screenshotBase64,
+    });
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    res.json({ ok: true, thread: result.thread, message: result.message });
+  } catch (e) {
+    res.status(500).json({ error: e.message || "Support send failed" });
+  }
+});
+
+app.get("/api/admin/support", requireAdmin, (_req, res) => {
+  res.json({ threads: billing.listSupportThreads() });
+});
+
+app.get("/api/admin/support/:userId", requireAdmin, (req, res) => {
+  const result = billing.getSupportThread(req.params.userId);
+  if (!result.ok) return res.status(404).json({ error: result.error });
+  res.json({ thread: result.thread });
+});
+
+app.post("/api/admin/support/:userId/reply", requireAdmin, (req, res) => {
+  try {
+    const result = billing.addSupportMessage({
+      userId: req.params.userId,
+      from: "admin",
+      text: req.body?.text,
+      screenshotBase64: req.body?.screenshotBase64,
+    });
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    res.json({ ok: true, thread: result.thread, message: result.message });
+  } catch (e) {
+    res.status(500).json({ error: e.message || "Reply failed" });
+  }
+});
+
+app.post("/api/admin/support/:userId/close", requireAdmin, (req, res) => {
+  const result = billing.setSupportThreadStatus(req.params.userId, "closed");
+  if (!result.ok) return res.status(404).json({ error: result.error });
   res.json(result);
 });
 

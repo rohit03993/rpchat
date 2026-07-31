@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=11" />
+    <link rel="stylesheet" href="/admin.css?v=12" />
   </head>
   <body>
     <div class="admin-app">
@@ -119,6 +119,9 @@
             <button type="button" class="tab" id="tab-payments">
               <span class="tab-full">Payments</span><span class="tab-short">Pays</span>
             </button>
+            <button type="button" class="tab" id="tab-support">
+              <span class="tab-full">Support</span><span class="tab-short">Help</span>
+            </button>
             <button type="button" class="tab" id="tab-reports">
               <span class="tab-full">AI reports</span><span class="tab-short">AI</span>
             </button>
@@ -174,6 +177,48 @@
             </div>
             <p id="pay-money-line" class="meta pay-money-line"></p>
             <div id="payments" class="payments-grid"></div>
+          </div>
+
+          <div id="support-view" class="panel hidden">
+            <div class="toolbar">
+              <span id="support-count" class="meta">0 threads</span>
+              <button type="button" id="refresh-support-btn" class="btn-ghost btn-sm">
+                Refresh
+              </button>
+            </div>
+            <p class="meta setup-lead">
+              Users message from Settings → Support. Each card shows their User ID.
+            </p>
+            <div class="support-admin-layout">
+              <div id="support-thread-list" class="support-thread-list"></div>
+              <div id="support-thread-pane" class="support-thread-pane">
+                <div class="support-thread-head">
+                  <div>
+                    <h3 id="support-thread-title">Select a user</h3>
+                    <p id="support-thread-meta" class="meta"></p>
+                  </div>
+                  <button
+                    type="button"
+                    id="support-close-thread-btn"
+                    class="btn-ghost btn-sm hidden"
+                  >
+                    Mark closed
+                  </button>
+                </div>
+                <div id="support-admin-messages" class="support-admin-messages">
+                  <div class="empty">Pick a support thread on the left.</div>
+                </div>
+                <div id="support-admin-compose" class="support-admin-compose hidden">
+                  <textarea
+                    id="support-admin-input"
+                    rows="3"
+                    maxlength="2000"
+                    placeholder="Reply to user…"
+                  ></textarea>
+                  <button type="button" id="support-admin-send" class="btn">Send reply</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div id="reports-view" class="panel hidden">
@@ -260,6 +305,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=15"></script>
+    <script src="/admin.js?v=16"></script>
   </body>
 </html>

@@ -18,12 +18,27 @@
   const refreshUsersBtn = document.getElementById("refresh-users-btn");
   const tabUsers = document.getElementById("tab-users");
   const tabPayments = document.getElementById("tab-payments");
+  const tabSupport = document.getElementById("tab-support");
   const tabReports = document.getElementById("tab-reports");
   const tabPaySetup = document.getElementById("tab-pay-setup");
   const usersView = document.getElementById("users-view");
   const paymentsView = document.getElementById("payments-view");
+  const supportView = document.getElementById("support-view");
   const reportsView = document.getElementById("reports-view");
   const paySetupView = document.getElementById("pay-setup-view");
+  const supportThreadList = document.getElementById("support-thread-list");
+  const supportThreadTitle = document.getElementById("support-thread-title");
+  const supportThreadMeta = document.getElementById("support-thread-meta");
+  const supportAdminMessages = document.getElementById("support-admin-messages");
+  const supportAdminCompose = document.getElementById("support-admin-compose");
+  const supportAdminInput = document.getElementById("support-admin-input");
+  const supportAdminSend = document.getElementById("support-admin-send");
+  const supportCloseThreadBtn = document.getElementById("support-close-thread-btn");
+  const supportCount = document.getElementById("support-count");
+  const refreshSupportBtn = document.getElementById("refresh-support-btn");
+  let supportThreadsCache = [];
+  let openSupportUserId = "";
+  let supportPollId = null;
   const reportsList = document.getElementById("reports-list");
   const reportsCount = document.getElementById("reports-count");
   const downloadReportsBtn = document.getElementById("download-reports-btn");
@@ -119,12 +134,18 @@
   function hideAllTabs() {
     tabUsers.classList.remove("active");
     tabPayments.classList.remove("active");
+    if (tabSupport) tabSupport.classList.remove("active");
     if (tabReports) tabReports.classList.remove("active");
     if (tabPaySetup) tabPaySetup.classList.remove("active");
     usersView.classList.add("hidden");
     paymentsView.classList.add("hidden");
+    if (supportView) supportView.classList.add("hidden");
     if (reportsView) reportsView.classList.add("hidden");
     if (paySetupView) paySetupView.classList.add("hidden");
+    if (supportPollId) {
+      clearInterval(supportPollId);
+      supportPollId = null;
+    }
   }
 
   function showUsersTab() {
@@ -137,6 +158,20 @@
     hideAllTabs();
     tabPayments.classList.add("active");
     paymentsView.classList.remove("hidden");
+  }
+
+  function showSupportTab() {
+    hideAllTabs();
+    if (tabSupport) tabSupport.classList.add("active");
+    if (supportView) supportView.classList.remove("hidden");
+    loadSupportThreads();
+    if (supportPollId) clearInterval(supportPollId);
+    supportPollId = setInterval(function () {
+      if (document.hidden) return;
+      if (!supportView || supportView.classList.contains("hidden")) return;
+      loadSupportThreads(true);
+      if (openSupportUserId) openSupportThread(openSupportUserId, true);
+    }, 15000);
   }
 
   function showReportsTab() {
@@ -1171,8 +1206,238 @@
   }
   tabUsers.addEventListener("click", showUsersTab);
   tabPayments.addEventListener("click", showPaymentsTab);
+  if (tabSupport) tabSupport.addEventListener("click", showSupportTab);
   if (tabReports) tabReports.addEventListener("click", showReportsTab);
   if (tabPaySetup) tabPaySetup.addEventListener("click", showPaySetupTab);
+
+  function renderSupportThreadList(list) {
+    if (!supportThreadList) return;
+    if (!(list || []).length) {
+      supportThreadList.innerHTML =
+        "<div class='empty'>No support messages yet.<br/>Users open Settings → Support.</div>";
+      return;
+    }
+    supportThreadList.innerHTML = list
+      .map(function (t) {
+        const active = String(t.userId) === String(openSupportUserId) ? " active" : "";
+        const needs = t.needsAdmin ? " needs-admin" : "";
+        const when = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : "";
+        return (
+          "<button type='button' class='support-thread-card" +
+          active +
+          needs +
+          "' data-support-user='" +
+          escapeHtml(t.userId) +
+          "'>" +
+          "<div class='sth-top'>" +
+          "<span class='id-pill'>" +
+          escapeHtml(t.userId) +
+          "</span>" +
+          "<span class='badge " +
+          (t.needsAdmin ? "pending" : t.status === "closed" ? "" : "approved") +
+          "'>" +
+          (t.needsAdmin ? "new" : escapeHtml(t.status || "open")) +
+          "</span>" +
+          "</div>" +
+          "<div class='sth-preview'>" +
+          escapeHtml(t.lastText || "—") +
+          "<br/><span class='meta'>" +
+          (t.messageCount || 0) +
+          " msgs · " +
+          escapeHtml(when) +
+          "</span></div>" +
+          "</button>"
+        );
+      })
+      .join("");
+  }
+
+  async function loadSupportThreads(quiet) {
+    if (!supportThreadList) return;
+    if (!quiet) {
+      supportThreadList.innerHTML = "<p class='meta'>Loading…</p>";
+    }
+    try {
+      const res = await fetch("/api/admin/support", { headers: authHeaders() });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        supportThreadList.innerHTML =
+          "<div class='empty'>" +
+          escapeHtml(data.error || "Could not load support") +
+          "</div>";
+        return;
+      }
+      supportThreadsCache = data.threads || [];
+      if (supportCount) {
+        const waiting = supportThreadsCache.filter(function (t) {
+          return t.needsAdmin;
+        }).length;
+        supportCount.textContent =
+          supportThreadsCache.length +
+          " thread" +
+          (supportThreadsCache.length === 1 ? "" : "s") +
+          (waiting ? " · " + waiting + " waiting" : "");
+      }
+      renderSupportThreadList(supportThreadsCache);
+    } catch (e) {
+      supportThreadList.innerHTML = "<div class='empty'>Network error</div>";
+    }
+  }
+
+  function renderSupportAdminMessages(thread) {
+    if (!supportAdminMessages) return;
+    const msgs = (thread && thread.messages) || [];
+    if (!msgs.length) {
+      supportAdminMessages.innerHTML =
+        "<div class='empty'>No messages in this thread yet.</div>";
+      return;
+    }
+    supportAdminMessages.innerHTML = msgs
+      .map(function (m) {
+        const cls = m.from === "admin" ? "admin" : "user";
+        const who = m.from === "admin" ? "Admin" : "User " + (thread.userId || "");
+        const img = m.screenshotUrl
+          ? "<a href='" +
+            escapeHtml(m.screenshotUrl) +
+            "' target='_blank' rel='noopener'><img src='" +
+            escapeHtml(m.screenshotUrl) +
+            "' alt='attachment' /></a>"
+          : "";
+        return (
+          "<div class='support-admin-bubble " +
+          cls +
+          "'><span class='who'>" +
+          escapeHtml(who) +
+          "</span>" +
+          escapeHtml(m.text || "") +
+          img +
+          "</div>"
+        );
+      })
+      .join("");
+    supportAdminMessages.scrollTop = supportAdminMessages.scrollHeight;
+  }
+
+  async function openSupportThread(userId, quiet) {
+    openSupportUserId = String(userId || "");
+    if (!quiet) renderSupportThreadList(supportThreadsCache);
+    if (supportThreadTitle) {
+      supportThreadTitle.textContent = "User ID " + openSupportUserId;
+    }
+    if (supportThreadMeta) supportThreadMeta.textContent = "Loading…";
+    if (supportCloseThreadBtn) supportCloseThreadBtn.classList.remove("hidden");
+    if (supportAdminCompose) supportAdminCompose.classList.remove("hidden");
+    try {
+      const res = await fetch(
+        "/api/admin/support/" + encodeURIComponent(openSupportUserId),
+        { headers: authHeaders() }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        if (supportThreadMeta) supportThreadMeta.textContent = "";
+        supportAdminMessages.innerHTML =
+          "<div class='empty'>" +
+          escapeHtml(data.error || "Could not load thread") +
+          "</div>";
+        return;
+      }
+      const thread = data.thread || {};
+      if (supportThreadMeta) {
+        supportThreadMeta.textContent =
+          (thread.status || "open") +
+          " · " +
+          ((thread.messages && thread.messages.length) || 0) +
+          " messages";
+      }
+      renderSupportAdminMessages(thread);
+    } catch (e) {
+      supportAdminMessages.innerHTML = "<div class='empty'>Network error</div>";
+    }
+  }
+
+  async function sendAdminSupportReply() {
+    if (!openSupportUserId) return;
+    const text = supportAdminInput ? supportAdminInput.value.trim() : "";
+    if (!text) {
+      toast("Write a reply first", "err");
+      return;
+    }
+    if (supportAdminSend) supportAdminSend.disabled = true;
+    try {
+      const res = await fetch(
+        "/api/admin/support/" + encodeURIComponent(openSupportUserId) + "/reply",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ text: text }),
+        }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Reply failed", "err");
+        return;
+      }
+      if (supportAdminInput) supportAdminInput.value = "";
+      renderSupportAdminMessages(data.thread);
+      toast("Reply sent", "ok");
+      loadSupportThreads(true);
+    } catch (e) {
+      toast("Network error", "err");
+    } finally {
+      if (supportAdminSend) supportAdminSend.disabled = false;
+    }
+  }
+
+  if (supportThreadList) {
+    supportThreadList.addEventListener("click", function (e) {
+      const btn = e.target.closest("[data-support-user]");
+      if (!btn) return;
+      openSupportThread(btn.getAttribute("data-support-user"));
+    });
+  }
+  if (supportAdminSend) {
+    supportAdminSend.addEventListener("click", sendAdminSupportReply);
+  }
+  if (refreshSupportBtn) {
+    refreshSupportBtn.addEventListener("click", function () {
+      loadSupportThreads();
+      if (openSupportUserId) openSupportThread(openSupportUserId);
+    });
+  }
+  if (supportCloseThreadBtn) {
+    supportCloseThreadBtn.addEventListener("click", async function () {
+      if (!openSupportUserId) return;
+      try {
+        const res = await fetch(
+          "/api/admin/support/" +
+            encodeURIComponent(openSupportUserId) +
+            "/close",
+          { method: "POST", headers: authHeaders(), body: "{}" }
+        );
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          toast(data.error || "Could not close", "err");
+          return;
+        }
+        toast("Thread marked closed", "ok");
+        loadSupportThreads();
+        openSupportThread(openSupportUserId, true);
+      } catch (e) {
+        toast("Network error", "err");
+      }
+    });
+  }
 
   async function loadReports() {
     if (!reportsList) return;

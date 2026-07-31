@@ -1554,6 +1554,114 @@ body {
   font-size: 0.95rem;
 }
 
+.support-card {
+  display: flex;
+  flex-direction: column;
+  max-height: min(88dvh, 720px);
+  padding-bottom: 12px;
+}
+
+.support-messages {
+  flex: 1 1 auto;
+  min-height: 180px;
+  max-height: 42dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 4px 12px;
+  margin: 4px 0 10px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.support-bubble {
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.support-bubble.user {
+  align-self: flex-end;
+  background: rgba(30, 201, 160, 0.18);
+  border: 1px solid rgba(30, 201, 160, 0.28);
+}
+
+.support-bubble.admin {
+  align-self: flex-start;
+  background: var(--incoming);
+  border: 1px solid var(--line);
+}
+
+.support-bubble .support-who {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.support-bubble img {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  margin-top: 8px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #0b141a;
+}
+
+.support-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.support-upload {
+  min-height: 48px;
+  font-size: 0.82rem;
+}
+
+.support-send-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.support-send-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--line);
+  outline: none;
+  background: var(--input);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.support-send-row .auth-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 72px;
+  padding: 12px 16px;
+  border-radius: 999px;
+}
+
+.support-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 24px 12px;
+  line-height: 1.45;
+}
+
 .bubble.error {
   background: #5c2b2b;
   align-self: center;

@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=54" />
+    <link rel="stylesheet" href="/styles.css?v=55" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -484,6 +484,7 @@
               <input type="checkbox" id="sound-toggle" />
               Sound / vibrate on reply
             </label>
+            <button type="button" id="open-support-btn" class="auth-btn">Support · Help</button>
             <button type="button" id="apply-settings-btn" class="auth-btn">Save changes</button>
             <button type="button" id="new-chat-btn" class="btn-outline">New chat</button>
           </div>
@@ -613,6 +614,40 @@
       </div>
     </div>
 
+    <div id="support-sheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-backdrop" id="support-backdrop"></div>
+      <div class="sheet-card support-card" role="dialog" aria-labelledby="support-title">
+        <div class="sheet-head">
+          <div>
+            <h2 id="support-title">Support</h2>
+            <p class="pay-user-line">
+              User ID <b id="support-user-id">—</b> · payment help, unlock, doubts
+            </p>
+          </div>
+          <button type="button" id="support-close-btn" class="chip-btn">Close</button>
+        </div>
+        <div id="support-messages" class="support-messages" aria-live="polite"></div>
+        <div class="support-compose">
+          <label class="pay-upload support-upload" id="support-upload-label">
+            <input id="support-screenshot" type="file" accept="image/*" capture="environment" />
+            <span id="support-upload-text">Add screenshot (optional)</span>
+          </label>
+          <img id="support-preview" class="pay-preview hidden" alt="Preview" />
+          <div class="support-send-row">
+            <input
+              id="support-input"
+              type="text"
+              maxlength="2000"
+              placeholder="Message admin…"
+              autocomplete="off"
+            />
+            <button type="button" id="support-send-btn" class="auth-btn">Send</button>
+          </div>
+          <p id="support-msg" class="pay-msg"></p>
+        </div>
+      </div>
+    </div>
+
     <div id="toast-host" aria-live="polite"></div>
 
     <script>
@@ -624,6 +659,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=71" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=72" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

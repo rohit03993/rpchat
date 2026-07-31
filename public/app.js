@@ -1745,6 +1745,227 @@
   if (reportCancelBtn) reportCancelBtn.addEventListener("click", closeReportSheet);
   if (reportBackdrop) reportBackdrop.addEventListener("click", closeReportSheet);
 
+  const supportSheet = document.getElementById("support-sheet");
+  const supportBackdrop = document.getElementById("support-backdrop");
+  const supportCloseBtn = document.getElementById("support-close-btn");
+  const supportMessagesEl = document.getElementById("support-messages");
+  const supportInput = document.getElementById("support-input");
+  const supportSendBtn = document.getElementById("support-send-btn");
+  const supportMsgEl = document.getElementById("support-msg");
+  const supportUserIdEl = document.getElementById("support-user-id");
+  const supportScreenshot = document.getElementById("support-screenshot");
+  const supportPreview = document.getElementById("support-preview");
+  const supportUploadText = document.getElementById("support-upload-text");
+  const supportUploadLabel = document.getElementById("support-upload-label");
+  const openSupportBtn = document.getElementById("open-support-btn");
+  let supportPollId = null;
+  let supportSending = false;
+
+  function closeSupportSheet() {
+    if (supportSheet) {
+      supportSheet.classList.add("hidden");
+      supportSheet.setAttribute("aria-hidden", "true");
+    }
+    if (supportPollId) {
+      clearInterval(supportPollId);
+      supportPollId = null;
+    }
+  }
+
+  function renderSupportMessages(thread) {
+    if (!supportMessagesEl) return;
+    const msgs = (thread && thread.messages) || [];
+    if (!msgs.length) {
+      supportMessagesEl.innerHTML =
+        "<div class='support-empty'>Message admin about payment, unlock, or any doubt.<br/>You can also attach a payment screenshot.</div>";
+      return;
+    }
+    supportMessagesEl.innerHTML = msgs
+      .map(function (m) {
+        const who = m.from === "admin" ? "Admin" : "You";
+        const cls = m.from === "admin" ? "admin" : "user";
+        const text = escapeHtml(m.text || "");
+        const img = m.screenshotUrl
+          ? "<a href='" +
+            escapeHtml(m.screenshotUrl) +
+            "' target='_blank' rel='noopener'><img src='" +
+            escapeHtml(m.screenshotUrl) +
+            "' alt='attachment' /></a>"
+          : "";
+        return (
+          "<div class='support-bubble " +
+          cls +
+          "'><span class='support-who'>" +
+          who +
+          "</span>" +
+          (text ? text : "") +
+          img +
+          "</div>"
+        );
+      })
+      .join("");
+    supportMessagesEl.scrollTop = supportMessagesEl.scrollHeight;
+  }
+
+  async function loadSupportThread() {
+    if (!authToken) return null;
+    try {
+      const res = await fetch("/api/support", { headers: authHeaders() });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          logout();
+          return null;
+        }
+        if (supportMsgEl) {
+          supportMsgEl.className = "pay-msg err";
+          supportMsgEl.textContent = data.error || "Could not load support";
+        }
+        return null;
+      }
+      renderSupportMessages(data.thread);
+      return data.thread;
+    } catch (e) {
+      if (supportMsgEl) {
+        supportMsgEl.className = "pay-msg err";
+        supportMsgEl.textContent = "Network error";
+      }
+      return null;
+    }
+  }
+
+  function clearSupportAttachment() {
+    if (supportScreenshot) supportScreenshot.value = "";
+    if (supportPreview) {
+      supportPreview.classList.add("hidden");
+      supportPreview.removeAttribute("src");
+    }
+    if (supportUploadText) supportUploadText.textContent = "Add screenshot (optional)";
+    if (supportUploadLabel) supportUploadLabel.classList.remove("has-file");
+  }
+
+  async function openSupportSheet() {
+    if (!authToken) {
+      toast("Login required", "err");
+      return;
+    }
+    closeSidebar();
+    if (supportUserIdEl) supportUserIdEl.textContent = displayUserId(currentUser) || "—";
+    if (supportMsgEl) {
+      supportMsgEl.className = "pay-msg";
+      supportMsgEl.textContent = "";
+    }
+    if (supportSheet) {
+      supportSheet.classList.remove("hidden");
+      supportSheet.setAttribute("aria-hidden", "false");
+    }
+    await loadSupportThread();
+    if (supportPollId) clearInterval(supportPollId);
+    supportPollId = setInterval(function () {
+      if (document.hidden) return;
+      if (!supportSheet || supportSheet.classList.contains("hidden")) return;
+      loadSupportThread();
+    }, 12000);
+    if (supportInput) supportInput.focus();
+  }
+
+  async function sendSupportMessage() {
+    if (!authToken || supportSending) return;
+    const text = supportInput ? supportInput.value.trim() : "";
+    const file =
+      supportScreenshot && supportScreenshot.files && supportScreenshot.files[0];
+    if (!text && !file) {
+      if (supportMsgEl) {
+        supportMsgEl.className = "pay-msg err";
+        supportMsgEl.textContent = "Write a message or add a screenshot.";
+      }
+      return;
+    }
+    supportSending = true;
+    if (supportSendBtn) supportSendBtn.disabled = true;
+    if (supportMsgEl) {
+      supportMsgEl.className = "pay-msg";
+      supportMsgEl.textContent = "Sending…";
+    }
+    try {
+      let b64 = null;
+      if (file) {
+        b64 = (await compressImageFile(file)) || (await fileToBase64(file));
+      }
+      const res = await fetch("/api/support/message", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          text: text,
+          screenshotBase64: b64,
+        }),
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+        if (supportMsgEl) {
+          supportMsgEl.className = "pay-msg err";
+          supportMsgEl.textContent = data.error || "Send failed";
+        }
+        return;
+      }
+      if (supportInput) supportInput.value = "";
+      clearSupportAttachment();
+      renderSupportMessages(data.thread);
+      if (supportMsgEl) {
+        supportMsgEl.className = "pay-msg ok";
+        supportMsgEl.textContent = "Sent · admin will reply here";
+      }
+      toast("Support message sent", "ok");
+    } catch (e) {
+      if (supportMsgEl) {
+        supportMsgEl.className = "pay-msg err";
+        supportMsgEl.textContent = "Network error";
+      }
+    } finally {
+      supportSending = false;
+      if (supportSendBtn) supportSendBtn.disabled = false;
+    }
+  }
+
+  if (openSupportBtn) {
+    openSupportBtn.addEventListener("click", openSupportSheet);
+  }
+  if (supportCloseBtn) supportCloseBtn.addEventListener("click", closeSupportSheet);
+  if (supportBackdrop) supportBackdrop.addEventListener("click", closeSupportSheet);
+  if (supportSendBtn) supportSendBtn.addEventListener("click", sendSupportMessage);
+  if (supportInput) {
+    supportInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendSupportMessage();
+      }
+    });
+  }
+  if (supportScreenshot) {
+    supportScreenshot.addEventListener("change", function () {
+      const file = supportScreenshot.files && supportScreenshot.files[0];
+      if (!file) {
+        clearSupportAttachment();
+        return;
+      }
+      if (supportUploadText) supportUploadText.textContent = file.name || "Screenshot selected";
+      if (supportUploadLabel) supportUploadLabel.classList.add("has-file");
+      if (supportPreview) {
+        const url = URL.createObjectURL(file);
+        supportPreview.src = url;
+        supportPreview.classList.remove("hidden");
+      }
+    });
+  }
+
   function addWorkedStatus(ms, steps) {
     // Hidden for normal users (immersion). Enable with ?debug=1 or localStorage debugWorked=1
     var debug =
