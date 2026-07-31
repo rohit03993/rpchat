@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=12" />
+    <link rel="stylesheet" href="/admin.css?v=13" />
   </head>
   <body>
     <div class="admin-app">
@@ -193,9 +193,18 @@
               <div id="support-thread-list" class="support-thread-list"></div>
               <div id="support-thread-pane" class="support-thread-pane">
                 <div class="support-thread-head">
-                  <div>
-                    <h3 id="support-thread-title">Select a user</h3>
-                    <p id="support-thread-meta" class="meta"></p>
+                  <div class="support-thread-head-left">
+                    <button
+                      type="button"
+                      id="support-back-btn"
+                      class="btn-ghost btn-sm support-back-btn hidden"
+                    >
+                      ← Back
+                    </button>
+                    <div>
+                      <h3 id="support-thread-title">Select a user</h3>
+                      <p id="support-thread-meta" class="meta"></p>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -305,6 +314,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=16"></script>
+    <script src="/admin.js?v=17"></script>
   </body>
 </html>

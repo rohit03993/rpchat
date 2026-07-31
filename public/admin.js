@@ -34,11 +34,34 @@
   const supportAdminInput = document.getElementById("support-admin-input");
   const supportAdminSend = document.getElementById("support-admin-send");
   const supportCloseThreadBtn = document.getElementById("support-close-thread-btn");
+  const supportBackBtn = document.getElementById("support-back-btn");
   const supportCount = document.getElementById("support-count");
   const refreshSupportBtn = document.getElementById("refresh-support-btn");
   let supportThreadsCache = [];
   let openSupportUserId = "";
   let supportPollId = null;
+
+  function setSupportMobileMode(mode) {
+    if (!supportView) return;
+    supportView.classList.toggle("is-thread", mode === "thread");
+    if (supportBackBtn) {
+      supportBackBtn.classList.toggle("hidden", mode !== "thread");
+    }
+  }
+
+  function closeSupportThreadView() {
+    openSupportUserId = "";
+    setSupportMobileMode("list");
+    if (supportThreadTitle) supportThreadTitle.textContent = "Select a user";
+    if (supportThreadMeta) supportThreadMeta.textContent = "";
+    if (supportCloseThreadBtn) supportCloseThreadBtn.classList.add("hidden");
+    if (supportAdminCompose) supportAdminCompose.classList.add("hidden");
+    if (supportAdminMessages) {
+      supportAdminMessages.innerHTML =
+        "<div class='empty'>Pick a support thread from the list.</div>";
+    }
+    renderSupportThreadList(supportThreadsCache);
+  }
   const reportsList = document.getElementById("reports-list");
   const reportsCount = document.getElementById("reports-count");
   const downloadReportsBtn = document.getElementById("download-reports-btn");
@@ -164,6 +187,7 @@
     hideAllTabs();
     if (tabSupport) tabSupport.classList.add("active");
     if (supportView) supportView.classList.remove("hidden");
+    setSupportMobileMode(openSupportUserId ? "thread" : "list");
     loadSupportThreads();
     if (supportPollId) clearInterval(supportPollId);
     supportPollId = setInterval(function () {
@@ -1323,6 +1347,7 @@
 
   async function openSupportThread(userId, quiet) {
     openSupportUserId = String(userId || "");
+    setSupportMobileMode("thread");
     if (!quiet) renderSupportThreadList(supportThreadsCache);
     if (supportThreadTitle) {
       supportThreadTitle.textContent = "User ID " + openSupportUserId;
@@ -1403,6 +1428,9 @@
       if (!btn) return;
       openSupportThread(btn.getAttribute("data-support-user"));
     });
+  }
+  if (supportBackBtn) {
+    supportBackBtn.addEventListener("click", closeSupportThreadView);
   }
   if (supportAdminSend) {
     supportAdminSend.addEventListener("click", sendAdminSupportReply);
