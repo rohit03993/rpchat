@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=10" />
+    <link rel="stylesheet" href="/admin.css?v=11" />
   </head>
   <body>
     <div class="admin-app">
@@ -113,10 +113,18 @@
           </div>
 
           <div class="tabs">
-            <button type="button" class="tab active" id="tab-users">Users</button>
-            <button type="button" class="tab" id="tab-payments">Payments</button>
-            <button type="button" class="tab" id="tab-reports">AI reports</button>
-            <button type="button" class="tab" id="tab-pay-setup">Pay setup</button>
+            <button type="button" class="tab active" id="tab-users">
+              <span class="tab-full">Users</span><span class="tab-short">Users</span>
+            </button>
+            <button type="button" class="tab" id="tab-payments">
+              <span class="tab-full">Payments</span><span class="tab-short">Pays</span>
+            </button>
+            <button type="button" class="tab" id="tab-reports">
+              <span class="tab-full">AI reports</span><span class="tab-short">AI</span>
+            </button>
+            <button type="button" class="tab" id="tab-pay-setup">
+              <span class="tab-full">Pay setup</span><span class="tab-short">Setup</span>
+            </button>
           </div>
 
           <div id="users-view" class="panel">
@@ -252,6 +260,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=14"></script>
+    <script src="/admin.js?v=15"></script>
   </body>
 </html>

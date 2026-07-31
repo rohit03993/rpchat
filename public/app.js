@@ -851,9 +851,13 @@
   }
 
   async function resumeOnReturn() {
-    if (!authToken || !hoursCounting) return;
+    if (!authToken || !hoursCounting) {
+      resumePayProofIfNeeded();
+      return;
+    }
     await resumeSession();
     if (hoursCounting && !timerRunning) startLiveTimer();
+    resumePayProofIfNeeded();
   }
 
   function formatTime(u) {
@@ -978,6 +982,98 @@
   let payCatalog = { packages: [], payment: {} };
   let selectedPackId = "5h";
   let payPollId = null;
+  const PAY_PROOF_HOLD_MS = 5 * 60 * 1000; // silent — not shown to user
+  const PAY_PROOF_HOLD_KEY = "desichat_pay_proof_hold";
+
+  function markPayProofHold() {
+    try {
+      var uid = displayUserId(currentUser) || "";
+      sessionStorage.setItem(
+        PAY_PROOF_HOLD_KEY,
+        JSON.stringify({
+          until: Date.now() + PAY_PROOF_HOLD_MS,
+          packId: selectedPackId || "",
+          userId: uid,
+        })
+      );
+    } catch (e) {}
+  }
+
+  function getPayProofHold() {
+    try {
+      var raw = sessionStorage.getItem(PAY_PROOF_HOLD_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (!data || !data.until) return null;
+      if (Date.now() > Number(data.until)) {
+        sessionStorage.removeItem(PAY_PROOF_HOLD_KEY);
+        return null;
+      }
+      var uid = displayUserId(currentUser) || "";
+      if (data.userId && uid && String(data.userId) !== String(uid)) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearPayProofHold() {
+    try {
+      sessionStorage.removeItem(PAY_PROOF_HOLD_KEY);
+    } catch (e) {}
+    if (payUploadBlock) payUploadBlock.classList.remove("pay-upload-focus");
+    if (billingPanel) billingPanel.classList.remove("pay-proof-hold");
+  }
+
+  function focusPayProofUpload() {
+    if (payUploadBlock) {
+      payUploadBlock.classList.remove("hidden");
+      payUploadBlock.classList.add("pay-upload-focus");
+    }
+    if (payProofNav) payProofNav.classList.remove("hidden");
+    if (billingPanel) billingPanel.classList.add("pay-proof-hold");
+    if (selectedPackId == null && getPayProofHold() && getPayProofHold().packId) {
+      selectedPackId = getPayProofHold().packId;
+    }
+    goPayStep(3);
+    if (payMsg && (!payMsg.textContent || payMsg.className.indexOf("ok") < 0)) {
+      payMsg.className = "pay-msg";
+      payMsg.textContent =
+        "Back from UPI? Upload your payment screenshot below to unlock hours.";
+    }
+    if (payProofSummary) {
+      var pack = selectedPack();
+      var uid = (currentUser && currentUser.userId) || "";
+      payProofSummary.textContent = pack
+        ? "Upload screenshot of your ₹" +
+          pack.priceInr +
+          " payment (remark " +
+          uid +
+          "). Admin unlocks after verify."
+        : "Upload your payment screenshot — admin will verify and unlock hours.";
+    }
+    try {
+      if (payUploadLabel) {
+        payUploadLabel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    } catch (e) {}
+  }
+
+  /** Re-open Pay on upload step after returning from UPI (hold ~5 min, hidden). */
+  function resumePayProofIfNeeded() {
+    var hold = getPayProofHold();
+    if (!hold) return false;
+    if (!billingPanel) return false;
+    billingPanel.classList.remove("hidden");
+    billingPanel.setAttribute("aria-hidden", "false");
+    var uid = displayUserId(currentUser);
+    if (payIdValueEl) payIdValueEl.textContent = uid || "—";
+    if (hold.packId) selectedPackId = hold.packId;
+    loadBillingInfo().then(function () {
+      focusPayProofUpload();
+    });
+    return true;
+  }
 
   function setPaySteps(activeStep) {
     payWizardStep = activeStep;
@@ -1499,6 +1595,7 @@
       payMsg.textContent =
         "Submitted ✓ Pending admin approval. Hours unlock after verify.";
       toast("Payment pending · waiting for admin", "ok");
+      clearPayProofHold();
       if (payUploadBlock) payUploadBlock.classList.add("hidden");
       if (payProofNav) payProofNav.classList.add("hidden");
       goPayStep(3);
@@ -1674,10 +1771,13 @@
     el.className = "typing";
     el.id = "typing";
     el.innerHTML =
+      '<div class="typing-row">' +
       '<span class="typing-label">' +
       escapeHtml(name) +
       " typing…</span>" +
-      '<span class="typing-dots"><span></span><span></span><span></span></span>';
+      '<span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>' +
+      "</div>" +
+      '<span class="typing-stay">Keep this screen open · reply in ~30s</span>';
     messagesEl.appendChild(el);
     scrollMessagesToEnd(true);
   }
@@ -1687,6 +1787,8 @@
     if (t) t.remove();
   }
 
+  let composerPlaceholderSaved = "";
+
   function setBusy(busy, label) {
     sendBtn.disabled = busy;
     input.disabled = busy;
@@ -1694,10 +1796,19 @@
     if (sendSpinner) sendSpinner.classList.toggle("hidden", !busy);
     sendBtn.classList.toggle("is-busy", !!busy);
     if (busy) {
+      if (!composerPlaceholderSaved) {
+        composerPlaceholderSaved = input.getAttribute("placeholder") || "Message...";
+      }
+      input.setAttribute("placeholder", "Keep this screen open…");
       statusEl.textContent =
         label ||
-        ((charNameEl && charNameEl.value.trim()) || "Chat") + " typing…";
+        ((charNameEl && charNameEl.value.trim()) || "Chat") +
+          " typing · keep screen open";
     } else {
+      if (composerPlaceholderSaved) {
+        input.setAttribute("placeholder", composerPlaceholderSaved);
+        composerPlaceholderSaved = "";
+      }
       setUserChip(currentUser);
     }
   }
@@ -2604,6 +2715,31 @@
     if (payIdValueEl) payIdValueEl.textContent = uid || "—";
     if (payUploadBlock) payUploadBlock.classList.remove("hidden");
     if (payProofNav) payProofNav.classList.remove("hidden");
+
+    var hold = getPayProofHold();
+    if (hold) {
+      if (hold.packId) selectedPackId = hold.packId;
+      refreshMe();
+      loadBillingInfo().then(function () {
+        focusPayProofUpload();
+        loadMyPayments().then(function (list) {
+          if (
+            list &&
+            list.some(function (p) {
+              return p.status === "pending";
+            })
+          ) {
+            clearPayProofHold();
+            if (payUploadBlock) payUploadBlock.classList.add("hidden");
+            if (payProofNav) payProofNav.classList.add("hidden");
+            goPayStep(3);
+            startPayPoll();
+          }
+        });
+      });
+      return;
+    }
+
     goPayStep(1);
     refreshMe();
     loadBillingInfo().then(function () {
@@ -2625,6 +2761,7 @@
 
   function closePaySheet() {
     if (!billingPanel) return;
+    // During proof hold, closing is allowed — we reopen on return / next Pay tap
     billingPanel.classList.add("hidden");
     billingPanel.setAttribute("aria-hidden", "true");
   }
@@ -2660,7 +2797,8 @@
   }
   if (payGoto3) {
     payGoto3.addEventListener("click", function () {
-      goPayStep(3);
+      markPayProofHold();
+      focusPayProofUpload();
     });
   }
   if (payBack1) {
@@ -2673,6 +2811,15 @@
       if (payUploadBlock) payUploadBlock.classList.remove("hidden");
       if (payProofNav) payProofNav.classList.remove("hidden");
       goPayStep(2);
+    });
+  }
+  if (upiOpenBtn) {
+    upiOpenBtn.addEventListener("click", function () {
+      markPayProofHold();
+      // Next visible return → upload step (UPI apps background this tab)
+      setTimeout(function () {
+        goPayStep(3);
+      }, 400);
     });
   }
 

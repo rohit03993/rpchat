@@ -637,98 +637,110 @@
       return;
     }
 
-    const rows = filtered
+    const cards = filtered
       .map(function (u) {
         const clock = formatClock(u.hoursBalance);
         const chatLabel = u.chatMsgCount
           ? u.chatMsgCount +
             (u.chatSessionCount > 1 ? " / " + u.chatSessionCount + " chats" : "") +
             (u.chatArchived && !u.chatLive ? " (old)" : "")
-          : "—";
+          : "No chats";
         const scene =
           (u.characterName || "—") +
           (u.botRole ? " · " + u.botRole : "");
         const paidBadge = u.hasPaid
           ? "<span class='badge approved'>paid</span>"
           : "<span class='badge'>unpaid</span>";
-        return (
-          "<tr>" +
-          "<td><button type='button' class='id-pill id-link' title='View chat' data-view-chat='" +
-          escapeHtml(u.userId) +
-          "'>" +
-          escapeHtml(u.userId) +
-          "</button></td>" +
-          "<td><span class='pin-cell'>" +
-          escapeHtml(u.pin || "—") +
-          "</span></td>" +
-          "<td><div class='time-cell'>" +
-          clock +
-          "<small>" +
-          Number(u.hoursBalance || 0).toFixed(2) +
-          "h</small></div></td>" +
-          "<td><span class='badge " +
+        const onlineBadge =
+          "<span class='badge " +
           (u.sessionActive ? "online" : "") +
           "'>" +
           (u.sessionActive ? "online" : "idle") +
-          "</span> " +
-          paidBadge +
-          "</td>" +
-          "<td class='scene-cell' title='" +
-          escapeHtml(scene) +
-          "'>" +
-          escapeHtml(scene) +
-          "</td>" +
-          "<td class='meta'><button type='button' class='chat-count-btn' data-view-chat='" +
-          escapeHtml(u.userId) +
-          "'>" +
-          chatLabel +
-          "</button></td>" +
-          "<td class='meta'>P " +
+          "</span>";
+        const pays =
+          "P " +
           (u.pendingPayments || 0) +
           " · A " +
           (u.approvedPayments || 0) +
-          (u.rejectedPayments ? " · R " + u.rejectedPayments : "") +
-          "</td>" +
-          "<td class='meta'>" +
+          (u.rejectedPayments ? " · R " + u.rejectedPayments : "");
+
+        return (
+          "<article class='user-card" +
+          (u.sessionActive ? " is-online" : "") +
+          (Number(u.pendingPayments || 0) > 0 ? " has-pending" : "") +
+          "'>" +
+          "<div class='user-card-top'>" +
+          "<button type='button' class='id-pill id-link' title='View chat' data-view-chat='" +
+          escapeHtml(u.userId) +
+          "'>" +
+          escapeHtml(u.userId) +
+          "</button>" +
+          "<div class='user-card-badges'>" +
+          onlineBadge +
+          paidBadge +
+          "</div>" +
+          "</div>" +
+          "<div class='user-card-main'>" +
+          "<div class='user-card-time'>" +
+          "<span class='user-card-clock'>" +
+          clock +
+          "</span>" +
+          "<small>" +
+          Number(u.hoursBalance || 0).toFixed(2) +
+          "h left</small>" +
+          "</div>" +
+          "<div class='user-card-meta'>" +
+          "<div><span class='uc-label'>PIN</span> <b class='pin-cell'>" +
+          escapeHtml(u.pin || "—") +
+          "</b></div>" +
+          "<div><span class='uc-label'>Scene</span> " +
+          escapeHtml(scene) +
+          "</div>" +
+          "<div><span class='uc-label'>Pays</span> " +
+          pays +
+          "</div>" +
+          "<div><span class='uc-label'>Joined</span> " +
           new Date(u.createdAt).toLocaleString() +
-          "</td>" +
-          "<td><div class='row-actions'>" +
+          "</div>" +
+          "</div>" +
+          "</div>" +
+          "<button type='button' class='user-card-chat' data-view-chat='" +
+          escapeHtml(u.userId) +
+          "'>" +
+          "View chat · " +
+          escapeHtml(chatLabel) +
+          "</button>" +
+          "<div class='user-card-actions'>" +
           "<button type='button' class='btn btn-sm' data-add-hours='" +
           escapeHtml(u.userId) +
           "'>+1h</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-add-hours5='" +
           escapeHtml(u.userId) +
           "'>+5h</button>" +
-          "<button type='button' class='btn-danger btn-sm' title='Set time to zero and end chat' data-clear-hours='" +
+          "<button type='button' class='btn-danger btn-sm' title='Set time to zero' data-clear-hours='" +
           escapeHtml(u.userId) +
-          "'>Clear time</button>" +
+          "'>Clear</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-reset-pin='" +
           escapeHtml(u.userId) +
-          "'>Reset PIN</button>" +
-          "<button type='button' class='btn-ghost btn-sm' title='Delete live + archived chats' data-delete-chats='" +
+          "'>PIN</button>" +
+          "<button type='button' class='btn-ghost btn-sm' data-delete-chats='" +
           escapeHtml(u.userId) +
           "'>Del chats</button>" +
-          "<button type='button' class='btn-danger btn-sm' title='Delete account forever' data-delete-user='" +
+          "<button type='button' class='btn-danger btn-sm' data-delete-user='" +
           escapeHtml(u.userId) +
-          "'>Del account</button>" +
+          "'>Del</button>" +
           (u.isLegacy || u.needsFourDigit
             ? "<button type='button' class='btn btn-sm' data-migrate='" +
               escapeHtml(u.userId) +
               "'>→ 4-digit</button>"
             : "") +
-          "</div></td>" +
-          "</tr>"
+          "</div>" +
+          "</article>"
         );
       })
       .join("");
 
-    usersEl.innerHTML =
-      "<table class='data-table'>" +
-      "<thead><tr>" +
-      "<th>User ID</th><th>PIN</th><th>Time left</th><th>Status</th><th>Scene</th><th>Msgs</th><th>Pays</th><th>Joined</th><th>Actions</th>" +
-      "</tr></thead><tbody>" +
-      rows +
-      "</tbody></table>";
+    usersEl.innerHTML = "<div class='users-cards'>" + cards + "</div>";
   }
 
   function renderPayments(list) {
