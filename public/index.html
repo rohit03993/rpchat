@@ -569,6 +569,16 @@
                 <span id="pay-upload-text">Tap to add screenshot</span>
               </label>
               <img id="pay-preview" class="pay-preview hidden" alt="Preview" />
+              <label class="full pay-utr-label">
+                UTR / UPI Ref (optional — faster unlock)
+                <input
+                  id="pay-utr"
+                  type="text"
+                  maxlength="22"
+                  placeholder="From bank SMS / payment app"
+                  autocomplete="off"
+                />
+              </label>
               <button type="button" id="submit-pay-btn" class="auth-btn">Submit for admin approval</button>
             </div>
             <div id="pay-pending-banner" class="pay-pending-banner hidden" role="status" aria-live="polite"></div>
@@ -663,6 +673,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=75" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=76" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

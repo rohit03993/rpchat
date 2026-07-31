@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical"
+  android:padding="16dp"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent">
+
+  <EditText
+    android:id="@+id/baseUrl"
+    android:hint="https://rpdesichat.online"
+    android:inputType="textUri"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+
+  <EditText
+    android:id="@+id/adminToken"
+    android:hint="Admin Bearer token (from /admin login)"
+    android:inputType="textPassword"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+
+  <Button
+    android:id="@+id/saveBtn"
+    android:text="Save + allow SMS"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+
+  <Button
+    android:id="@+id/testBtn"
+    android:text="Test sample ₹130 SMS"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" />
+
+  <TextView
+    android:id="@+id/status"
+    android:text="Waiting for credit SMS…"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="12dp" />
+</LinearLayout>

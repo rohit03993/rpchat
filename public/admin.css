@@ -262,6 +262,35 @@ button {
   color: #7dd3fc;
 }
 
+.sms-credit-box {
+  margin: 0 0 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 201, 160, 0.28);
+  background: rgba(30, 201, 160, 0.06);
+  display: grid;
+  gap: 8px;
+}
+
+.sms-credit-box textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #0f1a20;
+  color: inherit;
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+  min-height: 72px;
+}
+
+.sms-credit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 #user-filter,
 #status-filter,
 #pay-search,

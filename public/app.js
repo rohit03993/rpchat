@@ -59,6 +59,7 @@
   const packageSelect = document.getElementById("package-select");
   const packageCardsEl = document.getElementById("package-cards");
   const payScreenshot = document.getElementById("pay-screenshot");
+  const payUtrEl = document.getElementById("pay-utr");
   const payUploadLabel = document.getElementById("pay-upload-label");
   const payUploadText = document.getElementById("pay-upload-text");
   const payPreview = document.getElementById("pay-preview");
@@ -1621,6 +1622,7 @@
             (upiNoteEl && upiNoteEl.value.trim()) ||
             (currentUser && currentUser.userId) ||
             "",
+          utr: (payUtrEl && payUtrEl.value.trim()) || "",
         }),
       });
       const data = await res.json();
@@ -1645,6 +1647,7 @@
       if (payProofNav) payProofNav.classList.add("hidden");
       goPayStep(3);
       if (payScreenshot) payScreenshot.value = "";
+      if (payUtrEl) payUtrEl.value = "";
       if (payPreview) {
         payPreview.classList.add("hidden");
         payPreview.removeAttribute("src");

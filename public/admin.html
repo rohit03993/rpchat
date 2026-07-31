@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=14" />
+    <link rel="stylesheet" href="/admin.css?v=15" />
   </head>
   <body>
     <div class="admin-app">
@@ -176,6 +176,21 @@
               <button type="button" id="refresh-btn" class="btn-ghost btn-sm">Refresh</button>
             </div>
             <p id="pay-money-line" class="meta pay-money-line"></p>
+            <div class="sms-credit-box">
+              <p class="meta setup-lead">
+                Auto-unlock test: paste bank credit SMS (or use Admin Android app). Safe match =
+                UTR → single ₹+screenshot → else needs review.
+              </p>
+              <textarea
+                id="sms-credit-input"
+                rows="3"
+                placeholder="e.g. Rs.130 credited to A/c XX123 via UPI. UTR 123456789012."
+              ></textarea>
+              <div class="sms-credit-actions">
+                <button type="button" id="sms-credit-btn" class="btn btn-sm">Match SMS → unlock</button>
+                <span id="sms-credit-result" class="meta"></span>
+              </div>
+            </div>
             <div id="payments" class="payments-grid"></div>
           </div>
 
@@ -318,6 +333,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=18"></script>
+    <script src="/admin.js?v=19"></script>
   </body>
 </html>

@@ -509,6 +509,7 @@ app.post("/api/billing/submit", requireUser, (req, res) => {
       packageId: req.body?.packageId,
       screenshotBase64: req.body?.screenshotBase64,
       upiNote: req.body?.upiNote,
+      utr: req.body?.utr,
     });
     res.json({
       payment,
@@ -708,6 +709,23 @@ app.post("/api/admin/users/:id/migrate-id", requireAdmin, (req, res) => {
   const result = billing.adminMigrateToFourDigit(req.params.id);
   if (!result.ok) return res.status(400).json({ error: result.error });
   res.json(result);
+});
+
+app.post("/api/admin/sms-credit", requireAdmin, (req, res) => {
+  try {
+    const result = billing.ingestSmsCredit({
+      smsText: req.body?.smsText || req.body?.body || "",
+      amountInr: req.body?.amountInr,
+      utr: req.body?.utr,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || "SMS credit failed" });
+  }
+});
+
+app.get("/api/admin/sms-credits", requireAdmin, (req, res) => {
+  res.json({ credits: billing.listSmsCredits(req.query.limit) });
 });
 
 app.post("/api/admin/payments/:id/approve", requireAdmin, (req, res) => {

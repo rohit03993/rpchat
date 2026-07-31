@@ -1236,6 +1236,61 @@
     }
   });
 
+  const smsCreditInput = document.getElementById("sms-credit-input");
+  const smsCreditBtn = document.getElementById("sms-credit-btn");
+  const smsCreditResult = document.getElementById("sms-credit-result");
+  if (smsCreditBtn) {
+    smsCreditBtn.addEventListener("click", async function () {
+      const smsText = smsCreditInput ? smsCreditInput.value.trim() : "";
+      if (!smsText) {
+        toast("Paste a credit SMS first", "err");
+        return;
+      }
+      smsCreditBtn.disabled = true;
+      if (smsCreditResult) smsCreditResult.textContent = "Matching…";
+      try {
+        const res = await fetch("/api/admin/sms-credit", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ smsText: smsText }),
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          toast(data.error || "SMS match failed", "err");
+          if (smsCreditResult) smsCreditResult.textContent = data.error || "Failed";
+          return;
+        }
+        const action = data.action || "?";
+        const reason = data.reason || "";
+        if (smsCreditResult) {
+          smsCreditResult.textContent =
+            action.toUpperCase() +
+            (data.parsed && data.parsed.amountInr ? " · ₹" + data.parsed.amountInr : "") +
+            (data.payment && data.payment.userId ? " · user " + data.payment.userId : "") +
+            " — " +
+            reason;
+        }
+        if (action === "approve") {
+          toast("Auto-approved · hours unlocked", "ok");
+          if (smsCreditInput) smsCreditInput.value = "";
+          await refreshAll();
+        } else if (action === "needs_review") {
+          toast("Needs review — open pending list", "err");
+          await refreshAll();
+        } else {
+          toast(reason || action, "ok");
+        }
+      } catch (err) {
+        toast("Network error", "err");
+        if (smsCreditResult) smsCreditResult.textContent = "Network error";
+      } finally {
+        smsCreditBtn.disabled = false;
+      }
+    });
+  }
+
   loginBtn.addEventListener("click", login);
   passEl.addEventListener("keydown", function (e) {
     if (e.key === "Enter") login();
