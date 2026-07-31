@@ -1462,33 +1462,45 @@
       return [];
     }
     const list = (data.payments || []).slice(0, 6);
-    if (!list.length) {
-      myPaymentsEl.innerHTML = "<div class='char-info'>No payments yet.</div>";
-      return [];
+    const buyingAgain = remainingHoursNow() <= 0.0001 || !!getPayProofHold();
+    // While buying again, never list old APPROVED rows — looks like current status.
+    const visible = buyingAgain
+      ? list.filter(function (p) {
+          return p.status === "pending" || p.status === "rejected";
+        })
+      : list;
+
+    if (!visible.length) {
+      myPaymentsEl.innerHTML = buyingAgain
+        ? ""
+        : list.length
+          ? ""
+          : "<div class='char-info'>No payments yet.</div>";
+    } else {
+      myPaymentsEl.innerHTML = visible
+        .map(function (p) {
+          var statusLabel =
+            p.status === "pending"
+              ? "WAITING ADMIN"
+              : p.status === "approved"
+                ? "APPROVED"
+                : p.status === "rejected"
+                  ? "REJECTED"
+                  : String(p.status || "").toUpperCase();
+          return (
+            "<div class='pay-history-item'><span>" +
+            p.packageId +
+            " · ₹" +
+            p.amountInr +
+            "</span><span class='pay-status " +
+            p.status +
+            "'>" +
+            statusLabel +
+            "</span></div>"
+          );
+        })
+        .join("");
     }
-    myPaymentsEl.innerHTML = list
-      .map(function (p) {
-        var statusLabel =
-          p.status === "pending"
-            ? "WAITING ADMIN"
-            : p.status === "approved"
-              ? "APPROVED"
-              : p.status === "rejected"
-                ? "REJECTED"
-                : String(p.status || "").toUpperCase();
-        return (
-          "<div class='pay-history-item'><span>" +
-          p.packageId +
-          " · ₹" +
-          p.amountInr +
-          "</span><span class='pay-status " +
-          p.status +
-          "'>" +
-          statusLabel +
-          "</span></div>"
-        );
-      })
-      .join("");
 
     syncPayStatusFromList(list);
     return list;

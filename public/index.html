@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=57" />
+    <link rel="stylesheet" href="/styles.css?v=60" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -339,26 +339,26 @@
           <input id="rp-custom-user" type="text" maxlength="40" placeholder="Your role (e.g. beti)" style="margin-top:6px" />
         </label>
         <label class="full">
-          What kind of RP do you want? (optional)
+          RP notes (optional)
           <textarea
             id="rp-note"
             maxlength="400"
-            rows="3"
-            placeholder="Example: I am the daughter. Start soft and flirty. Get dirty only when I push. We will decide the place in chat…"
+            rows="2"
+            placeholder="e.g. Soft start, dirty only when I push…"
           ></textarea>
         </label>
         <label class="full">
-          Resistance (how slow before intimacy)
+          Resistance
           <select id="rp-resistance">
-            <option value="strict" selected>Strict — seedhi-saadi slow burn (hard to seduce)</option>
-            <option value="normal">Normal — tease, then slowly heat up</option>
-            <option value="easy">Easy — less resistance, heats up sooner</option>
+            <option value="strict" selected>Strict — slow burn</option>
+            <option value="normal">Normal — gradual heat</option>
+            <option value="easy">Easy — heats up sooner</option>
           </select>
         </label>
         <p id="rp-setup-status" class="char-info full"></p>
 
-        <div class="setup-advanced full">
-          <p class="setup-advanced-title">More options (optional)</p>
+        <details class="setup-advanced full">
+          <summary class="setup-advanced-title">More options</summary>
           <label>
             You are
             <select id="rp-user-role">
@@ -451,7 +451,7 @@
               </select>
             </label>
           </div>
-        </div>
+        </details>
       </div>
 
       <div id="setup-modal" class="setup-modal">
@@ -476,15 +476,19 @@
               <b id="sidebar-user-id">—</b>
               <button type="button" id="copy-sidebar-id" class="chip-btn">Copy ID</button>
             </p>
-            <p class="account-hint">Keep your ID &amp; PIN safe. Saved on this browser for next login.</p>
+            <p class="account-hint">ID &amp; PIN stay on this browser.</p>
           </div>
-          <div id="sidebar-form-slot"></div>
+          <button type="button" id="open-support-btn" class="auth-btn sidebar-support-btn">
+            Support · Help
+          </button>
+          <div class="sidebar-scroll">
+            <div id="sidebar-form-slot"></div>
+          </div>
           <div class="sidebar-actions">
             <label class="sound-toggle">
               <input type="checkbox" id="sound-toggle" />
               Sound / vibrate on reply
             </label>
-            <button type="button" id="open-support-btn" class="auth-btn">Support · Help</button>
             <button type="button" id="apply-settings-btn" class="auth-btn">Save changes</button>
             <button type="button" id="new-chat-btn" class="btn-outline">New chat</button>
           </div>
@@ -659,6 +663,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=74" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=75" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>
