@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=15" />
+    <link rel="stylesheet" href="/admin.css?v=16" />
   </head>
   <body>
     <div class="admin-app">
@@ -122,6 +122,9 @@
             <button type="button" class="tab" id="tab-support">
               <span class="tab-full">Support</span><span class="tab-short">Help</span>
             </button>
+            <button type="button" class="tab" id="tab-notices">
+              <span class="tab-full">Notices</span><span class="tab-short">Msgs</span>
+            </button>
             <button type="button" class="tab" id="tab-reports">
               <span class="tab-full">AI reports</span><span class="tab-short">AI</span>
             </button>
@@ -156,6 +159,33 @@
               </button>
             </div>
             <div id="users" class="table-wrap"></div>
+          </div>
+
+          <div id="notices-view" class="panel hidden">
+            <div class="toolbar">
+              <input
+                id="notice-user-id"
+                type="text"
+                placeholder="User ID"
+                maxlength="12"
+                autocomplete="off"
+                style="max-width:110px"
+              />
+              <input
+                id="notice-text"
+                type="text"
+                placeholder="Offer or message to user…"
+                maxlength="500"
+                autocomplete="off"
+              />
+              <button type="button" id="notice-send-btn" class="btn btn-sm">Send</button>
+              <button type="button" id="refresh-notices-btn" class="btn-ghost btn-sm">Refresh</button>
+              <span id="notices-count" class="meta"></span>
+            </div>
+            <p class="meta setup-lead">
+              User sees this as a banner in chat. <b>Seen</b> updates when they tap Got it.
+            </p>
+            <div id="notices-list" class="notices-admin-list"></div>
           </div>
 
           <div id="payments-view" class="panel hidden">
@@ -333,6 +363,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=19"></script>
+    <script src="/admin.js?v=20"></script>
   </body>
 </html>

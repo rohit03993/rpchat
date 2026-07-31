@@ -291,6 +291,57 @@ button {
   gap: 10px;
 }
 
+.user-notice-flag {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.user-notice-flag.unread {
+  color: #f0d28a;
+}
+
+.user-notice-flag.seen {
+  color: #7dd3c0;
+}
+
+.notices-admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notice-admin-card {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #122028;
+}
+
+.notice-admin-card.is-unseen {
+  border-color: rgba(240, 210, 138, 0.35);
+}
+
+.notice-admin-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.notice-admin-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.notice-admin-text {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: #c5d5dc;
+}
+
 #user-filter,
 #status-filter,
 #pay-search,

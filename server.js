@@ -479,12 +479,49 @@ app.get("/api/billing/packages", (_req, res) => {
 app.get("/api/billing/me", requireUser, (req, res) => {
   const user = billing.getUser(req.userId);
   if (!user) return res.status(404).json({ error: "User not found" });
+  const notices = billing.listUserNotices(req.userId, { unseenOnly: true });
   // Soft tick while user is in the app (live timer)
   if (user.sessionActive) {
     const tick = billing.tickUserHours(req.userId);
-    return res.json({ user: tick.user || billing.publicUser(user) });
+    return res.json({
+      user: tick.user || billing.publicUser(user),
+      notices: notices,
+    });
   }
-  res.json({ user: billing.publicUser(user) });
+  res.json({ user: billing.publicUser(user), notices: notices });
+});
+
+app.get("/api/notices", requireUser, (req, res) => {
+  const unseenOnly = String(req.query.unseen || "") === "1";
+  res.json({
+    notices: billing.listUserNotices(req.userId, { unseenOnly: unseenOnly }),
+  });
+});
+
+app.post("/api/notices/:id/seen", requireUser, (req, res) => {
+  const result = billing.markNoticeSeen(req.userId, req.params.id);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+app.post("/api/admin/notices", requireAdmin, (req, res) => {
+  const result = billing.sendAdminNotice({
+    userId: req.body?.userId,
+    text: req.body?.text,
+    title: req.body?.title,
+  });
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+app.get("/api/admin/notices", requireAdmin, (req, res) => {
+  res.json({
+    notices: billing.listAdminNotices({
+      userId: req.query.userId,
+      unseenOnly: String(req.query.unseen || "") === "1",
+      limit: req.query.limit,
+    }),
+  });
 });
 
 /** Start / resume draining hours for live countdown while chat app is open */

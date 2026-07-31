@@ -89,6 +89,11 @@
   const copyPayDetailsBtn = document.getElementById("copy-pay-details-btn");
   const welcomeTipEl = document.getElementById("welcome-tip");
   const welcomeTipDismissBtn = document.getElementById("welcome-tip-dismiss");
+  const adminNoticeEl = document.getElementById("admin-notice");
+  const adminNoticeTitleEl = document.getElementById("admin-notice-title");
+  const adminNoticeTextEl = document.getElementById("admin-notice-text");
+  const adminNoticeGotItBtn = document.getElementById("admin-notice-got-it");
+  let openAdminNoticeId = null;
   let payWizardStep = 1;
   const tabLogin = document.getElementById("tab-login");
   const tabRegister = document.getElementById("tab-register");
@@ -977,7 +982,43 @@
         " · Left: " +
         formatCountdown(remainingHoursNow());
     }
+    showAdminNotices(data.notices || []);
     return true;
+  }
+
+  function showAdminNotices(list) {
+    if (!adminNoticeEl) return;
+    const unread = (list || []).filter(function (n) {
+      return n && !n.seen;
+    });
+    if (!unread.length) {
+      adminNoticeEl.classList.add("hidden");
+      openAdminNoticeId = null;
+      return;
+    }
+    const n = unread[0];
+    openAdminNoticeId = n.noticeId;
+    if (adminNoticeTitleEl) adminNoticeTitleEl.textContent = n.title || "Message from admin";
+    if (adminNoticeTextEl) adminNoticeTextEl.textContent = n.text || "";
+    adminNoticeEl.classList.remove("hidden");
+  }
+
+  async function dismissAdminNotice() {
+    if (!openAdminNoticeId || !authToken) {
+      if (adminNoticeEl) adminNoticeEl.classList.add("hidden");
+      return;
+    }
+    const id = openAdminNoticeId;
+    try {
+      await fetch("/api/notices/" + encodeURIComponent(id) + "/seen", {
+        method: "POST",
+        headers: authHeaders(),
+        body: "{}",
+      });
+    } catch (e) {}
+    openAdminNoticeId = null;
+    if (adminNoticeEl) adminNoticeEl.classList.add("hidden");
+    await refreshMe();
   }
 
   let payCatalog = { packages: [], payment: {} };
@@ -3118,6 +3159,9 @@
   }
   if (welcomeTipDismissBtn) {
     welcomeTipDismissBtn.addEventListener("click", dismissWelcomeTip);
+  }
+  if (adminNoticeGotItBtn) {
+    adminNoticeGotItBtn.addEventListener("click", dismissAdminNotice);
   }
 
   if (payScreenshot) {
