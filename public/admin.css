@@ -1,20 +1,20 @@
 :root {
-  /* Match user app — light, trustworthy */
-  --bg: #eef3f6;
+  /* Match user app — dark on white */
+  --bg: #ffffff;
   --panel: #ffffff;
   --card: #ffffff;
-  --line: rgba(21, 37, 45, 0.1);
-  --text: #15252d;
-  --muted: #5a7180;
-  --accent: #0d9f7e;
-  --accent-dim: #0b8268;
-  --danger: #c94a57;
-  --ok: #0b8268;
-  --warn: #b8860b;
-  --on-accent: #042018;
+  --line: rgba(15, 26, 32, 0.16);
+  --text: #0f1a20;
+  --muted: #3d5260;
+  --accent: #0a8a6d;
+  --accent-dim: #08785e;
+  --danger: #b83240;
+  --ok: #08785e;
+  --warn: #8a5a00;
+  --on-accent: #ffffff;
   --font-display: "Syne", sans-serif;
   --font-body: "Figtree", sans-serif;
-  --shadow: 0 18px 48px rgba(21, 40, 50, 0.12);
+  --shadow: 0 12px 40px rgba(15, 26, 32, 0.1);
 }
 
 * {
@@ -30,10 +30,7 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(900px 420px at 8% -10%, rgba(13, 159, 126, 0.12), transparent 55%),
-    radial-gradient(700px 380px at 100% 0%, rgba(53, 120, 160, 0.08), transparent 50%),
-    linear-gradient(165deg, #f7fafb 0%, #eef3f6 45%, #e8eef2 100%);
+  background: #ffffff;
   color: var(--text);
   font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
@@ -59,7 +56,7 @@ body {
   gap: 16px;
   padding: 22px 4px 16px;
   padding-top: max(22px, env(safe-area-inset-top));
-  background: linear-gradient(180deg, rgba(247, 250, 251, 0.96) 60%, rgba(238, 243, 246, 0.88) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 60%, rgba(255, 255, 255, 0.92) 100%);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
