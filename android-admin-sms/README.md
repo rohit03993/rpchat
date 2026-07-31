@@ -1,34 +1,42 @@
-# Admin Android SMS auto-unlock
+# DesiChat Admin — full admin on your phone
 
-Private APK for **you only** (sideload — not Play Store). Reads bank/UPI credit SMS and posts to your server.
+Private sideload APK (**not** Play Store).
 
-## Safe match (server)
+## What you get
 
-1. UTR matches pending payment (UTR field or remark) + screenshot → auto-approve  
-2. Else exactly **one** pending with same ₹ + screenshot → auto-approve  
-3. Else 2+ same ₹ → `needs_review` (manual)  
-4. Else no match / unknown pack amount → ignore  
+1. **Full admin** — same as `admin.html` (Users, Payments, Support, AI reports, Pay setup) inside the app  
+2. **SMS auto-unlock** — credit SMS → `/api/admin/sms-credit`  
+3. **Notifications** — new users, payments, support, SMS auto-approves  
 
-## Test without Android first
+Open the app → login once → use admin like the website, while SMS + alerts run in the background.
 
-```bash
-node scripts/test-sms-match.js
-```
-
-On admin site → **Payments** → paste SMS → **Match SMS → unlock**.
-
-API (admin Bearer token):
+## Server APIs
 
 ```http
+POST /api/auth/admin-login
+GET  /api/admin/alerts?since=<ms>
 POST /api/admin/sms-credit
-{ "smsText": "Rs.130 credited ... UTR 412345678901" }
 ```
 
-## Build APK (Android Studio)
+Deploy latest `main` on VPS first.
 
-1. Open folder `android-admin-sms` in Android Studio (or create new Empty Activity project and copy `app/src/main` files).
-2. Set your site URL + admin login in `MainActivity` / `local.properties` (see `SmsForwarder.kt`).
-3. Grant SMS permission when prompted.
-4. Install on the phone that receives UPI credit SMS.
+## Build
 
-Minimal files are under `app/src/main/` — wire package name `online.rpdesichat.adminsms`.
+1. Android Studio → **Open** folder `android-admin-sms`  
+2. Gradle sync → Run on phone (USB debugging) or **Build APK**  
+3. Install on the phone that receives **UPI/bank credit SMS**
+
+## First run
+
+1. Allow **SMS** + **Notifications**  
+2. Site URL `https://rpdesichat.online`  
+3. Admin ID + password  
+4. **Open full admin**  
+5. Use Users / Payments / Support as usual  
+6. Keep app installed — strip at bottom = SMS + alerts listening  
+
+## Notes
+
+- Admin UI is the real mobile admin site (WebView) — all features work  
+- SMS matching still uses safe rules (unique pay-intent / screenshot / UTR)  
+- After reboot, alerts restart if you were logged in  

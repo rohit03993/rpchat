@@ -1,133 +1,200 @@
 package online.rpdesichat.adminsms
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.provider.Telephony
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Button
-import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import com.google.android.material.textfield.TextInputEditText
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
 /**
- * Sideload admin helper: paste API base + admin token, listen for credit SMS.
- * Build with Android Studio; add OkHttp dependency.
+ * Full admin experience = mobile /admin.html inside WebView.
+ * Plus native SMS credit forward + alert notifications.
  */
 class MainActivity : AppCompatActivity() {
-  private val http = OkHttpClient()
   private val io = Executors.newSingleThreadExecutor()
 
+  private lateinit var web: WebView
+  private lateinit var loginPanel: ScrollView
+  private lateinit var listenBar: LinearLayout
+  private lateinit var status: TextView
+  private lateinit var listenLabel: TextView
+  private var tokenInjected = false
+
+  @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+    Notify.ensureChannels(this)
 
-    val baseUrl = findViewById<EditText>(R.id.baseUrl)
-    val token = findViewById<EditText>(R.id.adminToken)
-    val status = findViewById<TextView>(R.id.status)
-    val saveBtn = findViewById<Button>(R.id.saveBtn)
-    val testBtn = findViewById<Button>(R.id.testBtn)
+    web = findViewById(R.id.adminWeb)
+    loginPanel = findViewById(R.id.loginPanel)
+    listenBar = findViewById(R.id.listenBar)
+    status = findViewById(R.id.status)
+    listenLabel = findViewById(R.id.listenLabel)
 
-    val prefs = getSharedPreferences("adminsms", MODE_PRIVATE)
-    baseUrl.setText(prefs.getString("baseUrl", "https://rpdesichat.online"))
-    token.setText(prefs.getString("token", ""))
+    val baseUrl = findViewById<TextInputEditText>(R.id.baseUrl)
+    val adminId = findViewById<TextInputEditText>(R.id.adminId)
+    val adminPass = findViewById<TextInputEditText>(R.id.adminPass)
+    val loginBtn = findViewById<Button>(R.id.loginBtn)
+    val logoutBtn = findViewById<Button>(R.id.logoutBtn)
 
-    saveBtn.setOnClickListener {
-      prefs.edit()
-        .putString("baseUrl", baseUrl.text.toString().trim().trimEnd('/'))
-        .putString("token", token.text.toString().trim())
-        .apply()
-      Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
-      ensureSmsPermission()
-    }
+    baseUrl.setText(Prefs.baseUrl(this))
+    adminId.setText(Prefs.adminId(this))
 
-    testBtn.setOnClickListener {
-      val sample =
-        "Dear Customer, Rs.130.00 credited to A/c XX1234 via UPI. UTR 412345678901."
-      postSms(sample) { msg -> runOnUiThread { status.text = msg } }
-    }
+    setupWebView()
 
-    ensureSmsPermission()
-  }
-
-  private fun ensureSmsPermission() {
-    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
-      != PackageManager.PERMISSION_GRANTED
-    ) {
-      ActivityCompat.requestPermissions(
-        this,
-        arrayOf(Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS),
-        42
-      )
-    }
-  }
-
-  fun postSms(smsText: String, done: (String) -> Unit) {
-    val prefs = getSharedPreferences("adminsms", MODE_PRIVATE)
-    val base = prefs.getString("baseUrl", "") ?: ""
-    val tok = prefs.getString("token", "") ?: ""
-    if (base.isBlank() || tok.isBlank()) {
-      done("Set base URL + admin token first")
-      return
-    }
-    io.execute {
-      try {
-        val body =
-          JSONObject().put("smsText", smsText).toString()
-            .toRequestBody("application/json".toMediaType())
-        val req = Request.Builder()
-          .url("$base/api/admin/sms-credit")
-          .addHeader("Authorization", "Bearer $tok")
-          .post(body)
-          .build()
-        http.newCall(req).execute().use { res ->
-          val text = res.body?.string() ?: ""
-          done("HTTP ${res.code}: $text")
+    loginBtn.setOnClickListener {
+      requestPerms()
+      val url = baseUrl.text?.toString()?.trim().orEmpty()
+      val id = adminId.text?.toString()?.trim().orEmpty()
+      val pass = adminPass.text?.toString()?.trim().orEmpty()
+      if (url.isBlank() || id.isBlank() || pass.isBlank()) {
+        Toast.makeText(this, "Fill URL, admin ID, password", Toast.LENGTH_SHORT).show()
+        return@setOnClickListener
+      }
+      status.text = "Logging in…"
+      io.execute {
+        try {
+          val res = ApiClient.adminLogin(url, id, pass)
+          val json = runCatching { JSONObject(res.body) }.getOrNull()
+          val token = json?.optString("token").orEmpty()
+          runOnUiThread {
+            if (!res.ok || token.isBlank()) {
+              status.text = "Login failed (${res.code})"
+              return@runOnUiThread
+            }
+            Prefs.saveLogin(this, url, token, id)
+            Prefs.setAlertSince(this, System.currentTimeMillis())
+            AlertPollService.start(this)
+            openAdminWeb(forceReload = true)
+            Toast.makeText(this, "Full admin + SMS alerts on", Toast.LENGTH_SHORT).show()
+          }
+        } catch (e: Exception) {
+          runOnUiThread { status.text = e.message ?: "Login error" }
         }
-      } catch (e: Exception) {
-        done("Error: ${e.message}")
+      }
+    }
+
+    logoutBtn.setOnClickListener {
+      Prefs.saveLogin(this, Prefs.baseUrl(this), "", Prefs.adminId(this))
+      tokenInjected = false
+      showLogin()
+      Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show()
+    }
+
+    onBackPressedDispatcher.addCallback(
+      this,
+      object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+          if (web.visibility == View.VISIBLE && web.canGoBack()) {
+            web.goBack()
+          } else {
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+          }
+        }
+      }
+    )
+
+    if (Prefs.isLoggedIn(this)) {
+      requestPerms()
+      AlertPollService.start(this)
+      openAdminWeb(forceReload = false)
+    } else {
+      showLogin()
+    }
+  }
+
+  @SuppressLint("SetJavaScriptEnabled")
+  private fun setupWebView() {
+    val s: WebSettings = web.settings
+    s.javaScriptEnabled = true
+    s.domStorageEnabled = true
+    s.databaseEnabled = true
+    s.loadWithOverviewMode = true
+    s.useWideViewPort = true
+    s.builtInZoomControls = false
+    s.displayZoomControls = false
+    s.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+    web.webChromeClient = WebChromeClient()
+    web.webViewClient = object : WebViewClient() {
+      override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+        return false
+      }
+
+      override fun onPageFinished(view: WebView, url: String) {
+        injectAdminToken()
       }
     }
   }
-}
 
-class SmsReceiver : BroadcastReceiver() {
-  override fun onReceive(context: Context, intent: Intent) {
-    if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION != intent.action) return
-    val msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
-    val body = msgs.joinToString("") { it.displayMessageBody ?: "" }
-    if (!body.contains(Regex("credited|INR|Rs\\.?|₹|UPI", RegexOption.IGNORE_CASE))) return
+  private fun injectAdminToken() {
+    val token = Prefs.token(this)
+    if (token.isBlank()) return
+    // admin.js boots from localStorage.adminToken — set then reload once per WebView session
+    val js =
+      "(function(){try{" +
+        "localStorage.setItem('adminToken'," + JSONObject.quote(token) + ");" +
+        "if(sessionStorage.getItem('desiAdminTok')==='1')return;" +
+        "sessionStorage.setItem('desiAdminTok','1');" +
+        "location.reload();" +
+        "}catch(e){}})();"
+    web.evaluateJavascript(js, null)
+    tokenInjected = true
+  }
 
-    // Reuse MainActivity helper via application context prefs + OkHttp
-    val prefs = context.getSharedPreferences("adminsms", Context.MODE_PRIVATE)
-    val base = prefs.getString("baseUrl", "") ?: return
-    val tok = prefs.getString("token", "") ?: return
-    if (base.isBlank() || tok.isBlank()) return
+  private fun openAdminWeb(forceReload: Boolean) {
+    loginPanel.visibility = View.GONE
+    web.visibility = View.VISIBLE
+    listenBar.visibility = View.VISIBLE
+    listenLabel.text = "SMS unlock + alerts on · full admin below"
+    val url = Prefs.baseUrl(this) + "/admin.html"
+    if (forceReload || web.url.isNullOrBlank()) {
+      tokenInjected = false
+      web.loadUrl(url)
+    } else {
+      injectAdminToken()
+    }
+  }
 
-    Thread {
-      try {
-        val client = OkHttpClient()
-        val json = JSONObject().put("smsText", body).toString()
-          .toRequestBody("application/json".toMediaType())
-        val req = Request.Builder()
-          .url("${base.trimEnd('/')}/api/admin/sms-credit")
-          .addHeader("Authorization", "Bearer $tok")
-          .post(json)
-          .build()
-        client.newCall(req).execute().close()
-      } catch (_: Exception) {
-      }
-    }.start()
+  private fun showLogin() {
+    web.visibility = View.GONE
+    listenBar.visibility = View.GONE
+    loginPanel.visibility = View.VISIBLE
+    status.text = "Login to open full admin on this phone"
+  }
+
+  private fun requestPerms() {
+    val need = mutableListOf(
+      Manifest.permission.RECEIVE_SMS,
+      Manifest.permission.READ_SMS
+    )
+    if (Build.VERSION.SDK_INT >= 33) {
+      need += Manifest.permission.POST_NOTIFICATIONS
+    }
+    val missing = need.filter {
+      ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+    }
+    if (missing.isNotEmpty()) {
+      ActivityCompat.requestPermissions(this, missing.toTypedArray(), 42)
+    }
   }
 }

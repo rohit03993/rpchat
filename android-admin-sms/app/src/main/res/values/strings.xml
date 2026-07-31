@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">DesiChat Admin</string>
+  <string name="channel_alerts">Admin alerts</string>
+  <string name="channel_sms">SMS credit match</string>
+</resources>

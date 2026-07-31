@@ -747,6 +747,10 @@ app.get("/api/admin/sms-credits", requireAdmin, (req, res) => {
   res.json({ credits: billing.listSmsCredits(req.query.limit) });
 });
 
+app.get("/api/admin/alerts", requireAdmin, (req, res) => {
+  res.json(billing.getAdminAlerts(req.query.since));
+});
+
 app.post("/api/admin/payments/:id/approve", requireAdmin, (req, res) => {
   const result = billing.approvePayment(req.params.id);
   if (!result.ok) return res.status(400).json({ error: result.error });
