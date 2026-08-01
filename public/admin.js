@@ -497,6 +497,9 @@
       .trim()
       .toLowerCase();
     const f = (userFilter && userFilter.value) || "all";
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayMs = startOfToday.getTime();
     return list.filter(function (u) {
       if (f === "online" && !u.sessionActive) return false;
       if (f === "idle" && u.sessionActive) return false;
@@ -504,6 +507,7 @@
       if (f === "unpaid" && u.hasPaid) return false;
       if (f === "has-time" && Number(u.hoursBalance || 0) <= 0.0001) return false;
       if (f === "no-time" && Number(u.hoursBalance || 0) > 0.0001) return false;
+      if (f === "today" && !(Number(u.createdAt || 0) >= todayMs)) return false;
       if (!q) return true;
       const hay = [
         u.userId,
@@ -521,6 +525,47 @@
         .toLowerCase();
       return hay.indexOf(q) !== -1;
     });
+  }
+
+  function syncStatActive(action, userFilterValue, payStatus) {
+    const host = document.getElementById("admin-stats");
+    if (!host) return;
+    host.querySelectorAll(".stat").forEach(function (el) {
+      const a = el.getAttribute("data-stat-action") || "";
+      const uf = el.getAttribute("data-user-filter") || "";
+      const ps = el.getAttribute("data-pay-status") || "";
+      let on = false;
+      if (action === "users" && a === "users" && uf === userFilterValue) on = true;
+      if (action === "payments" && a === "payments" && ps === payStatus) on = true;
+      if (action === "reports" && a === "reports") on = true;
+      el.classList.toggle("is-active", on);
+    });
+  }
+
+  function applyStatClick(btn) {
+    const action = btn.getAttribute("data-stat-action") || "users";
+    const uf = btn.getAttribute("data-user-filter") || "all";
+    const payStatus = btn.getAttribute("data-pay-status") || "all";
+
+    if (action === "reports") {
+      syncStatActive("reports");
+      showReportsTab();
+      return;
+    }
+    if (action === "payments") {
+      if (statusFilter) statusFilter.value = payStatus;
+      syncStatActive("payments", "", payStatus);
+      showPaymentsTab();
+      renderPayments(paymentsCache);
+      return;
+    }
+
+    if (userFilter) userFilter.value = uf;
+    if (userSearch) userSearch.value = "";
+    usersPage = 1;
+    syncStatActive("users", uf);
+    showUsersTab();
+    renderUsers(usersCache);
   }
 
   function filterPaymentsList(list) {
@@ -1526,7 +1571,16 @@
   if (userFilter) {
     userFilter.addEventListener("change", function () {
       usersPage = 1;
+      syncStatActive("users", userFilter.value || "all");
       renderUsers(usersCache);
+    });
+  }
+  const adminStats = document.getElementById("admin-stats");
+  if (adminStats) {
+    adminStats.addEventListener("click", function (e) {
+      const btn = e.target.closest ? e.target.closest(".stat[data-stat-action]") : null;
+      if (!btn || !adminStats.contains(btn)) return;
+      applyStatClick(btn);
     });
   }
   if (usersPageSizeEl) {

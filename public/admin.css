@@ -239,6 +239,33 @@ button {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 16px 18px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  width: 100%;
+}
+
+.stat:hover {
+  border-color: rgba(8, 120, 94, 0.35);
+  background: #f7fafb;
+}
+
+.stat:focus-visible {
+  outline: 2px solid rgba(8, 120, 94, 0.45);
+  outline-offset: 2px;
+}
+
+.stat.is-active {
+  border-color: rgba(8, 120, 94, 0.55);
+  box-shadow: 0 0 0 2px rgba(8, 120, 94, 0.12);
+  background: rgba(8, 120, 94, 0.05);
+}
+
+.stat.stat-hot:hover,
+.stat.stat-hot.is-active {
+  border-color: rgba(8, 120, 94, 0.55);
 }
 
 .stat b {

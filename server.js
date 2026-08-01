@@ -21,6 +21,7 @@ const {
   looksIncompleteReply,
   looksLikeStockOpener,
   looksLikeOffTopicPivot,
+  looksLikeSoftWashDirty,
   looksLikeStickyBreak,
   looksLikeAddressSpam,
   looksLikeGaaliSpam,
@@ -28,6 +29,7 @@ const {
   extractSetupBrief,
   parseSetupMeta,
   looksLikeEarlySexYes,
+  setupResistanceLevel,
   strictStillResisting,
 } = require("./lib/maaAgent");
 const { roleIs } = require("./lib/roles");
@@ -1179,11 +1181,18 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeStockOpener(reply) ||
           looksLikeStickyBreak(reply, stickyFacts) ||
           looksLikeAddressSpam(reply, lastBotMsg) ||
-          looksLikeGaaliSpam(reply, lastBotMsg, lastUser))
+          looksLikeGaaliSpam(reply, lastBotMsg, lastUser) ||
+          (setupResistanceLevel(setupText) === "easy" &&
+            looksLikeSoftWashDirty(reply, lastUser)))
       ) {
         const stickyHint =
           stickyFacts.place || stickyFacts.clothing
             ? ` Keep sticky place=${stickyFacts.place || "?"} clothes=${stickyFacts.clothing || "?"} — do not teleport/change without user.`
+            : "";
+        const easyDirtyHint =
+          setupResistanceLevel(setupText) === "easy" &&
+          looksLikeSoftWashDirty(reply, lastUser)
+            ? " EASY+DIRTY: User already used dirty words — rewrite with real dirty vocab (lund/chut/gaand/chod/size). Ban soft-wash (physical touch/sikhaaya/baaton tak/kaisa lag). Shame OK."
             : "";
         const stayFix = await callVenice(
           voiceModel,
@@ -1201,6 +1210,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
                 stickyHint +
+                easyDirtyHint +
                 " Short fresh WhatsApp. Resist/shame OK. Output ONLY the reply.\n\n" +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
