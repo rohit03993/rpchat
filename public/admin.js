@@ -496,6 +496,10 @@
         u.pin,
         u.characterName,
         u.botRole,
+        u.userRole,
+        u.sceneNote,
+        u.resistance,
+        u.activeMood,
         u.hasPaid ? "paid" : "unpaid",
         u.sessionActive ? "online" : "idle",
       ]
@@ -558,6 +562,43 @@
     }
   }
 
+  function extractAdminSceneInfo(session) {
+    const form = (session && session.form) || {};
+    const setup = String((session && session.rpSetup) || "");
+    let brief = String(form.note || "").trim();
+    if (!brief) {
+      const m = setup.match(/USER RP BRIEF[^:\n]*:\s*([^\n]+)/i);
+      if (m) {
+        brief = m[1]
+          .trim()
+          .replace(
+            /\.\s*(Start vibe|Pace|Resistance|All adults|Scene rule|ACTIVE MOOD|Identity lock|Default shy).*/i,
+            ""
+          )
+          .trim();
+        if (/^none\b/i.test(brief)) brief = "";
+      }
+    }
+    const moodMatch = setup.match(/ACTIVE MOOD:\s*([^\n.]+)/i);
+    return {
+      characterName:
+        form.characterName ||
+        (session &&
+          session.selectedCharacter &&
+          session.selectedCharacter.name) ||
+        "—",
+      botRole: form.botRole || "—",
+      userRole: form.userRole || "—",
+      resistance: form.resistance || "—",
+      vibe: form.vibe || "—",
+      pace: form.pace || "—",
+      language: form.language || "—",
+      brief: brief || "",
+      mood: moodMatch ? moodMatch[1].trim() : "",
+      rpSetup: setup,
+    };
+  }
+
   function renderSessionMessages(session, source, keepDays) {
     if (!session || !Array.isArray(session.history) || !session.history.length) {
       chatDrawerMeta.textContent = "No saved chat yet for this user.";
@@ -566,22 +607,54 @@
       return;
     }
 
-    const form = session.form || {};
-    const char =
-      form.characterName ||
-      (session.selectedCharacter && session.selectedCharacter.name) ||
-      "—";
-    const role = form.botRole || "—";
+    const info = extractAdminSceneInfo(session);
     const when = session.updatedAt || session.archivedAt;
     chatDrawerMeta.textContent =
       (source === "archived" ? "Archived · " : "Live · ") +
       "Kept " +
       (keepDays || 5) +
       " days · Character: " +
-      char +
+      info.characterName +
       " · Role: " +
-      role +
+      info.botRole +
+      " · You: " +
+      info.userRole +
       (when ? " · " + new Date(when).toLocaleString() : "");
+
+    const sceneRows = [
+      ["AI", info.characterName + " (" + info.botRole + ")"],
+      ["You are", info.userRole],
+      ["Resistance", info.resistance],
+      ["Vibe", info.vibe],
+      ["Pace", info.pace],
+      ["Language", info.language],
+    ];
+    if (info.mood) sceneRows.push(["Mood", info.mood]);
+    if (info.brief) sceneRows.push(["User scene / RP notes", info.brief]);
+    else sceneRows.push(["User scene / RP notes", "(none — user left notes empty)"]);
+
+    const sceneHtml =
+      "<div class='admin-scene-box'>" +
+      "<div class='admin-scene-title'>User-defined scene (updates when they Save settings)</div>" +
+      "<dl class='admin-scene-dl'>" +
+      sceneRows
+        .map(function (row) {
+          return (
+            "<div class='admin-scene-row'><dt>" +
+            escapeHtml(row[0]) +
+            "</dt><dd>" +
+            escapeHtml(row[1]) +
+            "</dd></div>"
+          );
+        })
+        .join("") +
+      "</dl>" +
+      (info.rpSetup
+        ? "<details class='admin-scene-raw'><summary>Full setup text</summary><pre>" +
+          escapeHtml(info.rpSetup) +
+          "</pre></details>"
+        : "") +
+      "</div>";
 
     const msgs = session.history.filter(function (m) {
       return (
@@ -593,25 +666,28 @@
 
     if (!msgs.length) {
       chatDrawerBody.innerHTML =
+        sceneHtml +
         "<div class='empty'>Only setup data — no dialogue yet.</div>";
       return;
     }
 
-    chatDrawerBody.innerHTML = msgs
-      .map(function (m) {
-        const who = m.role === "user" ? "User" : "AI";
-        const cls = m.role === "user" ? "user" : "ai";
-        return (
-          "<div class='chat-bubble " +
-          cls +
-          "'><span class='chat-who'>" +
-          who +
-          "</span><p>" +
-          escapeHtml(m.content) +
-          "</p></div>"
-        );
-      })
-      .join("");
+    chatDrawerBody.innerHTML =
+      sceneHtml +
+      msgs
+        .map(function (m) {
+          const who = m.role === "user" ? "User" : "AI";
+          const cls = m.role === "user" ? "user" : "ai";
+          return (
+            "<div class='chat-bubble " +
+            cls +
+            "'><span class='chat-who'>" +
+            who +
+            "</span><p>" +
+            escapeHtml(m.content) +
+            "</p></div>"
+          );
+        })
+        .join("");
   }
 
   function renderChatSessions(sessions, keepDays) {
@@ -746,7 +822,13 @@
           : "No chats";
         const scene =
           (u.characterName || "—") +
-          (u.botRole ? " · " + u.botRole : "");
+          (u.botRole ? " · " + u.botRole : "") +
+          (u.userRole ? " ↔ " + u.userRole : "");
+        const sceneBrief = u.sceneNote
+          ? String(u.sceneNote).length > 70
+            ? String(u.sceneNote).slice(0, 67) + "…"
+            : String(u.sceneNote)
+          : "";
         const paidBadge = u.hasPaid
           ? "<span class='badge approved'>paid</span>"
           : "<span class='badge'>unpaid</span>";
@@ -795,6 +877,20 @@
           "<div><span class='uc-label'>Scene</span> " +
           escapeHtml(scene) +
           "</div>" +
+          (sceneBrief
+            ? "<div class='user-card-brief'><span class='uc-label'>Notes</span> " +
+              escapeHtml(sceneBrief) +
+              "</div>"
+            : "") +
+          (u.resistance || u.activeMood
+            ? "<div><span class='uc-label'>Pace</span> " +
+              escapeHtml(
+                [u.resistance, u.activeMood ? "mood:" + u.activeMood : ""]
+                  .filter(Boolean)
+                  .join(" · ")
+              ) +
+              "</div>"
+            : "") +
           "<div><span class='uc-label'>Pays</span> " +
           pays +
           "</div>" +

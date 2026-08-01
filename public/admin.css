@@ -698,6 +698,82 @@ button.id-pill.id-link:hover {
   gap: 10px;
 }
 
+.admin-scene-box {
+  border: 1px solid var(--line);
+  background: #f7faf9;
+  border-radius: 12px;
+  padding: 12px 12px 10px;
+  margin-bottom: 4px;
+}
+
+.admin-scene-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.admin-scene-dl {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.admin-scene-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.admin-scene-row dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.admin-scene-row dd {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.admin-scene-raw {
+  margin-top: 10px;
+  font-size: 0.78rem;
+}
+
+.admin-scene-raw summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.admin-scene-raw pre {
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.user-card-brief {
+  grid-column: 1 / -1;
+}
+
 .chat-session-tabs {
   display: flex;
   flex-wrap: wrap;
