@@ -2482,14 +2482,14 @@
         ? "Resistance: easy — soft denials short; can heat up faster when user pushes; still never jump soft→sex in one line."
         : resistance === "normal"
           ? "Resistance: normal — tease and shy first; sex only after several clear pushes; no instant yes to papa-wali baat."
-          : "Resistance: strict — seedhi-saadi saree Maa/Papa. Real daily talk first. Change topic + resist + tiny hook. Hard to seduce. Many shy/deny beats before any sex yes. NEVER 'Theek hai aaja' early. Body describe only when heated (full/bulky actress vibe). Easy yes FORBIDDEN.";
+          : "Resistance: strict — seedhi-saadi slow burn for this role. Real scene talk first (USER RP BRIEF). Change topic + resist + tiny hook. Hard to seduce. Many shy/deny beats before any sex yes. NEVER 'Theek hai aaja' early. Body describe only when heated. Easy yes FORBIDDEN.";
     const relationship =
       roles.botRole +
       " primary with " +
       roles.userRole +
       " — NEVER swap gender or rishta; masti with user only unless user asks to add a relative or wants a confession; never invent 'I hooked up with your nani/mummy'.";
     const briefBlock = brief
-      ? "USER RP BRIEF (OBEY carefully — scene, place, pace, boundaries, address): " +
+      ? "USER RP BRIEF (HARD SCENE LOCK for early chat — place, mood, pace, what to do; OBEY): " +
         brief
       : "USER RP BRIEF: none — ask lightly in chat where you are; do NOT assume bedroom-at-night.";
     return (
@@ -2511,7 +2511,7 @@
       roles.botRole +
       " named " +
       roles.characterName +
-      " every message. Rishta lock: speak with correct Indian addressing (Mummy says meri Maa not Nani; Bahu says Papa ji to Sasur). Family: one relative at a time only if asked. Place: NOT fixed — follow USER RP BRIEF and chat; never force night bedroom. Start vibe: " +
+      " every message. Rishta lock: speak with correct Indian addressing (Mummy says meri Maa not Nani; Bahu says Papa ji to Sasur; Saas says damad ji not bahu). Family: one relative at a time only if asked. Place: NOT fixed — follow USER RP BRIEF and chat; never force night bedroom. Start vibe: " +
       vibe +
       ". Pace: " +
       pace +
@@ -2519,7 +2519,7 @@
       resistanceLine +
       " All adults 18+. " +
       briefBlock +
-      ". Default shy + flirty first unless brief/vibe says otherwise."
+      ". Scene rule: early replies must match USER RP BRIEF + vibe/pace for THIS role (not a generic Mummy hello). After that, follow user tempo/messages."
     );
   }
 
@@ -2631,6 +2631,45 @@
     const name = roles.characterName || "Chat";
     const you = userAddressName(roles.userRole);
     const bot = String(roles.botRole || "").toLowerCase();
+    const brief = rpNoteEl ? rpNoteEl.value.trim() : "";
+    const vibe = rpVibeEl ? String(rpVibeEl.value || "") : "";
+    const clip =
+      brief.length > 85 ? brief.slice(0, 82).replace(/\s+\S*$/, "") + "…" : brief;
+
+    // User wrote a scene — open inside it (all roles)
+    if (clip) {
+      if (roleIsClient(bot, "saas")) {
+        const u = String(roles.userRole || "").toLowerCase();
+        const male = u === "jamai" || u === "damad";
+        if (male) {
+          return (
+            name +
+            ": Damad ji… " +
+            clip +
+            ". Main yahan hu — bol, ab kya? 💕"
+          );
+        }
+        return name + ": Bahu… " + clip + ". Main yahan hu — bol. 💕";
+      }
+      if (roleIsClient(bot, "sasur")) {
+        return (
+          name +
+          ": Bahu… " +
+          clip +
+          ". Papa ji yahan hai — bol, ab kya? 💕"
+        );
+      }
+      return (
+        name +
+        ": " +
+        you +
+        "… " +
+        clip +
+        ". Main yahan hu — bol. 💕"
+      );
+    }
+
+    // No brief — role openers (still avoid one identical line for everyone)
     if (roleIsClient(bot, "dad", "papa", "father")) {
       return (
         name +
@@ -2675,6 +2714,14 @@
         ": Hello Papa ji... bahu yahan hai. Bolie, kya haal hai? 💕"
       );
     }
+    if (roleIsClient(bot, "bhabhi")) {
+      return (
+        name +
+        ": Hello " +
+        you +
+        "... Bhabhi yahan hai. Bol, kya haal hai? 💕"
+      );
+    }
     if (roleIsClient(bot, "nani")) {
       return name + ": Hello " + you + "... Nani yahan hai. Bol, kya haal hai? 💕";
     }
@@ -2684,14 +2731,24 @@
     if (roleIsClient(bot, "mausi", "maushi")) {
       return name + ": Hello " + you + "... Mausi yahan hai. Bol, kya haal hai? 💕";
     }
+    if (roleIsClient(bot, "mausa")) {
+      return name + ": Hello " + you + "... Mausa yahan hai. Bol, kya haal hai? 💕";
+    }
     if (roleIsClient(bot, "bua")) {
       return name + ": Hello " + you + "... Bua yahan hai. Bol, kya haal hai? 💕";
     }
+    const vibeBit = /dirty|filthy|hot/i.test(vibe)
+      ? " thodi masti mood mein…"
+      : /shy/i.test(vibe)
+        ? " thodi sharma ke…"
+        : "";
     return (
       name +
       ": Hello " +
       you +
-      "... main yahan hu. Bol, kya haal hai? 💕"
+      "..." +
+      vibeBit +
+      " main yahan hu. Bol, kya haal hai? 💕"
     );
   }
 
