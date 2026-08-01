@@ -1358,6 +1358,39 @@ code {
   margin-top: 12px;
 }
 
+.reports-digest {
+  margin-top: 12px;
+}
+
+.digest-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.digest-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.digest-themes {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.digest-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .report-item {
   background: var(--card);
   border: 1px solid var(--line);

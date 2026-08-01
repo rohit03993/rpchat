@@ -63,11 +63,13 @@
     renderSupportThreadList(supportThreadsCache);
   }
   const reportsList = document.getElementById("reports-list");
+  const reportsDigest = document.getElementById("reports-digest");
   const reportsCount = document.getElementById("reports-count");
   const downloadReportsBtn = document.getElementById("download-reports-btn");
   const clearReportsBtn = document.getElementById("clear-reports-btn");
   const refreshReportsBtn = document.getElementById("refresh-reports-btn");
   let reportsCache = [];
+  let reportsDigestCache = null;
   const statUsers = document.getElementById("stat-users");
   const statPending = document.getElementById("stat-pending");
   const statHours = document.getElementById("stat-hours");
@@ -1707,9 +1709,89 @@
     });
   }
 
+  function renderReportsDigest(digest) {
+    if (!reportsDigest) return;
+    if (!digest) {
+      reportsDigest.innerHTML = "";
+      return;
+    }
+    const themes = digest.themes || [];
+    const byRole = digest.byRole || [];
+    const themeHtml = themes.length
+      ? themes
+          .map(function (t) {
+            return (
+              "<li><strong>" +
+              escapeHtml(t.label) +
+              "</strong> ×" +
+              Number(t.count || 0) +
+              "<br/><span class='meta'>" +
+              escapeHtml(t.hint || "") +
+              "</span></li>"
+            );
+          })
+          .join("")
+      : "<li class='meta'>No themes yet — defaults still inject into agent.</li>";
+    const roleHtml = byRole.length
+      ? byRole
+          .map(function (r) {
+            return (
+              "<span class='id-pill'>" +
+              escapeHtml(r.role) +
+              " · " +
+              Number(r.count || 0) +
+              "</span>"
+            );
+          })
+          .join(" ")
+      : "<span class='meta'>No role breakdown</span>";
+    reportsDigest.innerHTML =
+      "<div class='digest-card'>" +
+      "<div class='digest-head'>" +
+      "<strong>Weekly AI report digest</strong>" +
+      "<span class='meta'>last " +
+      Number(digest.days || 7) +
+      "d · " +
+      Number(digest.total || 0) +
+      " reports · themes auto-feed prompts</span>" +
+      "</div>" +
+      "<ul class='digest-themes'>" +
+      themeHtml +
+      "</ul>" +
+      "<div class='digest-roles'>" +
+      roleHtml +
+      "</div>" +
+      "</div>";
+  }
+
+  async function loadReportsDigest() {
+    if (!reportsDigest) return;
+    try {
+      const res = await fetch("/api/admin/reports/digest?days=7", {
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        reportsDigest.innerHTML =
+          "<p class='meta'>Digest unavailable: " +
+          escapeHtml(data.error || "error") +
+          "</p>";
+        return;
+      }
+      reportsDigestCache = data.digest || null;
+      renderReportsDigest(reportsDigestCache);
+    } catch (e) {
+      reportsDigest.innerHTML = "<p class='meta'>Digest network error</p>";
+    }
+  }
+
   async function loadReports() {
     if (!reportsList) return;
     reportsList.innerHTML = "<p class='meta'>Loading reports…</p>";
+    loadReportsDigest();
     try {
       const res = await fetch("/api/admin/reports", { headers: authHeaders() });
       const data = await res.json().catch(function () {

@@ -9,6 +9,7 @@ const {
   buildMaaVoicePrompt,
   buildMaaHinglishPolishPrompt,
   buildMaaOpenerPrompt,
+  buildReportFixHints,
   recentTranscript,
   buildChatMemoryCard,
   sceneHeatIsDirty,
@@ -18,6 +19,13 @@ const {
   fixMaaGenderSlips,
   wantsLongReply,
   looksIncompleteReply,
+  looksLikeStockOpener,
+  looksLikeOffTopicPivot,
+  looksLikeStickyBreak,
+  looksLikeAddressSpam,
+  looksLikeGaaliSpam,
+  extractStickySceneFacts,
+  extractSetupBrief,
   parseSetupMeta,
   looksLikeEarlySexYes,
   strictStillResisting,
@@ -651,6 +659,12 @@ app.get("/api/admin/reports", requireAdmin, (_req, res) => {
   res.json({ reports, count: reports.length });
 });
 
+app.get("/api/admin/reports/digest", requireAdmin, (req, res) => {
+  const days = Number(req.query?.days) || 7;
+  const digest = billing.getAiReportDigest({ days });
+  res.json({ digest });
+});
+
 app.get("/api/admin/reports/download", requireAdmin, (_req, res) => {
   const reports = billing.listAiReports();
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
@@ -989,6 +1003,11 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         userGender: String(userGender || "").trim(),
       };
       const memoryCard = buildChatMemoryCard(hist, setupText, charOverrides);
+      const reportHints = buildReportFixHints(billing.getAiReportDigest());
+      const stickyFacts = extractStickySceneFacts(
+        hist,
+        extractSetupBrief(setupText)
+      );
 
       // --- Step 1: Brain ---
       let sceneCard = "";
@@ -1002,12 +1021,14 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           role: "user",
           content:
             `${memoryCard}\n\n` +
+            (reportHints ? `${reportHints}\n\n` : "") +
             `Recent chat:\n${transcript || "(start)"}\n\n` +
             `Latest from user (decode typos): "${lastUser}"\n` +
             `Detected USER_HEAT: ${userHeat} — language dirtiness can match this.\n` +
             (strictStillResisting(setupText, hist)
               ? `RESISTANCE OVERRIDE (strict/normal still resisting): HEAT dirty talk OK, but NEXT_BEATS must DENY sex consent — no "aaja" / panty off / sex yes yet. Make them push more.\n`
               : `Mirror heat. Do not jump ahead of user.\n`) +
+            `MUST_ANSWER must react to the latest user line FIRST — never ignore hug/kiss/dirty ask for kitchen/padhai/weather.\n` +
             `If user answered your previous question, MUST_ANSWER = react to that answer — NEVER re-ask "dimaag/soch/kaisa laga".\n` +
             `Default LENGTH=short and ACTIONS=none unless user asked for long/story/listen/guest.\n\n` +
             `Write the SCENE CARD now.`,
@@ -1086,6 +1107,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             buildMaaVoicePrompt(lang, sceneCard, setupText, charOverrides) +
             "\n\n" +
             memoryCard +
+            (reportHints ? "\n\n" + reportHints : "") +
             "\n\n" +
             identitySticky +
             "\n\nOUTPUT RULE: Reply only as the character. Never quote, print, or mention CHAT MEMORY CARD, IDENTITY STICKY, SCENE CARD, or any 'Remember silently' notes.",
@@ -1140,6 +1162,56 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         if (refresh.response.ok) {
           const fresh = extractText(refresh.data?.choices?.[0]?.message);
           if (fresh) reply = fresh;
+        }
+      }
+
+      // Stay on user's last beat — no kitchen/weather pivot; no stock shock; keep sticky place/clothes;
+      // no formal-address spam (pota/bhatija) or heavy-gaali spam
+      const lastBotMsg =
+        [...hist].reverse().find(
+          (m) =>
+            m.role === "assistant" &&
+            !/^Setup locked/i.test(String(m.content || ""))
+        )?.content || "";
+      if (
+        reply &&
+        (looksLikeOffTopicPivot(reply, lastUser) ||
+          looksLikeStockOpener(reply) ||
+          looksLikeStickyBreak(reply, stickyFacts) ||
+          looksLikeAddressSpam(reply, lastBotMsg) ||
+          looksLikeGaaliSpam(reply, lastBotMsg, lastUser))
+      ) {
+        const stickyHint =
+          stickyFacts.place || stickyFacts.clothing
+            ? ` Keep sticky place=${stickyFacts.place || "?"} clothes=${stickyFacts.clothing || "?"} — do not teleport/change without user.`
+            : "";
+        const stayFix = await callVenice(
+          voiceModel,
+          [
+            ...voicePayload,
+            {
+              role: "user",
+              content:
+                "BEAT FIX (all roles): React FIRST to the user's latest line/action. " +
+                "Do NOT invent kitchen/khana/padhai/weather if they asked hug/kiss/dirty/body. " +
+                "Do NOT open with stock aankhein-phat / chehra-laal / pallu / 'Main teri X hoon' essay. " +
+                "Do NOT change room/clothes/props already set." +
+                " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
+                " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
+                stickyHint +
+                " Short fresh WhatsApp. Resist/shame OK. Output ONLY the reply.\n\n" +
+                `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
+            },
+          ],
+          {
+            temperature: Math.min(voiceTemp + 0.15, 1),
+            max_tokens: tokenBudget,
+          }
+        );
+        steps += 1;
+        if (stayFix.response.ok) {
+          const fixed = extractText(stayFix.data?.choices?.[0]?.message);
+          if (fixed && fixed.length > 12) reply = fixed;
         }
       }
 
@@ -1246,6 +1318,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 (wantLong
                   ? "Keep FULL phone dialogue — do not shorten.\n"
                   : "Keep SHORT WhatsApp style — do not pad with extra *actions* or long paragraphs.\n") +
+                (stickyFacts.place || stickyFacts.clothing
+                  ? `STICKY FACTS — keep unless user changed them: place=${stickyFacts.place || "n/a"}; clothes/props=${stickyFacts.clothing || "n/a"}; heat=${stickyFacts.heatStage || "n/a"}.\n`
+                  : "") +
                 `Fix this ${metaForPolish.characterName} reply into Easy Hinglish:\n${reply}`,
             },
           ],
