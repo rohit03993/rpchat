@@ -1,4 +1,44 @@
 (function () {
+  const CACHE_KEY_LS = "desichat_cache_key";
+  let clientCachePollId = null;
+
+  async function syncClientCache(opts) {
+    const o = opts || {};
+    try {
+      const res = await fetch("/api/client-config", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const key = String(data.cacheKey || "");
+      if (!key) return;
+      let prev = "";
+      try {
+        prev = localStorage.getItem(CACHE_KEY_LS) || "";
+      } catch (e) {}
+      try {
+        localStorage.setItem(CACHE_KEY_LS, key);
+      } catch (e) {}
+      if (typeof data.oneIdPerDevice === "boolean") {
+        window.__oneIdPerDevice = data.oneIdPerDevice;
+        if (typeof window.__paintSignupDeviceHint === "function") {
+          window.__paintSignupDeviceHint(data.oneIdPerDevice);
+        }
+      }
+      if (prev && prev !== key && !o.skipReload) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("_cv", key);
+        window.location.replace(url.toString());
+      }
+    } catch (e) {}
+  }
+
+  syncClientCache({ skipReload: false });
+  clientCachePollId = setInterval(function () {
+    syncClientCache();
+  }, 45000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") syncClientCache();
+  });
+
   const messagesEl = document.getElementById("messages");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("message-input");
@@ -134,6 +174,7 @@
   const registerDobMonth = document.getElementById("register-dob-month");
   const registerDobYear = document.getElementById("register-dob-year");
   const registerAgeConfirm = document.getElementById("register-age-confirm");
+  const registerDeviceHint = document.getElementById("register-device-hint");
   const registerPinEl = document.getElementById("register-pin");
   const registerPinConfirmEl = document.getElementById("register-pin-confirm");
   const loginIdEl = document.getElementById("login-id");
@@ -241,6 +282,17 @@
       "-" +
       String(d).padStart(2, "0")
     );
+  }
+
+  function paintSignupDeviceHint(oneId) {
+    if (!registerDeviceHint) return;
+    registerDeviceHint.textContent = oneId
+      ? "18+ only. Enter DOB, choose a 4-digit PIN, then we create your User ID (free trial). One ID per device — save ID + PIN."
+      : "18+ only. Enter DOB, choose your own 4-digit PIN, then we create your User ID (free trial). Save your ID + PIN.";
+  }
+  window.__paintSignupDeviceHint = paintSignupDeviceHint;
+  if (typeof window.__oneIdPerDevice === "boolean") {
+    paintSignupDeviceHint(window.__oneIdPerDevice);
   }
 
   fillDobSelects();

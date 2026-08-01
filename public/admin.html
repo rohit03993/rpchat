@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=26" />
+    <link rel="stylesheet" href="/admin.css?v=__CACHE_KEY__" />
   </head>
   <body>
     <div class="admin-app">
@@ -309,6 +309,26 @@
             <p class="meta setup-lead">
               Trial minutes apply to <b>new signups</b> only (1–120). Existing users keep their current balance.
             </p>
+            <h4 class="setup-heading">One ID per device</h4>
+            <p class="meta setup-lead">
+              When ON, each phone/browser can create only <b>one</b> User ID. Extra Create ID attempts
+              send them to login with the existing ID. Turn OFF to allow free new IDs on the same device.
+            </p>
+            <label class="field setup-toggle-row">
+              <input id="set-one-id-device" type="checkbox" />
+              <span>One ID per device (block second signup on same phone)</span>
+            </label>
+            <h4 class="setup-heading">Clear cache for users</h4>
+            <p class="meta setup-lead">
+              After you deploy new code, tap this so open chat tabs reload the latest JS/CSS.
+              Users pick up the new version within about a minute (or on next visit).
+            </p>
+            <div class="row-actions">
+              <button type="button" id="set-bust-cache-btn" class="btn btn-sm">
+                Clear cache for everyone
+              </button>
+              <span id="set-cache-meta" class="meta"></span>
+            </div>
             <div class="qr-admin-block">
               <p class="field"><span>UPI QR image</span></p>
               <img id="set-qr-preview" class="admin-qr-preview" alt="UPI QR" />
@@ -363,6 +383,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=29"></script>
+    <script src="/admin.js?v=__CACHE_KEY__"></script>
   </body>
 </html>

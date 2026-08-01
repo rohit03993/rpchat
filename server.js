@@ -363,7 +363,44 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, "public")));
+const PUBLIC_DIR = path.join(__dirname, "public");
+
+function sendHtmlWithCacheKey(res, fileName) {
+  const filePath = path.join(PUBLIC_DIR, fileName);
+  let html = fs.readFileSync(filePath, "utf8");
+  const key = String(billing.getClientCacheKey());
+  html = html.replace(/__CACHE_KEY__/g, key);
+  html = html.replace(
+    /(\/(?:app\.js|styles\.css|admin\.js|admin\.css)\?v=)[^"'&\s]+/g,
+    "$1" + key
+  );
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.type("html").send(html);
+}
+
+app.get(["/", "/index.html"], (_req, res) => {
+  try {
+    sendHtmlWithCacheKey(res, "index.html");
+  } catch (err) {
+    res.status(500).send("App failed to load");
+  }
+});
+
+app.get("/admin.html", (_req, res) => {
+  try {
+    sendHtmlWithCacheKey(res, "admin.html");
+  } catch (err) {
+    res.status(500).send("Admin failed to load");
+  }
+});
+
+app.get("/api/client-config", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(billing.getClientConfig());
+});
+
+app.use(express.static(PUBLIC_DIR));
 
 billing.ensureDirs();
 
@@ -792,10 +829,19 @@ app.put("/api/admin/settings", requireAdmin, (req, res) => {
       upiName: req.body?.upiName,
       packages: req.body?.packages,
       trialMinutes: req.body?.trialMinutes,
+      oneIdPerDevice: req.body?.oneIdPerDevice,
     });
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: err.message || "Update failed" });
+  }
+});
+
+app.post("/api/admin/settings/bust-cache", requireAdmin, (_req, res) => {
+  try {
+    res.json(billing.bumpClientCacheKey());
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Cache bust failed" });
   }
 });
 

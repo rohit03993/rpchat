@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=76" />
+    <link rel="stylesheet" href="/styles.css?v=__CACHE_KEY__" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -124,7 +124,7 @@
             <button type="button" id="forget-saved-login" class="btn-link hidden">Forget saved login on this device</button>
           </div>
           <div id="register-form" class="auth-form hidden">
-            <p class="char-info">
+            <p id="register-device-hint" class="char-info">
               18+ only. Enter DOB, choose your own 4-digit PIN, then we create your User ID (free trial). Save your ID + PIN.
             </p>
             <p class="auth-remember-note">
@@ -762,6 +762,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=94" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=__CACHE_KEY__" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>

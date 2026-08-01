@@ -97,6 +97,9 @@
   const setUpiId = document.getElementById("set-upi-id");
   const setUpiName = document.getElementById("set-upi-name");
   const setTrialMinutes = document.getElementById("set-trial-minutes");
+  const setOneIdDevice = document.getElementById("set-one-id-device");
+  const setBustCacheBtn = document.getElementById("set-bust-cache-btn");
+  const setCacheMeta = document.getElementById("set-cache-meta");
   const setQrPreview = document.getElementById("set-qr-preview");
   const setQrFile = document.getElementById("set-qr-file");
   const setQrUploadBtn = document.getElementById("set-qr-upload-btn");
@@ -106,6 +109,15 @@
   const setPkgAdd = document.getElementById("set-pkg-add");
   const setSaveBtn = document.getElementById("set-save-btn");
   const setSaveMsg = document.getElementById("set-save-msg");
+
+  function paintCacheMeta(s) {
+    if (!setCacheMeta) return;
+    const key = s && s.clientCacheKey != null ? s.clientCacheKey : "—";
+    const at = s && s.clientCacheUpdatedAt ? new Date(s.clientCacheUpdatedAt) : null;
+    setCacheMeta.textContent = at
+      ? "Cache v" + key + " · cleared " + at.toLocaleString()
+      : "Cache v" + key;
+  }
 
   let token = localStorage.getItem("adminToken") || "";
   let usersCache = [];
@@ -340,6 +352,8 @@
             ? String(s.trialMinutes)
             : "5";
       }
+      if (setOneIdDevice) setOneIdDevice.checked = !!s.oneIdPerDevice;
+      paintCacheMeta(s);
       if (setQrPreview) {
         setQrPreview.src = s.qrImageUrl || "/upi-qr.svg";
       }
@@ -2105,6 +2119,7 @@
             upiId: setUpiId ? setUpiId.value : "",
             upiName: setUpiName ? setUpiName.value : "",
             trialMinutes: setTrialMinutes ? setTrialMinutes.value : 5,
+            oneIdPerDevice: setOneIdDevice ? !!setOneIdDevice.checked : false,
             packages: collectPackagesFromEditor(),
           }),
         });
@@ -2124,9 +2139,46 @@
           if (setTrialMinutes && data.settings.trialMinutes != null) {
             setTrialMinutes.value = String(data.settings.trialMinutes);
           }
+          if (setOneIdDevice) {
+            setOneIdDevice.checked = !!data.settings.oneIdPerDevice;
+          }
+          paintCacheMeta(data.settings);
         }
       } catch (e) {
         toast("Network error", "err");
+      }
+    });
+  }
+  if (setBustCacheBtn) {
+    setBustCacheBtn.addEventListener("click", async function () {
+      if (
+        !confirm(
+          "Clear cache for all users? Open chat tabs will reload the latest code within about a minute."
+        )
+      ) {
+        return;
+      }
+      setBustCacheBtn.disabled = true;
+      try {
+        const res = await fetch("/api/admin/settings/bust-cache", {
+          method: "POST",
+          headers: authHeaders(),
+          body: "{}",
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          if (handleAuthFail(res)) return;
+          toast(data.error || "Clear cache failed", "err");
+          return;
+        }
+        paintCacheMeta(data.settings || data);
+        toast("Cache cleared · users will get latest code", "ok");
+      } catch (e) {
+        toast("Network error", "err");
+      } finally {
+        setBustCacheBtn.disabled = false;
       }
     });
   }
