@@ -22,6 +22,7 @@ const {
   looksLikeStockOpener,
   looksLikeOffTopicPivot,
   looksLikeSoftWashDirty,
+  looksLikeBrokenGuestCall,
   looksLikeStickyBreak,
   looksLikeAddressSpam,
   looksLikeGaaliSpam,
@@ -1183,7 +1184,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeAddressSpam(reply, lastBotMsg) ||
           looksLikeGaaliSpam(reply, lastBotMsg, lastUser) ||
           (setupResistanceLevel(setupText) === "easy" &&
-            looksLikeSoftWashDirty(reply, lastUser)))
+            looksLikeSoftWashDirty(reply, lastUser)) ||
+          looksLikeBrokenGuestCall(reply, lastUser))
       ) {
         const stickyHint =
           stickyFacts.place || stickyFacts.clothing
@@ -1194,6 +1196,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeSoftWashDirty(reply, lastUser)
             ? " EASY+DIRTY: User already used dirty words — rewrite with real dirty vocab (lund/chut/gaand/chod/size). Ban soft-wash (physical touch/sikhaaya/baaton tak/kaisa lag). Shame OK."
             : "";
+        const guestCallHint = looksLikeBrokenGuestCall(reply, lastUser)
+          ? " GUEST-CALL FIX: For each named man write labeled dialogues. Husband=pati ji (Papa:). Nana=mere Papa NEVER pati ji; Nana male verbs + calls you beti. Dada=Papa ji. If he asked ek bed/lund patao: filthy seduction lines not soft baithenge/zaroorat."
+          : "";
         const stayFix = await callVenice(
           voiceModel,
           [
@@ -1211,6 +1216,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
                 stickyHint +
                 easyDirtyHint +
+                guestCallHint +
                 " Short fresh WhatsApp. Resist/shame OK. Output ONLY the reply.\n\n" +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
