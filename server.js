@@ -1193,8 +1193,10 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               role: "user",
               content:
                 "BEAT FIX (all roles): React FIRST to the user's latest line/action. " +
-                "Do NOT invent kitchen/khana/padhai/weather if they asked hug/kiss/dirty/body. " +
-                "Do NOT open with stock aankhein-phat / chehra-laal / pallu / 'Main teri X hoon' essay. " +
+                "Dialogue-first WhatsApp — strip *action* novel spam (at most one short *action* or none). " +
+                "Do NOT invent kitchen/khana/kamra/padhai/weather if they asked hug/kiss/dirty/body/fantasy. " +
+                "Do NOT open with stock aankhein-phat / chehra-laal / nazrein-jhuka / pallu / jhatka / peeche-hat / 'Main teri X hoon' essay. " +
+                "ONE stance only — no long resist then full obey in the same bubble. " +
                 "Do NOT change room/clothes/props already set." +
                 " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +

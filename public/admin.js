@@ -106,6 +106,12 @@
   let usersCache = [];
   let paymentsCache = [];
   let pendingQrBase64 = null;
+  const expandedUserIds = new Set();
+
+  const USER_CHEVRON =
+    "<svg class='user-card-chevron' viewBox='0 0 20 20' fill='none' aria-hidden='true'>" +
+    "<path d='M5 7.5L10 12.5L15 7.5' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/>" +
+    "</svg>";
 
   function toast(message, type) {
     let host = document.getElementById("toast-host");
@@ -837,7 +843,7 @@
         const onlineBadge =
           "<span class='badge " +
           (u.sessionActive ? "online" : "") +
-          "'>" +
+          " user-card-status'>" +
           (u.sessionActive ? "online" : "idle") +
           "</span>";
         const pays =
@@ -846,36 +852,43 @@
           " · A " +
           (u.approvedPayments || 0) +
           (u.rejectedPayments ? " · R " + u.rejectedPayments : "");
+        const isOpen = expandedUserIds.has(String(u.userId));
+        const uid = escapeHtml(u.userId);
 
         return (
           "<article class='user-card" +
           (u.sessionActive ? " is-online" : "") +
           (Number(u.pendingPayments || 0) > 0 ? " has-pending" : "") +
+          (isOpen ? " is-open" : "") +
+          "' data-user-id='" +
+          uid +
           "'>" +
-          "<div class='user-card-top'>" +
-          "<button type='button' class='id-pill id-link' title='View chat' data-view-chat='" +
-          escapeHtml(u.userId) +
+          "<button type='button' class='user-card-summary' data-toggle-user='" +
+          uid +
+          "' aria-expanded='" +
+          (isOpen ? "true" : "false") +
           "'>" +
-          escapeHtml(u.userId) +
-          "</button>" +
-          "<div class='user-card-badges'>" +
-          onlineBadge +
-          paidBadge +
-          "</div>" +
-          "</div>" +
-          "<div class='user-card-main'>" +
-          "<div class='user-card-time'>" +
+          "<span class='id-pill'>" +
+          uid +
+          "</span>" +
           "<span class='user-card-clock'>" +
           clock +
           "</span>" +
-          "<small>" +
-          Number(u.hoursBalance || 0).toFixed(2) +
-          "h left</small>" +
-          "</div>" +
+          onlineBadge +
+          USER_CHEVRON +
+          "</button>" +
+          "<div class='user-card-detail'>" +
           "<div class='user-card-meta'>" +
           "<div><span class='uc-label'>PIN</span> <b class='pin-cell'>" +
           escapeHtml(u.pin || "—") +
-          "</b></div>" +
+          "</b> " +
+          paidBadge +
+          "</div>" +
+          "<div><span class='uc-label'>Time</span> " +
+          Number(u.hoursBalance || 0).toFixed(2) +
+          "h · " +
+          clock +
+          "</div>" +
           "<div><span class='uc-label'>Scene</span> " +
           escapeHtml(scene) +
           "</div>" +
@@ -900,38 +913,37 @@
           new Date(u.createdAt).toLocaleString() +
           "</div>" +
           "</div>" +
-          "</div>" +
           "<button type='button' class='user-card-chat' data-view-chat='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>" +
           "View chat · " +
           escapeHtml(chatLabel) +
           "</button>" +
           "<div class='user-card-actions'>" +
           "<button type='button' class='btn btn-sm' data-msg-user='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>Support</button>" +
           "<button type='button' class='btn btn-sm' data-add-hours='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>+1h</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-add-hours5='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>+5h</button>" +
           "<button type='button' class='btn-danger btn-sm' title='Set time to zero' data-clear-hours='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>Clear</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-reset-pin='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>PIN</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-delete-chats='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>Del chats</button>" +
           "<button type='button' class='btn-danger btn-sm' data-delete-user='" +
-          escapeHtml(u.userId) +
+          uid +
           "'>Del</button>" +
           (u.isLegacy || u.needsFourDigit
             ? "<button type='button' class='btn btn-sm' data-migrate='" +
-              escapeHtml(u.userId) +
+              uid +
               "'>→ 4-digit</button>"
             : "") +
           "</div>" +
@@ -940,6 +952,7 @@
               u.supportUnseen +
               ")</p>"
             : "") +
+          "</div>" +
           "</article>"
         );
       })
@@ -1120,6 +1133,23 @@
   }
 
   usersEl.addEventListener("click", async function (e) {
+    const toggleBtn = e.target.closest
+      ? e.target.closest("[data-toggle-user]")
+      : null;
+    if (toggleBtn) {
+      const id = String(toggleBtn.getAttribute("data-toggle-user") || "");
+      if (!id) return;
+      if (expandedUserIds.has(id)) expandedUserIds.delete(id);
+      else expandedUserIds.add(id);
+      const card = toggleBtn.closest(".user-card");
+      if (card) {
+        const open = expandedUserIds.has(id);
+        card.classList.toggle("is-open", open);
+        toggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      return;
+    }
+
     const t = e.target.closest
       ? e.target.closest(
           "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
