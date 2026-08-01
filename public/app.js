@@ -1877,7 +1877,7 @@
         payPreview.classList.add("hidden");
         payPreview.removeAttribute("src");
       }
-      if (payUploadText) payUploadText.textContent = "Tap to add screenshot";
+      if (payUploadText) payUploadText.textContent = "Tap to choose screenshot from gallery";
       if (payUploadLabel) payUploadLabel.classList.remove("has-file");
       await loadMyPayments();
       startPayPoll();
@@ -3934,7 +3934,7 @@
       const file = payScreenshot.files && payScreenshot.files[0];
       if (!file) {
         if (payPreview) payPreview.classList.add("hidden");
-        if (payUploadText) payUploadText.textContent = "Tap to add screenshot";
+        if (payUploadText) payUploadText.textContent = "Tap to choose screenshot from gallery";
         if (payUploadLabel) payUploadLabel.classList.remove("has-file");
         return;
       }
