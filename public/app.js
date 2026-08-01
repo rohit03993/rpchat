@@ -1237,7 +1237,7 @@
     if (payMsg) {
       payMsg.className = "pay-msg";
       payMsg.textContent =
-        "Scanning for payment… Usually under a minute after UPI success.";
+        "Scanning for payment… Usually under a minute after you pay.";
     }
   }
 
@@ -1497,7 +1497,7 @@
     const text =
       "Pay ₹" +
       pack.priceInr +
-      " · User ID (UPI remark): " +
+      " · User ID (payment note): " +
       (uid || "—");
     copyText(text, "Payment details");
   }
@@ -1549,15 +1549,7 @@
           : "";
       if (payAmountLine) {
         payAmountLine.innerHTML =
-          "Pay exactly <b>₹" +
-          pack.priceInr +
-          "</b>" +
-          listHtml +
-          " · " +
-          pack.label +
-          " · remark <b>" +
-          uid +
-          "</b>";
+          "Pay <b>₹" + pack.priceInr + "</b>" + listHtml + " · " + pack.label;
       }
       if (paySelectedSummary) {
         paySelectedSummary.classList.remove("hidden");
@@ -1572,7 +1564,7 @@
           pack.perHourInr +
           "/hr" +
           saveHtml +
-          "<br/>UPI remark = User ID <b>" +
+          "<br/>Payment note = User ID <b>" +
           uid +
           "</b></span>";
       }
@@ -1580,14 +1572,7 @@
         submitPayBtn.textContent = "Submit ₹" + pack.priceInr + " screenshot";
       }
       if (payInstructions) {
-        payInstructions.innerHTML =
-          "1) Scan the QR · 2) Pay exactly <b>₹" +
-          pack.priceInr +
-          "</b>" +
-          (pack.saveInr > 0 ? " (save ₹" + pack.saveInr + ")" : "") +
-          " · 3) Remark = <b>" +
-          uid +
-          "</b> · 4) Tap <b>I’ve paid</b> and wait — hours unlock from bank SMS.";
+        payInstructions.innerHTML = "";
       }
       // stay on current wizard step — don't jump
     } else {
@@ -1679,7 +1664,7 @@
       upiQr.src = payCatalog.payment.qrImageUrl;
       upiQr.classList.remove("hidden");
       upiQr.onerror = function () {
-        upiQr.alt = "Add QR at public/upi-qr.png or set UPI_QR_URL";
+        upiQr.alt = "Payment QR";
       };
     }
     syncPayUi();
@@ -3931,13 +3916,13 @@
       try {
         await navigator.clipboard.writeText(text);
         copyUpiBtn.textContent = "Copied";
-        toast("UPI ID copied", "ok");
+        toast("ID copied", "ok");
         setTimeout(function () {
           copyUpiBtn.textContent = "Copy";
         }, 1200);
       } catch (e) {
         copyUpiBtn.textContent = "Select & copy";
-        toast("Copy failed — select UPI manually", "err");
+        toast("Copy failed — select manually", "err");
       }
     });
   }

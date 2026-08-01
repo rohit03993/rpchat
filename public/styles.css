@@ -763,8 +763,27 @@ body {
   color: var(--muted);
 }
 
-.pay-upi-fallback {
-  flex-wrap: wrap;
+.pay-more-details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--panel);
+}
+
+.pay-more-details summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  list-style: none;
+}
+
+.pay-more-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.pay-more-details[open] summary {
+  margin-bottom: 8px;
 }
 
 .pay-upi-fallback-label {
@@ -772,6 +791,15 @@ body {
   font-size: 0.72rem;
   color: var(--muted);
   font-weight: 600;
+}
+
+.pay-copy-details {
+  width: 100%;
+  justify-content: center;
+}
+
+.pay-upi-fallback {
+  flex-wrap: wrap;
 }
 
 .pay-wait-block {

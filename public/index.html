@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=72" />
+    <link rel="stylesheet" href="/styles.css?v=73" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -535,12 +535,12 @@
             <button type="button" id="copy-pay-id" class="chip-btn">Copy</button>
           </div>
           <p class="pay-remember-note">
-            Put this User ID in the UPI remark when you scan the QR. Remember your ID &amp; PIN — both are saved on this browser.
+            Save your User ID &amp; PIN on this phone. Add User ID in payment note when you pay.
           </p>
 
           <div class="pay-steps" role="tablist">
             <button type="button" class="pay-step active" data-step="1" id="pay-step-btn-1">1 Pack</button>
-            <button type="button" class="pay-step" data-step="2" id="pay-step-btn-2">2 Scan QR</button>
+            <button type="button" class="pay-step" data-step="2" id="pay-step-btn-2">2 Scan</button>
             <button type="button" class="pay-step" data-step="3" id="pay-step-btn-3">3 Unlock</button>
           </div>
 
@@ -551,37 +551,35 @@
             <div id="package-cards" class="package-cards" role="listbox" aria-label="Packages"></div>
             <select id="package-select" class="hidden" aria-hidden="true"></select>
             <div id="pay-selected-summary" class="pay-selected-summary hidden" aria-live="polite"></div>
-            <button type="button" id="pay-goto-2" class="auth-btn">Continue to QR</button>
+            <button type="button" id="pay-goto-2" class="auth-btn">Continue to scan</button>
           </section>
 
           <!-- STEP 2 -->
           <section id="pay-pane-2" class="pay-pane" data-pane="2">
-            <h3 class="pay-section-title">Scan QR to pay</h3>
+            <h3 class="pay-section-title">Scan &amp; pay</h3>
             <p id="pay-amount-line" class="pay-amount-line">Select a pack first</p>
-            <button type="button" id="copy-pay-details-btn" class="auth-btn pay-copy-details">
-              Copy amount + User ID
-            </button>
             <div class="pay-qr-wrap pay-qr-hero">
-              <img id="upi-qr" class="upi-qr" alt="UPI QR" />
+              <img id="upi-qr" class="upi-qr" alt="Payment QR" />
             </div>
             <p class="pay-qr-caption">
-              Open GPay / PhonePe / Paytm → <b>Scan this QR</b> → pay the exact amount
+              Scan with any payment app · pay the amount above · note = your User ID
             </p>
-            <div class="pay-upi-row pay-upi-fallback">
-              <span class="pay-upi-fallback-label">UPI ID (if scan fails)</span>
-              <code id="upi-id-display" class="upi-id-display">—</code>
-              <button type="button" id="copy-upi-btn" class="chip-btn">Copy</button>
-            </div>
-            <p id="pay-instructions" class="pay-box">
-              Put your <b>User ID</b> in the UPI remark. Pay the exact amount. Hours unlock when payment SMS is received.
-            </p>
-            <label class="full pay-remark-label">
-              UPI remark (User ID)
-              <input id="upi-note" type="text" maxlength="80" readonly />
-            </label>
+            <button type="button" id="copy-pay-details-btn" class="chip-btn pay-copy-details">
+              Copy amount + User ID
+            </button>
+            <input id="upi-note" type="hidden" maxlength="80" />
+            <details class="pay-more-details">
+              <summary>Scan not working?</summary>
+              <div class="pay-upi-row pay-upi-fallback">
+                <span class="pay-upi-fallback-label">Pay to this ID</span>
+                <code id="upi-id-display" class="upi-id-display">—</code>
+                <button type="button" id="copy-upi-btn" class="chip-btn">Copy</button>
+              </div>
+            </details>
+            <p id="pay-instructions" class="hidden" aria-hidden="true"></p>
             <div class="pay-nav-row">
               <button type="button" id="pay-back-1" class="btn-outline pay-nav-btn">← Packs</button>
-              <button type="button" id="pay-goto-3" class="auth-btn pay-nav-btn">I’ve paid — wait for unlock</button>
+              <button type="button" id="pay-goto-3" class="auth-btn pay-nav-btn">I’ve paid</button>
             </div>
           </section>
 
@@ -611,7 +609,7 @@
               </label>
               <img id="pay-preview" class="pay-preview hidden" alt="Preview" />
               <label class="full pay-utr-label">
-                UTR / UPI Ref (optional — faster unlock)
+                UTR / Ref (optional)
                 <input
                   id="pay-utr"
                   type="text"
@@ -751,6 +749,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=89" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=90" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>
