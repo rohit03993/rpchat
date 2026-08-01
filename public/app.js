@@ -45,6 +45,20 @@
   const sidebarClose = document.getElementById("sidebar-close");
   const menuBtn = document.getElementById("menu-btn");
   const startChatBtn = document.getElementById("start-chat-btn");
+  const wizProgress = document.getElementById("wiz-progress");
+  const wizStepLabel = document.getElementById("wiz-step-label");
+  const wizTitle = document.getElementById("wiz-title");
+  const wizSub = document.getElementById("wiz-sub");
+  const wizPairPreview = document.getElementById("wiz-pair-preview");
+  const wizRoleCards = document.getElementById("wiz-role-cards");
+  const wizNameChips = document.getElementById("wiz-name-chips");
+  const wizSceneChips = document.getElementById("wiz-scene-chips");
+  const wizResistCards = document.getElementById("wiz-resist-cards");
+  const wizLangCards = document.getElementById("wiz-lang-cards");
+  const wizBackBtn = document.getElementById("wiz-back");
+  const wizNextBtn = document.getElementById("wiz-next");
+  let wizStep = 1;
+  const WIZ_TOTAL = 5;
   const applySettingsBtn = document.getElementById("apply-settings-btn");
   const newChatBtn = document.getElementById("new-chat-btn");
   const authGate = document.getElementById("auth-gate");
@@ -2442,6 +2456,438 @@
     if (rpResistanceEl && (key === "mummy" || key === "dad")) {
       if (!setupLocked || forceName) rpResistanceEl.value = "strict";
     }
+    if (typeof refreshSetupWizard === "function") {
+      refreshSetupWizard({ soft: true });
+    }
+  }
+
+  const WIZARD_ROLE_ORDER = [
+    "mummy",
+    "dad",
+    "saas",
+    "sasur",
+    "bhabhi",
+    "mausi",
+    "bua",
+    "nani",
+    "dadi",
+    "sister",
+    "girlfriend",
+    "wife",
+    "boyfriend",
+    "husband",
+    "nanad",
+    "bahu",
+    "mama",
+    "mami",
+    "chachi",
+    "chacha",
+    "custom",
+  ];
+
+  const SCENE_CHIPS_BY_ROLE = {
+    mummy: [
+      "Kitchen soft baat pehle",
+      "Raat ghar pe soft",
+      "Dirty only jab main push karun",
+    ],
+    dad: [
+      "Ghar pe soft baat",
+      "Padhai ke baad private",
+      "Dirty only jab main push karun",
+    ],
+    saas: [
+      "Damad ji se pehli soft baat",
+      "Terrace pe soft",
+      "Slow heat, Mummy ji bolna",
+    ],
+    sasur: [
+      "Bahu se soft Papa ji baat",
+      "Ghar pe private",
+      "Slow burn, dirty later",
+    ],
+    bhabhi: [
+      "Kitchen tease soft",
+      "Ghar khali soft baat",
+      "Dirty only jab main push karun",
+    ],
+    mausi: [
+      "Mausi ghar soft visit",
+      "Private soft baat",
+      "Dirty only jab main push karun",
+    ],
+    bua: [
+      "Bua ghar soft visit",
+      "Private soft baat",
+      "Slow heat",
+    ],
+    nani: ["Nani ghar soft", "Raat soft baat", "Slow elder heat"],
+    dadi: ["Dadi ghar soft", "Private soft baat", "Slow elder heat"],
+    sister: ["Didi scold + soft", "Room mein soft baat", "Slow heat"],
+    girlfriend: ["Date soft romantic", "Night call soft", "Heat jab main push karun"],
+    wife: ["Bedroom soft", "Ghar pe soft romantic", "Dirty jab main push karun"],
+    boyfriend: ["Date soft", "Night chat soft", "Heat jab main push karun"],
+    husband: ["Ghar soft romantic", "Night soft", "Dirty jab main push karun"],
+    _default: [
+      "Soft start pehle",
+      "Private soft baat",
+      "Dirty only jab main push karun",
+    ],
+  };
+
+  const NAME_IDEAS = {
+    mummy: ["Maa", "Neetu", "Sunita", "Poonam"],
+    dad: ["Papa", "Rajesh", "Suresh"],
+    saas: ["Saas", "Kamla", "Sunita"],
+    sasur: ["Sasur", "Ramesh", "Omprakash"],
+    bhabhi: ["Bhabhi", "Priya", "Anjali"],
+    mausi: ["Mausi", "Seema", "Rita"],
+    bua: ["Bua", "Geeta"],
+    nani: ["Nani", "Shanti"],
+    dadi: ["Dadi", "Kamala"],
+    sister: ["Didi", "Riya", "Pooja"],
+    girlfriend: ["Baby", "Priya", "Aisha"],
+    wife: ["Biwi", "Neha", "Pooja"],
+    boyfriend: ["Jaan", "Rahul", "Arjun"],
+    husband: ["Pati", "Rohit", "Aman"],
+  };
+
+  const WIZ_COPY = {
+    1: {
+      title: "Who is the AI?",
+      sub: "Pick the character. Yeh decide karega pehli baatein aur rishta.",
+    },
+    2: {
+      title: "Unka naam?",
+      sub: "Optional — skip kar sakte ho. Default naam bhi chalega.",
+    },
+    3: {
+      title: "Scene kya hai?",
+      sub: "Jagah + mood likho, ya chip tap karo. Early chat isi scene pe rahegi.",
+    },
+    4: {
+      title: "Kitni mushkil seduce?",
+      sub: "Yeh control karega kitni jaldi heat badhe.",
+    },
+    5: {
+      title: "Kaunsi language?",
+      sub: "Most users Hinglish choose karte hain — WhatsApp feel.",
+    },
+  };
+
+  function wizRoleLabel(key) {
+    if (ROLE_SMART[key] && ROLE_SMART[key].name) {
+      if (key === "mummy") return "Mummy / Maa";
+      if (key === "dad") return "Papa / Dad";
+      if (key === "sister") return "Didi / Bahan";
+      if (key === "girlfriend") return "Girlfriend";
+      if (key === "custom") return "Custom…";
+      return ROLE_SMART[key].name;
+    }
+    return key;
+  }
+
+  function updateWizPairPreview() {
+    if (!wizPairPreview) return;
+    const roles = getRpRoles();
+    const youNice = userAddressName(roles.userRole);
+    wizPairPreview.textContent =
+      "AI = " +
+      roles.characterName +
+      " (" +
+      roles.botRole +
+      ")  ·  You = " +
+      youNice;
+  }
+
+  function buildWizRoleCards() {
+    if (!wizRoleCards) return;
+    wizRoleCards.innerHTML = "";
+    WIZARD_ROLE_ORDER.forEach(function (key) {
+      if (key !== "custom" && !ROLE_SMART[key]) return;
+      const smart = ROLE_SMART[key] || { userRole: "custom", name: "Custom" };
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wiz-role-card";
+      btn.setAttribute("role", "option");
+      btn.dataset.role = key;
+      btn.innerHTML =
+        '<span class="wiz-role-title"></span><span class="wiz-role-you"></span>';
+      btn.querySelector(".wiz-role-title").textContent = wizRoleLabel(key);
+      btn.querySelector(".wiz-role-you").textContent =
+        key === "custom"
+          ? "Type both roles"
+          : "You are · " + (smart.userRole || "—");
+      btn.addEventListener("click", function () {
+        if (!rpBotRoleEl) return;
+        rpBotRoleEl.value = key;
+        applySmartRoleDefaults(true);
+        syncWizRoleCardActive();
+        updateWizPairPreview();
+        renderWizNameChips();
+        renderWizSceneChips();
+        setSetupWizardStep(wizStep);
+      });
+      wizRoleCards.appendChild(btn);
+    });
+    syncWizRoleCardActive();
+  }
+
+  function syncWizRoleCardActive() {
+    if (!wizRoleCards || !rpBotRoleEl) return;
+    const cur = rpBotRoleEl.value;
+    wizRoleCards.querySelectorAll(".wiz-role-card").forEach(function (el) {
+      el.classList.toggle("active", el.dataset.role === cur);
+    });
+  }
+
+  function renderWizNameChips() {
+    if (!wizNameChips || !rpBotRoleEl) return;
+    const key = rpBotRoleEl.value;
+    const ideas = NAME_IDEAS[key] || (ROLE_SMART[key] ? [ROLE_SMART[key].name] : ["Jaan"]);
+    wizNameChips.innerHTML = "";
+    ideas.filter(Boolean).forEach(function (name) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "wiz-chip";
+      chip.textContent = name;
+      chip.addEventListener("click", function () {
+        if (charNameEl) charNameEl.value = name;
+        updateWizPairPreview();
+        wizNameChips.querySelectorAll(".wiz-chip").forEach(function (c) {
+          c.classList.toggle("active", c.textContent === name);
+        });
+      });
+      if (charNameEl && charNameEl.value.trim() === name) chip.classList.add("active");
+      wizNameChips.appendChild(chip);
+    });
+  }
+
+  function renderWizSceneChips() {
+    if (!wizSceneChips || !rpBotRoleEl) return;
+    const key = rpBotRoleEl.value;
+    const chips = SCENE_CHIPS_BY_ROLE[key] || SCENE_CHIPS_BY_ROLE._default;
+    wizSceneChips.innerHTML = "";
+    chips.forEach(function (text) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "wiz-chip";
+      chip.textContent = text;
+      chip.addEventListener("click", function () {
+        if (rpNoteEl) rpNoteEl.value = text;
+        wizSceneChips.querySelectorAll(".wiz-chip").forEach(function (c) {
+          c.classList.toggle("active", c.textContent === text);
+        });
+      });
+      if (rpNoteEl && rpNoteEl.value.trim() === text) chip.classList.add("active");
+      wizSceneChips.appendChild(chip);
+    });
+  }
+
+  function buildWizResistCards() {
+    if (!wizResistCards) return;
+    const options = [
+      {
+        value: "strict",
+        title: "Strict — slow burn",
+        desc: "Zyada resist. Seduce mushkil. Long tease = zyada maza.",
+      },
+      {
+        value: "normal",
+        title: "Normal — gradual",
+        desc: "Beech ka balance. Push ke baad dheere heat.",
+      },
+      {
+        value: "easy",
+        title: "Easy — heats sooner",
+        desc: "Jaldi garam. Phir bhi soft→sex ek line mein nahi.",
+      },
+    ];
+    wizResistCards.innerHTML = "";
+    options.forEach(function (opt) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wiz-choice-card";
+      btn.dataset.value = opt.value;
+      btn.innerHTML =
+        '<span class="wiz-choice-title"></span><span class="wiz-choice-desc"></span>';
+      btn.querySelector(".wiz-choice-title").textContent = opt.title;
+      btn.querySelector(".wiz-choice-desc").textContent = opt.desc;
+      btn.addEventListener("click", function () {
+        if (rpResistanceEl) rpResistanceEl.value = opt.value;
+        syncWizResistActive();
+      });
+      wizResistCards.appendChild(btn);
+    });
+    syncWizResistActive();
+  }
+
+  function syncWizResistActive() {
+    if (!wizResistCards || !rpResistanceEl) return;
+    const cur = rpResistanceEl.value;
+    wizResistCards.querySelectorAll(".wiz-choice-card").forEach(function (el) {
+      el.classList.toggle("active", el.dataset.value === cur);
+    });
+  }
+
+  function buildWizLangCards() {
+    if (!wizLangCards || !languageEl) return;
+    const options = [
+      { value: "hinglish", title: "Hinglish", desc: "Best WhatsApp desi feel (recommended)" },
+      { value: "english", title: "English", desc: "Clear English, light Hinglish OK" },
+      { value: "hindi", title: "Hindi (Roman)", desc: "Zyada Hindi words, Roman script" },
+    ];
+    wizLangCards.innerHTML = "";
+    options.forEach(function (opt) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "wiz-choice-card";
+      btn.dataset.value = opt.value;
+      btn.innerHTML =
+        '<span class="wiz-choice-title"></span><span class="wiz-choice-desc"></span>';
+      btn.querySelector(".wiz-choice-title").textContent = opt.title;
+      btn.querySelector(".wiz-choice-desc").textContent = opt.desc;
+      btn.addEventListener("click", function () {
+        languageEl.value = opt.value;
+        syncWizLangActive();
+      });
+      wizLangCards.appendChild(btn);
+    });
+    syncWizLangActive();
+  }
+
+  function syncWizLangActive() {
+    if (!wizLangCards || !languageEl) return;
+    const cur = languageEl.value;
+    wizLangCards.querySelectorAll(".wiz-choice-card").forEach(function (el) {
+      el.classList.toggle("active", el.dataset.value === cur);
+    });
+  }
+
+  function setSetupWizardStep(step) {
+    wizStep = Math.max(1, Math.min(WIZ_TOTAL, step | 0));
+    if (setupModal) setupModal.classList.add("wiz-on");
+
+    const copy = WIZ_COPY[wizStep] || WIZ_COPY[1];
+    if (wizTitle) wizTitle.textContent = copy.title;
+    if (wizSub) wizSub.textContent = copy.sub;
+    if (wizStepLabel) {
+      wizStepLabel.textContent = "Step " + wizStep + " of " + WIZ_TOTAL;
+    }
+    if (wizProgress) {
+      wizProgress.querySelectorAll(".wiz-dot").forEach(function (dot) {
+        const n = Number(dot.getAttribute("data-dot") || 0);
+        dot.classList.toggle("active", n === wizStep);
+        dot.classList.toggle("done", n < wizStep);
+      });
+    }
+
+    if (sceneForm) {
+      sceneForm.querySelectorAll("[data-wiz-step]").forEach(function (el) {
+        const s = el.getAttribute("data-wiz-step");
+        const on =
+          s === "all" || String(s) === String(wizStep);
+        el.classList.toggle("wiz-step-active", on);
+      });
+    }
+
+    if (wizRoleCards) wizRoleCards.classList.toggle("hidden", wizStep !== 1);
+    if (wizNameChips) wizNameChips.classList.toggle("hidden", wizStep !== 2);
+    if (wizSceneChips) wizSceneChips.classList.toggle("hidden", wizStep !== 3);
+    if (wizResistCards) wizResistCards.classList.toggle("hidden", wizStep !== 4);
+    if (wizLangCards) wizLangCards.classList.toggle("hidden", wizStep !== 5);
+
+    if (wizBackBtn) wizBackBtn.disabled = wizStep <= 1;
+    if (wizNextBtn) wizNextBtn.classList.toggle("hidden", wizStep >= WIZ_TOTAL);
+    if (startChatBtn) {
+      startChatBtn.classList.toggle("wiz-start-hidden", wizStep < WIZ_TOTAL);
+      startChatBtn.textContent =
+        wizStep >= WIZ_TOTAL ? "Start chat" : "Start chat";
+    }
+
+    updateWizPairPreview();
+    syncCustomRoleFields();
+  }
+
+  function refreshSetupWizard(opts) {
+    opts = opts || {};
+    if (!setupModal || !setupModal.classList.contains("wiz-on")) {
+      if (!opts.soft) return;
+    }
+    syncWizRoleCardActive();
+    syncWizResistActive();
+    syncWizLangActive();
+    if (!opts.soft) {
+      renderWizNameChips();
+      renderWizSceneChips();
+    } else if (wizStep === 2) renderWizNameChips();
+    else if (wizStep === 3) renderWizSceneChips();
+    updateWizPairPreview();
+    setSetupWizardStep(wizStep);
+  }
+
+  function initSetupWizard() {
+    buildWizRoleCards();
+    buildWizResistCards();
+    buildWizLangCards();
+    renderWizNameChips();
+    renderWizSceneChips();
+    if (wizBackBtn) {
+      wizBackBtn.addEventListener("click", function () {
+        setSetupWizardStep(wizStep - 1);
+      });
+    }
+    if (wizNextBtn) {
+      wizNextBtn.addEventListener("click", function () {
+        if (wizStep === 1 && rpBotRoleEl && rpBotRoleEl.value === "custom") {
+          const b = rpCustomBot && rpCustomBot.value.trim();
+          const u = rpCustomUser && rpCustomUser.value.trim();
+          if (!b || !u) {
+            toast("Custom: AI role aur your role dono likho", "err");
+            return;
+          }
+        }
+        if (wizStep === 2 && charNameEl && !charNameEl.value.trim()) {
+          const key = rpBotRoleEl ? rpBotRoleEl.value : "mummy";
+          charNameEl.value =
+            (ROLE_SMART[key] && ROLE_SMART[key].name) || "Jaan";
+        }
+        setSetupWizardStep(wizStep + 1);
+      });
+    }
+    if (charNameEl) {
+      charNameEl.addEventListener("input", updateWizPairPreview);
+    }
+    setSetupWizardStep(1);
+  }
+
+  function parkSceneForm(where) {
+    if (!sceneForm) return;
+    sceneForm.hidden = false;
+    if (where === "sidebar" && sidebarFormSlot) {
+      sidebarFormSlot.appendChild(sceneForm);
+      if (setupModal) setupModal.classList.remove("wiz-on");
+      // Sidebar = full form: clear step hiding
+      sceneForm.querySelectorAll("[data-wiz-step]").forEach(function (el) {
+        el.classList.add("wiz-step-active");
+      });
+    } else if (setupFormSlot) {
+      setupFormSlot.appendChild(sceneForm);
+      if (setupModal) setupModal.classList.add("wiz-on");
+      setSetupWizardStep(wizStep || 1);
+    }
+  }
+
+  function openSetupModal() {
+    parkSceneForm("modal");
+    setSetupWizardStep(wizStep || 1);
+    refreshSetupWizard();
+    if (setupModal) {
+      setupModal.classList.remove("hidden");
+      setupModal.setAttribute("aria-hidden", "false");
+    }
+    closeSidebar();
+    if (appShellEl) appShellEl.classList.remove("chat-ready");
   }
 
   function getRpRoles() {
@@ -2532,26 +2978,6 @@
     }
     const roles = getRpRoles();
     return "✓ " + roles.characterName + " · " + roles.botRole;
-  }
-
-  function parkSceneForm(where) {
-    if (!sceneForm) return;
-    sceneForm.hidden = false;
-    if (where === "sidebar" && sidebarFormSlot) {
-      sidebarFormSlot.appendChild(sceneForm);
-    } else if (setupFormSlot) {
-      setupFormSlot.appendChild(sceneForm);
-    }
-  }
-
-  function openSetupModal() {
-    parkSceneForm("modal");
-    if (setupModal) {
-      setupModal.classList.remove("hidden");
-      setupModal.setAttribute("aria-hidden", "false");
-    }
-    closeSidebar();
-    if (appShellEl) appShellEl.classList.remove("chat-ready");
   }
 
   function closeSetupModal() {
@@ -2825,6 +3251,7 @@
     messagesEl.innerHTML = "";
     setupLocked = false;
     rpSetup = "";
+    wizStep = 1;
     clearSavedChatSession();
     syncTitle();
     openSetupModal();
@@ -3083,7 +3510,9 @@
     });
   });
   syncCustomRoleFields();
+  initSetupWizard();
   applySmartRoleDefaults(true);
+  refreshSetupWizard();
   if (charSearchBtn) charSearchBtn.addEventListener("click", loadCharacters);
   if (charSearchEl) {
     charSearchEl.addEventListener("keydown", function (e) {

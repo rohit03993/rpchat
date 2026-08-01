@@ -2015,6 +2015,244 @@ body {
   line-height: 1.45;
 }
 
+/* —— Setup wizard (one question at a time) —— */
+.wiz-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.wiz-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(15, 26, 32, 0.12);
+}
+
+.wiz-dot.active {
+  background: var(--accent, #0d9488);
+}
+
+.wiz-dot.done {
+  background: rgba(13, 148, 136, 0.45);
+}
+
+.wiz-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.wiz-pair-preview {
+  display: none;
+  margin: -6px 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.2);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.wiz-pair-preview:not(:empty) {
+  display: block;
+}
+
+.wiz-role-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+  max-height: min(42vh, 320px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.wiz-role-card {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--input, #fff);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.wiz-role-card:hover {
+  border-color: rgba(13, 148, 136, 0.45);
+}
+
+.wiz-role-card:active {
+  transform: scale(0.98);
+}
+
+.wiz-role-card.active {
+  border-color: var(--accent, #0d9488);
+  background: rgba(13, 148, 136, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(13, 148, 136, 0.25);
+}
+
+.wiz-role-card .wiz-role-title {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.wiz-role-card .wiz-role-you {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.wiz-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.wiz-chip {
+  border: 1px solid var(--line);
+  background: var(--input, #fff);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.25;
+  max-width: 100%;
+}
+
+.wiz-chip:hover,
+.wiz-chip.active {
+  border-color: var(--accent, #0d9488);
+  background: rgba(13, 148, 136, 0.1);
+}
+
+.wiz-choice-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wiz-choice-card {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--input, #fff);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.wiz-choice-card.active {
+  border-color: var(--accent, #0d9488);
+  background: rgba(13, 148, 136, 0.1);
+}
+
+.wiz-choice-card .wiz-choice-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 2px;
+}
+
+.wiz-choice-card .wiz-choice-desc {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.wiz-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  align-items: stretch;
+}
+
+.wiz-nav .btn-outline,
+.wiz-nav .auth-btn {
+  flex: 1;
+  min-height: 46px;
+}
+
+#setup-modal.wiz-on .setup-grid {
+  grid-template-columns: 1fr;
+  margin-bottom: 8px;
+}
+
+#setup-modal.wiz-on .setup-grid > [data-wiz-step]:not(.wiz-step-active) {
+  display: none !important;
+}
+
+#setup-modal.wiz-on .setup-advanced {
+  display: none !important;
+}
+
+#setup-modal.wiz-on [data-wiz-field="role"] select,
+#setup-modal.wiz-on [data-wiz-field="resistance"] select,
+#setup-modal.wiz-on [data-wiz-field="language"] select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#setup-modal.wiz-on [data-wiz-field="role"] {
+  display: none !important;
+}
+
+#setup-modal.wiz-on [data-wiz-field="resistance"],
+#setup-modal.wiz-on [data-wiz-field="language"] {
+  display: none !important;
+}
+
+#setup-modal.wiz-on #rp-custom-roles.wiz-step-active:not(.hidden) {
+  display: flex !important;
+  flex-direction: column;
+  font-size: 0.74rem;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+#setup-modal.wiz-on #rp-setup-status {
+  display: none;
+}
+
+#setup-modal:not(.wiz-on) .wiz-only,
+#setup-modal:not(.wiz-on) .wiz-progress,
+#setup-modal:not(.wiz-on) .wiz-step-label,
+#setup-modal:not(.wiz-on) .wiz-pair-preview {
+  display: none !important;
+}
+
+#setup-modal.wiz-on #start-chat-btn.wiz-start-hidden {
+  display: none;
+}
+
+#setup-modal.wiz-on #wiz-back:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .setup-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

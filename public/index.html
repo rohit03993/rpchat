@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=68" />
+    <link rel="stylesheet" href="/styles.css?v=69" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -270,11 +270,11 @@
 
       <!-- Shared scene form (moved between modal ↔ sidebar) -->
       <div id="scene-form" class="setup-grid" hidden>
-        <label class="full">
+        <label class="full" data-wiz-step="2" data-wiz-field="name">
           Character name
           <input id="char-name" type="text" value="Maa" maxlength="40" placeholder="Neetu Mom, Priya…" />
         </label>
-        <label class="full">
+        <label class="full" data-wiz-step="1" data-wiz-field="role">
           Who is AI?
           <select id="rp-bot-role">
             <optgroup label="Parents">
@@ -326,12 +326,12 @@
             <option value="custom">Custom…</option>
           </select>
         </label>
-        <label class="full hidden" id="rp-custom-roles">
+        <label class="full hidden" id="rp-custom-roles" data-wiz-step="1" data-wiz-field="custom">
           Custom roles
           <input id="rp-custom-bot" type="text" maxlength="40" placeholder="AI role (e.g. baap)" />
           <input id="rp-custom-user" type="text" maxlength="40" placeholder="Your role (e.g. beti)" style="margin-top:6px" />
         </label>
-        <label class="full">
+        <label class="full" data-wiz-step="3" data-wiz-field="scene">
           RP notes (optional)
           <textarea
             id="rp-note"
@@ -340,7 +340,7 @@
             placeholder="Scene e.g. Raat terrace pe soft baat; dirty only jab main push karun…"
           ></textarea>
         </label>
-        <label class="full">
+        <label class="full" data-wiz-step="4" data-wiz-field="resistance">
           Resistance
           <select id="rp-resistance">
             <option value="strict" selected>Strict — slow burn</option>
@@ -348,7 +348,7 @@
             <option value="easy">Easy — heats up sooner</option>
           </select>
         </label>
-        <label class="full">
+        <label class="full" data-wiz-step="5" data-wiz-field="language">
           Chat language
           <select id="language">
             <option value="hinglish" selected>Hinglish (default)</option>
@@ -357,7 +357,7 @@
             <option value="auto">Auto</option>
           </select>
         </label>
-        <p id="rp-setup-status" class="char-info full"></p>
+        <p id="rp-setup-status" class="char-info full" data-wiz-step="all"></p>
 
         <details class="setup-advanced full">
           <summary class="setup-advanced-title">More options</summary>
@@ -448,12 +448,32 @@
         </details>
       </div>
 
-      <div id="setup-modal" class="setup-modal">
-        <div class="setup-card">
-          <h2>Start your chat</h2>
-          <p class="setup-sub">Choose who the AI is, optional name and notes. Place and scene stay in your control during chat.</p>
+      <div id="setup-modal" class="setup-modal wiz-on">
+        <div class="setup-card setup-wizard-card">
+          <div class="wiz-progress" id="wiz-progress" aria-hidden="true">
+            <span class="wiz-dot active" data-dot="1"></span>
+            <span class="wiz-dot" data-dot="2"></span>
+            <span class="wiz-dot" data-dot="3"></span>
+            <span class="wiz-dot" data-dot="4"></span>
+            <span class="wiz-dot" data-dot="5"></span>
+          </div>
+          <p class="wiz-step-label" id="wiz-step-label">Step 1 of 5</p>
+          <h2 id="wiz-title">Who is the AI?</h2>
+          <p class="setup-sub" id="wiz-sub">
+            Pick the character. Yeh decide karega pehli baatein aur rishta.
+          </p>
+          <p class="wiz-pair-preview" id="wiz-pair-preview" aria-live="polite"></p>
+          <div id="wiz-role-cards" class="wiz-role-cards wiz-only" role="listbox" aria-label="AI role"></div>
+          <div id="wiz-name-chips" class="wiz-chips wiz-only hidden" aria-label="Name ideas"></div>
+          <div id="wiz-scene-chips" class="wiz-chips wiz-only hidden" aria-label="Scene ideas"></div>
+          <div id="wiz-resist-cards" class="wiz-choice-cards wiz-only hidden" role="listbox" aria-label="Resistance"></div>
+          <div id="wiz-lang-cards" class="wiz-choice-cards wiz-only hidden" role="listbox" aria-label="Language"></div>
           <div id="setup-form-slot"></div>
-          <button type="button" id="start-chat-btn" class="auth-btn">Start chat</button>
+          <div class="wiz-nav">
+            <button type="button" id="wiz-back" class="btn-outline wiz-only">Back</button>
+            <button type="button" id="wiz-next" class="auth-btn wiz-only">Next</button>
+            <button type="button" id="start-chat-btn" class="auth-btn">Start chat</button>
+          </div>
         </div>
       </div>
 
@@ -707,6 +727,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=85" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=86" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>
