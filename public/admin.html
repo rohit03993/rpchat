@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=25" />
+    <link rel="stylesheet" href="/admin.css?v=26" />
   </head>
   <body>
     <div class="admin-app">
@@ -189,8 +189,9 @@
             <p id="pay-money-line" class="meta pay-money-line"></p>
             <div class="sms-credit-box">
               <p class="meta setup-lead">
-                Auto-unlock: paste bank credit SMS. Match order = UTR → unique ₹+screenshot
-                → unique user who opened Pay/UPI in last 10 min (no screenshot OK) → else review.
+                Auto-unlock from bank credit SMS (android-admin-sms app or paste here). Match order =
+                UTR → unique ₹+screenshot → unique user who opened Scan QR / waiting in last 12 min
+                (no screenshot OK) → else review.
               </p>
               <textarea
                 id="sms-credit-input"
@@ -279,7 +280,9 @@
           <div id="pay-setup-view" class="panel hidden">
             <h3 class="setup-heading">UPI &amp; packages</h3>
             <p class="meta setup-lead">
-              Edit UPI ID, upload your real QR, and change pack prices. Users see this on Pay.
+              Users pay by <b>scanning your QR</b> only (no Open UPI link). Unlock =
+              bank credit SMS on the admin phone (<code>android-admin-sms</code>) or paste
+              SMS under Payments. Keep UPI ID + real QR up to date.
             </p>
             <div class="setup-grid-admin">
               <label class="field">
@@ -360,6 +363,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=28"></script>
+    <script src="/admin.js?v=29"></script>
   </body>
 </html>

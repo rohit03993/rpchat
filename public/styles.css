@@ -730,9 +730,9 @@ body {
 }
 
 .upi-qr {
-  width: min(150px, 42vw);
+  width: min(220px, 68vw);
   height: auto;
-  max-height: 150px;
+  max-height: 220px;
   object-fit: contain;
   border-radius: 8px;
   background: #fff;
@@ -743,11 +743,73 @@ body {
 .pay-qr-wrap {
   display: flex;
   justify-content: center;
-  padding: 8px;
-  background: var(--bg-elevated);
-  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  border-radius: 14px;
   border: 1px solid var(--line);
   flex-shrink: 0;
+}
+
+.pay-qr-wrap.pay-qr-hero {
+  padding: 16px;
+  box-shadow: 0 4px 18px rgba(15, 26, 32, 0.06);
+}
+
+.pay-qr-caption {
+  margin: 0;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.pay-upi-fallback {
+  flex-wrap: wrap;
+}
+
+.pay-upi-fallback-label {
+  width: 100%;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.pay-wait-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 16px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(8, 120, 94, 0.22);
+  background: rgba(8, 120, 94, 0.06);
+}
+
+.pay-wait-block.hidden {
+  display: none !important;
+}
+
+.pay-wait-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ok);
+}
+
+.pay-wait-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(8, 120, 94, 0.2);
+  border-top-color: var(--ok);
+  animation: pay-spin 0.8s linear infinite;
+}
+
+@keyframes pay-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pay-box {
@@ -1028,17 +1090,17 @@ body {
 .pay-qr-wrap {
   display: flex;
   justify-content: center;
-  padding: 8px;
-  background: var(--bg-elevated);
-  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  border-radius: 14px;
   border: 1px solid var(--line);
   flex-shrink: 0;
 }
 
 .upi-qr {
-  width: min(150px, 42vw);
+  width: min(220px, 68vw);
   height: auto;
-  max-height: 150px;
+  max-height: 220px;
   object-fit: contain;
   border-radius: 8px;
   background: #fff;
@@ -1065,10 +1127,7 @@ body {
 }
 
 .pay-open-link {
-  text-align: center;
-  text-decoration: none;
-  display: block;
-  flex-shrink: 0;
+  display: none !important;
 }
 
 .pay-nav-row {
