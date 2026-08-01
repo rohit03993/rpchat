@@ -8,6 +8,7 @@ const {
   buildMaaBrainPrompt,
   buildMaaVoicePrompt,
   buildMaaHinglishPolishPrompt,
+  buildMaaOpenerPrompt,
   recentTranscript,
   buildChatMemoryCard,
   sceneHeatIsDirty,
@@ -864,6 +865,81 @@ Short WhatsApp-style messages (1-3 lines).
 Understand typos and match flirty/adult intent when the user goes there.
 Never invent nonsense words. Never give medical lectures.`;
 }
+
+app.post("/api/chat/opener", requireUser, requireHours, async (req, res) => {
+  try {
+    if (!VENICE_API_KEY) {
+      return res.status(500).json({
+        error: "VENICE_API_KEY missing. Add it to your .env file.",
+      });
+    }
+
+    const setupText = String(req.body.rpSetup || "").trim();
+    const lang = String(req.body.language || "hinglish");
+    const charOverrides = {
+      characterName: String(req.body.characterName || "").trim(),
+      botRole: String(req.body.botRole || "").trim(),
+      userRole: String(req.body.userRole || "").trim(),
+      botGender: String(req.body.botGender || "").trim(),
+      userGender: String(req.body.userGender || "").trim(),
+    };
+    const meta = parseSetupMeta(setupText, charOverrides);
+    const name = meta.characterName || "Chat";
+
+    const payload = [
+      {
+        role: "system",
+        content: buildMaaOpenerPrompt(setupText, charOverrides),
+      },
+      {
+        role: "user",
+        content:
+          `Write the first opening WhatsApp line now as ${name}. ` +
+          `Language feel: ${lang === "english" ? "clear English" : "Easy Hinglish"}.`,
+      },
+    ];
+
+    const startedAt = Date.now();
+    const out = await callVenice(CLEAR_MODEL, payload, {
+      temperature: 0.7,
+      frequency_penalty: 0.2,
+      presence_penalty: 0.1,
+      max_tokens: 180,
+    });
+
+    let reply = "";
+    if (out.response.ok) {
+      reply = extractText(out.data?.choices?.[0]?.message);
+    }
+    reply = fixMaaGenderSlips(reply, charOverrides);
+    reply = String(reply || "")
+      .replace(/^["'\s]+|["'\s]+$/g, "")
+      .trim();
+
+    if (reply && !new RegExp("^" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:", "i").test(reply)) {
+      reply = name + ": " + reply.replace(/^[^:]{0,40}:\s*/, "");
+    }
+
+    if (!reply || reply.length < 8) {
+      return res.json({
+        ok: false,
+        reply: "",
+        fallback: true,
+        workedMs: Date.now() - startedAt,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      reply,
+      workedMs: Date.now() - startedAt,
+      hoursBalance: req.user && req.user.hoursBalance,
+    });
+  } catch (e) {
+    console.error("opener error", e);
+    return res.status(500).json({ error: "Opener failed", fallback: true });
+  }
+});
 
 app.post("/api/chat", requireUser, requireHours, async (req, res) => {
   try {

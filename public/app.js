@@ -57,8 +57,14 @@
   const wizLangCards = document.getElementById("wiz-lang-cards");
   const wizBackBtn = document.getElementById("wiz-back");
   const wizNextBtn = document.getElementById("wiz-next");
+  const moodBar = document.getElementById("mood-bar");
+  const continueSceneBanner = document.getElementById("continue-scene-banner");
+  const continueSceneBtn = document.getElementById("continue-scene-btn");
+  const continueSceneSub = document.getElementById("continue-scene-sub");
   let wizStep = 1;
   const WIZ_TOTAL = 5;
+  let activeMood = "";
+  let pendingContinueSession = null;
   const applySettingsBtn = document.getElementById("apply-settings-btn");
   const newChatBtn = document.getElementById("new-chat-btn");
   const authGate = document.getElementById("auth-gate");
@@ -335,6 +341,89 @@
     return id ? "chatSession_v1_" + id : "";
   }
 
+  function sceneBackupKey() {
+    const id = currentUserId();
+    return id ? "chatSceneBackup_v1_" + id : "";
+  }
+
+  function saveSceneBackup(session) {
+    const key = sceneBackupKey();
+    if (!key || !session) return;
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify(
+          Object.assign({}, session, { backedUpAt: Date.now() })
+        )
+      );
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function loadSceneBackup() {
+    const key = sceneBackupKey();
+    if (!key) return null;
+    try {
+      return JSON.parse(localStorage.getItem(key) || "null");
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearSceneBackup() {
+    const key = sceneBackupKey();
+    if (!key) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function syncMoodBar() {
+    if (!moodBar) return;
+    const show = !!(setupLocked && appShellEl && appShellEl.classList.contains("chat-ready"));
+    moodBar.classList.toggle("hidden", !show);
+    moodBar.querySelectorAll(".mood-chip").forEach(function (chip) {
+      chip.classList.toggle("active", chip.getAttribute("data-mood") === activeMood);
+    });
+  }
+
+  function setActiveMood(mood) {
+    activeMood = String(mood || "").trim();
+    if (rpSetup) {
+      rpSetup = rpSetup.replace(/\s*ACTIVE MOOD:\s*[^\n.]*/i, "").trim();
+      if (activeMood) {
+        rpSetup =
+          rpSetup.replace(/\.\s*$/, "") +
+          ". ACTIVE MOOD: " +
+          activeMood +
+          ".";
+      }
+    }
+    syncMoodBar();
+    scheduleSaveChatSession();
+  }
+
+  function refreshContinueBanner() {
+    if (!continueSceneBanner) return;
+    const backup = loadSceneBackup();
+    const usable =
+      backup &&
+      backup.setupLocked &&
+      Array.isArray(backup.history) &&
+      backup.history.length > 0;
+    pendingContinueSession = usable ? backup : null;
+    continueSceneBanner.classList.toggle("hidden", !usable || setupLocked);
+    if (usable && continueSceneSub) {
+      const form = backup.form || {};
+      const who = form.characterName || form.botRole || "last chat";
+      continueSceneSub.textContent =
+        who + " · " + backup.history.length + " messages saved";
+    }
+  }
+
   function collectFormState() {
     return {
       characterName: charNameEl ? charNameEl.value : "",
@@ -462,6 +551,11 @@
       closeSidebar();
       if (appShellEl) appShellEl.classList.add("chat-ready");
       updateSetupStatus();
+      const moodMatch = String(rpSetup || "").match(/ACTIVE MOOD:\s*([^\n.]+)/i);
+      activeMood = moodMatch ? moodMatch[1].trim() : "";
+      syncMoodBar();
+      clearSceneBackup();
+      refreshContinueBanner();
       return history.length > 0 || !!rpSetup;
     } finally {
       restoringSession = false;
@@ -2882,12 +2976,14 @@
     parkSceneForm("modal");
     setSetupWizardStep(wizStep || 1);
     refreshSetupWizard();
+    refreshContinueBanner();
     if (setupModal) {
       setupModal.classList.remove("hidden");
       setupModal.setAttribute("aria-hidden", "false");
     }
     closeSidebar();
     if (appShellEl) appShellEl.classList.remove("chat-ready");
+    syncMoodBar();
   }
 
   function getRpRoles() {
@@ -2965,6 +3061,7 @@
       resistanceLine +
       " All adults 18+. " +
       briefBlock +
+      (activeMood ? ". ACTIVE MOOD: " + activeMood : "") +
       ". Scene rule: early replies must match USER RP BRIEF + vibe/pace for THIS role (not a generic Mummy hello). After that, follow user tempo/messages."
     );
   }
@@ -3178,7 +3275,7 @@
     );
   }
 
-  function beginChatFromSetup() {
+  async function beginChatFromSetup() {
     if (isVeniceMode() && !selectedCharacter) {
       if (rpSetupStatus) {
         rpSetupStatus.textContent = "Select a Venice character first.";
@@ -3192,11 +3289,48 @@
     parkSceneForm("sidebar");
     closeSidebar();
     if (appShellEl) appShellEl.classList.add("chat-ready");
+    syncMoodBar();
+    clearSceneBackup();
+    refreshContinueBanner();
 
     history = [];
     messagesEl.innerHTML = "";
     const roles = getRpRoles();
-    const opener = buildRoleOpener(roles);
+    let opener = buildRoleOpener(roles);
+
+    if (isMaaMode()) {
+      setBusy(true, "typing...");
+      showTyping();
+      try {
+        await ensureHoursCounting();
+        const res = await fetch("/api/chat/opener", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            rpSetup: rpSetup,
+            language: languageEl ? languageEl.value : "hinglish",
+            characterName: roles.characterName,
+            botRole: roles.botRole,
+            userRole: roles.userRole,
+            botGender: roles.botGender,
+            userGender: roles.userGender,
+          }),
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (res.ok && data.reply && String(data.reply).trim().length > 8) {
+          opener = String(data.reply).trim();
+        }
+        if (typeof data.hoursBalance === "number") applyTimeFromResponse(data);
+      } catch (e) {
+        /* keep template opener */
+      } finally {
+        hideTyping();
+        setBusy(false);
+      }
+    }
+
     addBubble(opener, "incoming");
     history.push({ role: "assistant", content: opener });
     history.push({
@@ -3247,15 +3381,21 @@
   }
 
   function resetChat() {
+    if (setupLocked) {
+      saveSceneBackup(buildSessionPayload());
+    }
     history = [];
     messagesEl.innerHTML = "";
     setupLocked = false;
     rpSetup = "";
+    activeMood = "";
     wizStep = 1;
     clearSavedChatSession();
     syncTitle();
     openSetupModal();
     updateSetupStatus();
+    syncMoodBar();
+    refreshContinueBanner();
     input.focus();
   }
 
@@ -3426,12 +3566,18 @@
       }
 
       const reply = data.reply || "";
+      if (!String(reply).trim()) {
+        addBubble("Empty reply — tap send again to retry.", "error");
+        scheduleSaveChatSession();
+        return;
+      }
       history.push({ role: "assistant", content: reply });
       addBubble(reply, "incoming");
       scheduleSaveChatSession();
     } catch (e) {
       hideTyping();
       addBubble("Network issue — try again in a moment.", "error");
+      toast("Network issue — retry send", "err");
     } finally {
       setBusy(false);
       input.focus();
@@ -3450,6 +3596,34 @@
   if (sidebarClose) sidebarClose.addEventListener("click", closeSidebar);
   if (sidebarBackdrop) sidebarBackdrop.addEventListener("click", closeSidebar);
   if (startChatBtn) startChatBtn.addEventListener("click", beginChatFromSetup);
+  if (continueSceneBtn) {
+    continueSceneBtn.addEventListener("click", function () {
+      const session = pendingContinueSession || loadSceneBackup();
+      if (!session || !applySessionData(session)) {
+        toast("No saved scene found", "err");
+        refreshContinueBanner();
+        return;
+      }
+      clearSceneBackup();
+      refreshContinueBanner();
+      toast("Continued last scene", "ok");
+      maybeShowWelcomeTip();
+      input.focus();
+    });
+  }
+  if (moodBar) {
+    moodBar.querySelectorAll(".mood-chip").forEach(function (chip) {
+      chip.addEventListener("click", function () {
+        const mood = chip.getAttribute("data-mood") || "";
+        if (activeMood === mood) setActiveMood("");
+        else setActiveMood(mood);
+        toast(
+          activeMood ? "Mood: " + chip.textContent : "Mood cleared",
+          "ok"
+        );
+      });
+    });
+  }
   if (applySettingsBtn) {
     applySettingsBtn.addEventListener("click", function () {
       rpSetup = buildRpSetupText();

@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=69" />
+    <link rel="stylesheet" href="/styles.css?v=70" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -258,6 +258,12 @@
         </div>
       </div>
 
+      <div id="mood-bar" class="mood-bar hidden" aria-label="Chat mood">
+        <button type="button" class="mood-chip" data-mood="soft daily">Soft</button>
+        <button type="button" class="mood-chip" data-mood="tease flirty">Tease</button>
+        <button type="button" class="mood-chip" data-mood="push dirty">Push dirty</button>
+        <button type="button" class="mood-chip" data-mood="stay daily ghar">Stay daily</button>
+      </div>
       <form id="chat-form" class="composer">
         <input id="message-input" type="text" placeholder="Message..." maxlength="2000" required autocomplete="off" />
         <button type="submit" id="send-btn" aria-label="Send">
@@ -450,6 +456,13 @@
 
       <div id="setup-modal" class="setup-modal wiz-on">
         <div class="setup-card setup-wizard-card">
+          <div id="continue-scene-banner" class="continue-scene-banner hidden">
+            <div>
+              <p class="continue-scene-title">Continue last scene?</p>
+              <p class="continue-scene-sub" id="continue-scene-sub">Your previous chat is saved.</p>
+            </div>
+            <button type="button" id="continue-scene-btn" class="auth-btn">Continue</button>
+          </div>
           <div class="wiz-progress" id="wiz-progress" aria-hidden="true">
             <span class="wiz-dot active" data-dot="1"></span>
             <span class="wiz-dot" data-dot="2"></span>
@@ -727,6 +740,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=86" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=87" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>
