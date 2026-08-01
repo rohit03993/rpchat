@@ -89,7 +89,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=75" />
+    <link rel="stylesheet" href="/styles.css?v=76" />
   </head>
   <body>
     <div id="auth-gate" class="auth-gate">
@@ -588,9 +588,9 @@
           <!-- STEP 3 -->
           <section id="pay-pane-3" class="pay-pane" data-pane="3">
             <div class="pay-pane-scroll">
-              <h3 class="pay-section-title">Upload screenshot</h3>
+              <h3 id="pay-proof-title" class="pay-section-title">Upload screenshot</h3>
               <p id="pay-proof-summary" class="pay-hint">
-                Upload your payment screenshot now. You can close and keep chatting — unlock happens automatically when possible, or admin approves from Payments.
+                Choose your payment screenshot from gallery, then tap Submit.
               </p>
               <div id="pay-upload-block">
                 <label class="pay-upload" id="pay-upload-label">
@@ -611,24 +611,33 @@
                 <button type="button" id="submit-pay-btn" class="auth-btn">Submit screenshot</button>
               </div>
               <div id="pay-wait-block" class="pay-wait-block hidden" role="status" aria-live="polite">
-                <p class="pay-wait-title">Screenshot submitted</p>
+                <div class="pay-wait-spinner" aria-hidden="true"></div>
+                <p class="pay-wait-title">Waiting for approval</p>
                 <p id="pay-wait-text" class="pay-hint">
-                  You can Close and chat. Hours unlock via bank SMS when matched, or when admin approves.
+                  Screenshot received. Hours unlock when bank SMS matches or admin approves.
                 </p>
                 <button type="button" id="pay-refresh-status" class="auth-btn pay-refresh-btn">
                   Refresh status
                 </button>
-                <button type="button" id="pay-show-upload-btn" class="btn-outline pay-nav-btn hidden">
-                  Upload another screenshot
+                <button type="button" id="pay-show-upload-btn" class="btn-outline pay-nav-btn">
+                  Upload again
                 </button>
+              </div>
+              <div id="pay-success-block" class="pay-success-block hidden" role="status" aria-live="polite">
+                <p class="pay-wait-title">Hours added ✓</p>
+                <p id="pay-success-text" class="pay-hint">
+                  Payment approved. Check your timer — you can continue chatting.
+                </p>
               </div>
               <div id="pay-pending-banner" class="pay-pending-banner hidden" role="status" aria-live="polite"></div>
               <p id="pay-msg" class="pay-msg"></p>
-              <div id="my-payments" class="pay-history"></div>
+              <div id="my-payments" class="pay-history hidden" aria-hidden="true"></div>
             </div>
             <div class="pay-nav-row pay-nav-sticky" id="pay-proof-nav">
-              <button type="button" id="pay-back-2" class="btn-outline pay-nav-btn">← Pay again</button>
-              <button type="button" id="pay-close-after" class="auth-btn pay-nav-btn">Close &amp; chat</button>
+              <button type="button" id="pay-back-2" class="btn-outline pay-nav-btn">← Scan</button>
+              <button type="button" id="pay-close-after" class="auth-btn pay-nav-btn hidden">
+                Close &amp; chat
+              </button>
             </div>
           </section>
         </div>
@@ -753,6 +762,6 @@
         el.appendChild(div);
       };
     </script>
-    <script src="/app.js?v=93" onerror="window.__chatBootError('app.js failed to load')"></script>
+    <script src="/app.js?v=94" onerror="window.__chatBootError('app.js failed to load')"></script>
   </body>
 </html>
