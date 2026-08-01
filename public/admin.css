@@ -462,31 +462,44 @@ button {
 
 .user-card-summary {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 10px 12px;
   width: 100%;
-  padding: 10px 12px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  padding: 8px 10px 8px 12px;
   min-height: 48px;
+  min-width: 0;
 }
 
 .user-card-summary:hover {
   background: #f7fafb;
 }
 
-.user-card-summary:focus-visible {
-  outline: 2px solid rgba(8, 120, 94, 0.45);
-  outline-offset: -2px;
-}
-
 .user-card-summary .id-pill {
   justify-self: start;
+}
+
+.user-card-toggle {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, auto) 1fr auto;
+  align-items: center;
+  gap: 10px 12px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 2px;
+  border-radius: 8px;
+  min-height: 36px;
+}
+
+.user-card-toggle:focus-visible {
+  outline: 2px solid rgba(8, 120, 94, 0.45);
+  outline-offset: 1px;
 }
 
 .user-card-clock {
@@ -496,7 +509,9 @@ button {
   letter-spacing: 0;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  min-width: 0;
+  font-feature-settings: "tnum";
+  min-width: 5.5rem;
+  white-space: nowrap;
 }
 
 .user-card.is-online .user-card-clock {
@@ -505,6 +520,25 @@ button {
 
 .user-card-status {
   justify-self: end;
+}
+
+.user-card-toggle .user-card-chevron {
+  justify-self: end;
+}
+
+.users-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 8px 4px 4px;
+  flex-wrap: wrap;
+}
+
+.users-pager .btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .user-card-chevron {
@@ -645,10 +679,14 @@ button.id-pill.id-link {
   width: auto;
   font: inherit;
   font-weight: 700;
+  color: var(--ok);
+  background: #eef6f3;
 }
 
 button.id-pill.id-link:hover {
-  background: rgba(8, 120, 94, 0.12);
+  background: rgba(8, 120, 94, 0.14);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .scene-cell {
@@ -1106,14 +1144,20 @@ code {
   }
 
   .user-card-summary {
-    grid-template-columns: auto 1fr auto auto;
+    grid-template-columns: auto 1fr;
     gap: 8px;
-    padding: 12px;
+    padding: 10px 10px 10px 12px;
     min-height: 52px;
   }
 
+  .user-card-toggle {
+    grid-template-columns: minmax(5.5rem, auto) 1fr auto;
+    gap: 8px;
+  }
+
   .user-card-clock {
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+    min-width: 5.5rem;
   }
 
   .user-card-detail {

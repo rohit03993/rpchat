@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/admin.css?v=23" />
+    <link rel="stylesheet" href="/admin.css?v=24" />
   </head>
   <body>
     <div class="admin-app">
@@ -147,6 +147,11 @@
                 <option value="has-time">Has time</option>
                 <option value="no-time">No time</option>
               </select>
+              <select id="users-page-size" title="Users per page">
+                <option value="10">10 / page</option>
+                <option value="20" selected>20 / page</option>
+                <option value="50">50 / page</option>
+              </select>
               <span id="users-count" class="meta"></span>
               <button type="button" id="purge-old-chats-btn" class="btn-ghost btn-sm" title="Delete chats older than 5 days">
                 Purge old chats
@@ -156,6 +161,11 @@
               </button>
             </div>
             <div id="users" class="table-wrap"></div>
+            <div id="users-pager" class="users-pager hidden" aria-label="User list pages">
+              <button type="button" id="users-prev" class="btn-ghost btn-sm">Prev</button>
+              <span id="users-page-label" class="meta">Page 1</span>
+              <button type="button" id="users-next" class="btn-ghost btn-sm">Next</button>
+            </div>
           </div>
 
           <div id="payments-view" class="panel hidden">
@@ -349,6 +359,6 @@
       </aside>
     </div>
 
-    <script src="/admin.js?v=26"></script>
+    <script src="/admin.js?v=27"></script>
   </body>
 </html>

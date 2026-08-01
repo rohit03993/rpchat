@@ -10,6 +10,11 @@
   const paymentsEl = document.getElementById("payments");
   const usersEl = document.getElementById("users");
   const usersCount = document.getElementById("users-count");
+  const usersPager = document.getElementById("users-pager");
+  const usersPageLabel = document.getElementById("users-page-label");
+  const usersPrevBtn = document.getElementById("users-prev");
+  const usersNextBtn = document.getElementById("users-next");
+  const usersPageSizeEl = document.getElementById("users-page-size");
   const statusFilter = document.getElementById("status-filter");
   const paySearch = document.getElementById("pay-search");
   const paymentsCount = document.getElementById("payments-count");
@@ -107,6 +112,7 @@
   let paymentsCache = [];
   let pendingQrBase64 = null;
   const expandedUserIds = new Set();
+  let usersPage = 1;
 
   const USER_CHEVRON =
     "<svg class='user-card-chevron' viewBox='0 0 20 20' fill='none' aria-hidden='true'>" +
@@ -546,8 +552,12 @@
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
     const pad = (n) => String(n).padStart(2, "0");
-    if (h > 0) return h + ":" + pad(m) + ":" + pad(s);
-    return m + ":" + pad(s);
+    return pad(h) + ":" + pad(m) + ":" + pad(s);
+  }
+
+  function usersPageSize() {
+    const n = Number(usersPageSizeEl && usersPageSizeEl.value);
+    return n === 10 || n === 50 ? n : 20;
   }
 
   function escapeHtml(str) {
@@ -807,20 +817,46 @@
 
   function renderUsers(list) {
     const filtered = filterUsersList(list || []);
+    const pageSize = usersPageSize();
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
+    if (usersPage > totalPages) usersPage = totalPages;
+    if (usersPage < 1) usersPage = 1;
+    const start = (usersPage - 1) * pageSize;
+    const pageItems = filtered.slice(start, start + pageSize);
 
-    usersCount.textContent = filtered.length + " shown · " + list.length + " total";
+    usersCount.textContent =
+      filtered.length +
+      " shown · " +
+      list.length +
+      " total · page " +
+      usersPage +
+      "/" +
+      totalPages;
+
+    if (usersPager) {
+      const showPager = filtered.length > pageSize;
+      usersPager.classList.toggle("hidden", !showPager);
+      if (usersPageLabel) {
+        usersPageLabel.textContent =
+          "Page " + usersPage + " of " + totalPages;
+      }
+      if (usersPrevBtn) usersPrevBtn.disabled = usersPage <= 1;
+      if (usersNextBtn) usersNextBtn.disabled = usersPage >= totalPages;
+    }
 
     if (!list.length) {
       usersEl.innerHTML =
         "<div class='empty'>No users yet.<br/>Open chat → New ID to create one.</div>";
+      if (usersPager) usersPager.classList.add("hidden");
       return;
     }
     if (!filtered.length) {
       usersEl.innerHTML = "<div class='empty'>No users match your search / filter.</div>";
+      if (usersPager) usersPager.classList.add("hidden");
       return;
     }
 
-    const cards = filtered
+    const cards = pageItems
       .map(function (u) {
         const clock = formatClock(u.hoursBalance);
         const chatLabel = u.chatMsgCount
@@ -863,20 +899,24 @@
           "' data-user-id='" +
           uid +
           "'>" +
-          "<button type='button' class='user-card-summary' data-toggle-user='" +
+          "<div class='user-card-summary'>" +
+          "<button type='button' class='id-pill id-link' title='Open chat' data-view-chat='" +
+          uid +
+          "'>" +
+          uid +
+          "</button>" +
+          "<button type='button' class='user-card-toggle' data-toggle-user='" +
           uid +
           "' aria-expanded='" +
           (isOpen ? "true" : "false") +
           "'>" +
-          "<span class='id-pill'>" +
-          uid +
-          "</span>" +
           "<span class='user-card-clock'>" +
           clock +
           "</span>" +
           onlineBadge +
           USER_CHEVRON +
           "</button>" +
+          "</div>" +
           "<div class='user-card-detail'>" +
           "<div class='user-card-meta'>" +
           "<div><span class='uc-label'>PIN</span> <b class='pin-cell'>" +
@@ -1485,6 +1525,26 @@
   }
   if (userFilter) {
     userFilter.addEventListener("change", function () {
+      usersPage = 1;
+      renderUsers(usersCache);
+    });
+  }
+  if (usersPageSizeEl) {
+    usersPageSizeEl.addEventListener("change", function () {
+      usersPage = 1;
+      renderUsers(usersCache);
+    });
+  }
+  if (usersPrevBtn) {
+    usersPrevBtn.addEventListener("click", function () {
+      if (usersPage <= 1) return;
+      usersPage -= 1;
+      renderUsers(usersCache);
+    });
+  }
+  if (usersNextBtn) {
+    usersNextBtn.addEventListener("click", function () {
+      usersPage += 1;
       renderUsers(usersCache);
     });
   }
@@ -2081,6 +2141,7 @@
 
   if (userSearch) {
     userSearch.addEventListener("input", function () {
+      usersPage = 1;
       renderUsers(usersCache);
     });
   }
