@@ -730,9 +730,9 @@ body {
 }
 
 .upi-qr {
-  width: min(220px, 68vw);
+  width: min(180px, 56vw);
   height: auto;
-  max-height: 220px;
+  max-height: 180px;
   object-fit: contain;
   border-radius: 8px;
   background: #fff;
@@ -950,6 +950,26 @@ body {
   display: flex;
 }
 
+.pay-pane-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.pay-nav-sticky {
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  background: var(--panel, #fff);
+  flex-shrink: 0;
+}
+
 .pay-section-title {
   font-family: var(--font-display);
   font-size: 1rem;
@@ -1126,9 +1146,9 @@ body {
 }
 
 .upi-qr {
-  width: min(220px, 68vw);
+  width: min(180px, 56vw);
   height: auto;
-  max-height: 220px;
+  max-height: 180px;
   object-fit: contain;
   border-radius: 8px;
   background: #fff;

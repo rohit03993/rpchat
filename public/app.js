@@ -1164,9 +1164,9 @@
   let payWaitUploadTimer = null;
   let payWaitStartedAt = 0;
   let payHoursAtWaitStart = 0;
-  const PAY_PROOF_HOLD_MS = 12 * 60 * 1000; // cover slow UPI + SMS window
+  const PAY_PROOF_HOLD_MS = 12 * 60 * 1000;
   const PAY_PROOF_HOLD_KEY = "desichat_pay_proof_hold";
-  const PAY_WAIT_UPLOAD_MS = 2.5 * 60 * 1000; // show screenshot backup after wait
+  const payCloseAfterBtn = document.getElementById("pay-close-after");
 
   function markPayProofHold() {
     try {
@@ -1217,31 +1217,7 @@
     }
   }
 
-  function showPayWaitUi() {
-    if (payWaitBlock) payWaitBlock.classList.remove("hidden");
-    if (payUploadBlock) {
-      payUploadBlock.classList.add("hidden");
-      payUploadBlock.classList.remove("pay-upload-focus");
-    }
-    if (payProofSummary) payProofSummary.classList.add("hidden");
-    if (payProofNav) payProofNav.classList.remove("hidden");
-    if (payRefreshStatusBtn) payRefreshStatusBtn.classList.remove("hidden");
-    if (payWaitText) {
-      var pack = selectedPack();
-      payWaitText.textContent = pack
-        ? "Paid ₹" +
-          pack.priceInr +
-          "? Keep this open. Bank SMS unlocks hours automatically."
-        : "Keep this open. Bank SMS unlocks hours automatically.";
-    }
-    if (payMsg) {
-      payMsg.className = "pay-msg";
-      payMsg.textContent =
-        "Scanning for payment… Usually under a minute after you pay.";
-    }
-  }
-
-  function showPayUploadBackup() {
+  function showPayUploadUi() {
     if (payWaitBlock) payWaitBlock.classList.add("hidden");
     if (payUploadBlock) {
       payUploadBlock.classList.remove("hidden");
@@ -1252,21 +1228,36 @@
       var pack = selectedPack();
       var uid = (currentUser && currentUser.userId) || "";
       payProofSummary.textContent = pack
-        ? "Still waiting? Upload screenshot of your ₹" +
+        ? "Upload screenshot of ₹" +
           pack.priceInr +
-          " UPI payment (remark " +
+          " payment (note " +
           uid +
-          ")."
-        : "Upload your payment screenshot for admin approval.";
+          "). Submit, then Close & chat — no need to wait here."
+        : "Upload your payment screenshot, then Close & chat.";
     }
+    if (payShowUploadBtn) payShowUploadBtn.classList.add("hidden");
     if (payMsg) {
       payMsg.className = "pay-msg";
-      payMsg.textContent =
-        "SMS unlock timed out or needs review — screenshot is a backup.";
+      payMsg.textContent = "";
     }
   }
 
-  function startPayWaitFlow() {
+  function showPaySubmittedUi() {
+    if (payUploadBlock) {
+      payUploadBlock.classList.add("hidden");
+      payUploadBlock.classList.remove("pay-upload-focus");
+    }
+    if (payWaitBlock) payWaitBlock.classList.remove("hidden");
+    if (payProofSummary) payProofSummary.classList.add("hidden");
+    if (payShowUploadBtn) payShowUploadBtn.classList.remove("hidden");
+    if (payWaitText) {
+      payWaitText.textContent =
+        "You can Close & chat. Unlock is automatic when bank SMS matches, or when admin approves your screenshot.";
+    }
+  }
+
+  /** After pay: go straight to screenshot upload (no forced wait). */
+  function startPayUploadFlow() {
     payWaitStartedAt = Date.now();
     payHoursAtWaitStart = remainingHoursNow();
     markPayProofHold();
@@ -1275,29 +1266,20 @@
       showPendingBanner(null);
     }
     goPayStep(3);
-    showPayWaitUi();
+    showPayUploadUi();
     pingPayIntent("ive_paid");
     startPayPoll();
     if (payIntentRenewId) clearInterval(payIntentRenewId);
     payIntentRenewId = setInterval(function () {
       pingPayIntent("wait_renew");
     }, 120000);
-    if (payWaitUploadTimer) clearTimeout(payWaitUploadTimer);
-    var hold = getPayProofHold();
-    var started = hold && hold.waitStartedAt ? Number(hold.waitStartedAt) : payWaitStartedAt;
-    var elapsed = Date.now() - started;
-    var left = Math.max(0, PAY_WAIT_UPLOAD_MS - elapsed);
-    payWaitUploadTimer = setTimeout(function () {
-      if (remainingHoursNow() > payHoursAtWaitStart + 0.05) return;
-      showPayUploadBackup();
-    }, left);
   }
 
   function focusPayProofUpload() {
-    startPayWaitFlow();
+    startPayUploadFlow();
   }
 
-  /** Re-open Pay on unlock/wait step after returning (hold ~12 min). */
+  /** Re-open Pay on proof step after returning. */
   function resumePayProofIfNeeded() {
     var hold = getPayProofHold();
     if (!hold) return false;
@@ -1308,7 +1290,7 @@
     if (payIdValueEl) payIdValueEl.textContent = uid || "—";
     if (hold.packId) selectedPackId = hold.packId;
     loadBillingInfo().then(function () {
-      startPayWaitFlow();
+      startPayUploadFlow();
     });
     return true;
   }
@@ -1412,12 +1394,11 @@
     }
     payPendingBanner.innerHTML =
       "<strong>Pending unlock</strong>" +
-      "Payment request for <b>₹" +
+      "Screenshot for <b>₹" +
       payment.amountInr +
       "</b> (" +
       payment.packageId +
-      "). Waiting for bank SMS auto-approve or admin.<br/>" +
-      "Keep this open or tap Refresh status.";
+      ") is with admin. You can close and chat — SMS may unlock auto, or admin approves from Payments.";
     if (payRefreshStatusBtn) payRefreshStatusBtn.classList.remove("hidden");
   }
 
@@ -1429,7 +1410,7 @@
     });
     if (pending) {
       showPendingBanner(pending);
-      showPayWaitUi();
+      showPaySubmittedUi();
       return "pending";
     }
 
@@ -1439,8 +1420,8 @@
     // Buying again (no time left) — don't show old approved success
     if (remainingHoursNow() <= 0.0001 || getPayProofHold()) {
       showPendingBanner(rejected || null);
-      if (rejected) showPayUploadBackup();
-      else if (getPayProofHold()) showPayWaitUi();
+      if (rejected) showPayUploadUi();
+      else if (getPayProofHold()) showPayUploadUi();
       return rejected ? "rejected" : "upload";
     }
 
@@ -1470,11 +1451,11 @@
       if (state === "approved") {
         toast("Hours unlocked · continue chatting", "ok");
       } else if (state === "pending") {
-        toast("Still waiting for bank SMS / admin unlock", "ok");
+        toast("Still pending — admin can approve your screenshot anytime", "ok");
       } else if (state === "upload") {
-        toast("Upload screenshot if SMS unlock did not finish", "ok");
+        toast("Upload your payment screenshot", "ok");
       } else {
-        toast("No pending payment found — keep waiting if you just paid", "ok");
+        toast("No pending payment found", "ok");
       }
       paintLiveBadge();
     } catch (e) {
@@ -1885,10 +1866,10 @@
       showPendingBanner(payment);
       payMsg.className = "pay-msg ok";
       payMsg.textContent =
-        "Submitted ✓ Waiting for unlock (SMS auto or admin). Keep this open.";
-      toast("Payment pending · waiting for unlock", "ok");
+        "Submitted ✓ You can Close & chat. Unlock via SMS match or admin approve.";
+      toast("Screenshot sent · you can close and chat", "ok");
       clearPayProofHold();
-      showPayWaitUi();
+      showPaySubmittedUi();
       goPayStep(3);
       if (payScreenshot) payScreenshot.value = "";
       if (payUtrEl) payUtrEl.value = "";
@@ -3798,7 +3779,7 @@
       if (hold.packId) selectedPackId = hold.packId;
       refreshMe();
       loadBillingInfo().then(function () {
-        startPayWaitFlow();
+        startPayUploadFlow();
         loadMyPayments().then(function (list) {
           if (
             list &&
@@ -3823,7 +3804,7 @@
             return p.status === "pending";
           })
         ) {
-          showPayWaitUi();
+          showPaySubmittedUi();
           goPayStep(3);
           startPayPoll();
           syncPayStatusFromList(list);
@@ -3885,7 +3866,7 @@
   }
   if (payGoto3) {
     payGoto3.addEventListener("click", function () {
-      startPayWaitFlow();
+      startPayUploadFlow();
     });
   }
   if (payBack1) {
@@ -3897,15 +3878,20 @@
     payBack2.addEventListener("click", function () {
       clearPayProofHold();
       stopPayPoll();
-      if (payWaitBlock) payWaitBlock.classList.remove("hidden");
-      if (payUploadBlock) payUploadBlock.classList.add("hidden");
+      if (payWaitBlock) payWaitBlock.classList.add("hidden");
+      if (payUploadBlock) payUploadBlock.classList.remove("hidden");
       goPayStep(2);
       pingPayIntent("scan_qr");
     });
   }
   if (payShowUploadBtn) {
     payShowUploadBtn.addEventListener("click", function () {
-      showPayUploadBackup();
+      showPayUploadUi();
+    });
+  }
+  if (payCloseAfterBtn) {
+    payCloseAfterBtn.addEventListener("click", function () {
+      closePaySheet();
     });
   }
 
