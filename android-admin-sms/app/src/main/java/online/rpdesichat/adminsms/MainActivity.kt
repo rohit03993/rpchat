@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
   private val io = Executors.newSingleThreadExecutor()
 
   private lateinit var web: WebView
+  private lateinit var adminShell: LinearLayout
   private lateinit var loginPanel: ScrollView
   private lateinit var listenBar: LinearLayout
   private lateinit var status: TextView
@@ -45,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     Notify.ensureChannels(this)
 
     web = findViewById(R.id.adminWeb)
+    adminShell = findViewById(R.id.adminShell)
     loginPanel = findViewById(R.id.loginPanel)
     listenBar = findViewById(R.id.listenBar)
     status = findViewById(R.id.status)
@@ -104,7 +106,7 @@ class MainActivity : AppCompatActivity() {
       this,
       object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-          if (web.visibility == View.VISIBLE && web.canGoBack()) {
+          if (adminShell.visibility == View.VISIBLE && web.canGoBack()) {
             web.goBack()
           } else {
             isEnabled = false
@@ -163,9 +165,9 @@ class MainActivity : AppCompatActivity() {
 
   private fun openAdminWeb(forceReload: Boolean) {
     loginPanel.visibility = View.GONE
-    web.visibility = View.VISIBLE
+    adminShell.visibility = View.VISIBLE
     listenBar.visibility = View.VISIBLE
-    listenLabel.text = "SMS unlock + alerts on · full admin below"
+    listenLabel.text = "SMS unlock + alerts on"
     val url = Prefs.baseUrl(this) + "/admin.html"
     if (forceReload || web.url.isNullOrBlank()) {
       tokenInjected = false
@@ -176,7 +178,7 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun showLogin() {
-    web.visibility = View.GONE
+    adminShell.visibility = View.GONE
     listenBar.visibility = View.GONE
     loginPanel.visibility = View.VISIBLE
     status.text = "Login to open full admin on this phone"

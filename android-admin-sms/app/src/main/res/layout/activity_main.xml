@@ -1,13 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_height="match_parent"
+  android:fitsSystemWindows="true"
+  android:background="#FFFFFF">
 
-  <!-- Full admin website -->
-  <WebView
-    android:id="@+id/adminWeb"
+  <!-- Admin web + SMS strip stacked (no overlay on tabs) -->
+  <LinearLayout
+    android:id="@+id/adminShell"
+    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" />
+    android:layout_height="match_parent"
+    android:visibility="gone">
+
+    <LinearLayout
+      android:id="@+id/listenBar"
+      android:orientation="horizontal"
+      android:paddingStart="12dp"
+      android:paddingEnd="4dp"
+      android:paddingTop="8dp"
+      android:paddingBottom="8dp"
+      android:background="#0F1A20"
+      android:gravity="center_vertical"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp">
+
+      <TextView
+        android:id="@+id/listenLabel"
+        android:text="SMS + alerts on"
+        android:textColor="#1EC9A0"
+        android:textSize="12sp"
+        android:maxLines="2"
+        android:layout_weight="1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingEnd="8dp" />
+
+      <Button
+        android:id="@+id/logoutBtn"
+        android:text="Logout"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:textColor="#F0D28A"
+        android:minWidth="0dp"
+        android:minHeight="40dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <WebView
+      android:id="@+id/adminWeb"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1" />
+  </LinearLayout>
 
   <!-- Login overlay -->
   <ScrollView
@@ -93,34 +141,4 @@
         android:layout_height="wrap_content" />
     </LinearLayout>
   </ScrollView>
-
-  <!-- Thin listening strip over admin web -->
-  <LinearLayout
-    android:id="@+id/listenBar"
-    android:orientation="horizontal"
-    android:padding="8dp"
-    android:background="#CC122028"
-    android:gravity="center_vertical"
-    android:layout_gravity="bottom"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:visibility="gone">
-
-    <TextView
-      android:id="@+id/listenLabel"
-      android:text="SMS + alerts on"
-      android:textColor="#1EC9A0"
-      android:textSize="12sp"
-      android:layout_weight="1"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content" />
-
-    <Button
-      android:id="@+id/logoutBtn"
-      android:text="Logout"
-      style="@style/Widget.MaterialComponents.Button.TextButton"
-      android:textColor="#F0D28A"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content" />
-  </LinearLayout>
 </FrameLayout>

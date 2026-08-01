@@ -33,7 +33,7 @@ Deploy latest `main` on VPS first.
 3. Admin ID + password  
 4. **Open full admin**  
 5. Use Users / Payments / Support as usual  
-6. Keep app installed — strip at bottom = SMS + alerts listening  
+6. Keep app installed — dark strip at **top** = SMS + alerts listening (Logout there too)  
 
 ## Notes
 
