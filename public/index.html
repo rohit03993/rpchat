@@ -519,7 +519,7 @@
       <div id="pay-sheet" class="sheet hidden" aria-hidden="true">
         <div class="sheet-backdrop" id="pay-backdrop"></div>
         <div class="sheet-card pay-card">
-          <div class="sheet-head">
+          <div class="sheet-head pay-head">
             <div>
               <h2>Buy hours</h2>
               <p id="billing-user" class="pay-user-line"></p>
@@ -534,37 +534,36 @@
             </div>
             <button type="button" id="copy-pay-id" class="chip-btn">Copy</button>
           </div>
-          <p class="pay-remember-note">
-            Save your User ID &amp; PIN on this phone. Add User ID in payment note when you pay.
-          </p>
 
           <div class="pay-steps" role="tablist">
             <button type="button" class="pay-step active" data-step="1" id="pay-step-btn-1">1 Pack</button>
-            <button type="button" class="pay-step" data-step="2" id="pay-step-btn-2">2 Scan</button>
+            <button type="button" class="pay-step" data-step="2" id="pay-step-btn-2">2 Pay</button>
             <button type="button" class="pay-step" data-step="3" id="pay-step-btn-3">3 Proof</button>
           </div>
 
           <!-- STEP 1 -->
           <section id="pay-pane-1" class="pay-pane active" data-pane="1">
-            <h3 class="pay-section-title">Choose your pack</h3>
-            <p class="pay-hint">Larger packs unlock a better rate</p>
-            <div id="package-cards" class="package-cards" role="listbox" aria-label="Packages"></div>
-            <select id="package-select" class="hidden" aria-hidden="true"></select>
-            <div id="pay-selected-summary" class="pay-selected-summary hidden" aria-live="polite"></div>
-            <button type="button" id="pay-goto-2" class="auth-btn">Continue to scan</button>
+            <div class="pay-pane-body">
+              <h3 class="pay-section-title">Choose pack</h3>
+              <div id="package-cards" class="package-cards" role="listbox" aria-label="Packages"></div>
+              <select id="package-select" class="hidden" aria-hidden="true"></select>
+              <div id="pay-selected-summary" class="pay-selected-summary hidden" aria-live="polite"></div>
+            </div>
+            <div class="pay-nav-row pay-nav-sticky">
+              <button type="button" id="pay-goto-2" class="auth-btn pay-nav-btn pay-nav-primary">
+                Continue → Pay
+              </button>
+            </div>
           </section>
 
           <!-- STEP 2 -->
           <section id="pay-pane-2" class="pay-pane" data-pane="2">
-            <div class="pay-pane-scroll">
-              <h3 class="pay-section-title">Scan &amp; pay</h3>
+            <div class="pay-pane-body">
               <p id="pay-amount-line" class="pay-amount-line">Select a pack first</p>
               <div class="pay-qr-wrap pay-qr-hero">
                 <img id="upi-qr" class="upi-qr" alt="Payment QR" />
               </div>
-              <p class="pay-qr-caption">
-                Scan · pay the amount · add User ID in note
-              </p>
+              <p class="pay-qr-caption">Scan QR · put User ID in note</p>
               <button type="button" id="copy-pay-details-btn" class="chip-btn pay-copy-details">
                 Copy amount + User ID
               </button>
@@ -580,41 +579,30 @@
               <p id="pay-instructions" class="hidden" aria-hidden="true"></p>
             </div>
             <div class="pay-nav-row pay-nav-sticky">
-              <button type="button" id="pay-back-1" class="btn-outline pay-nav-btn">← Packs</button>
-              <button type="button" id="pay-goto-3" class="auth-btn pay-nav-btn">I’ve paid → Upload</button>
+              <button type="button" id="pay-back-1" class="btn-outline pay-nav-btn">← Pack</button>
+              <button type="button" id="pay-goto-3" class="auth-btn pay-nav-btn">I’ve paid →</button>
             </div>
           </section>
 
           <!-- STEP 3 -->
           <section id="pay-pane-3" class="pay-pane" data-pane="3">
-            <div class="pay-pane-scroll">
+            <div class="pay-pane-body">
               <h3 id="pay-proof-title" class="pay-section-title">Upload screenshot</h3>
               <p id="pay-proof-summary" class="pay-hint">
-                Choose your payment screenshot from gallery, then tap Submit.
+                Pick payment screenshot, then Submit.
               </p>
-              <div id="pay-upload-block">
+              <div id="pay-upload-block" class="pay-upload-block">
                 <label class="pay-upload" id="pay-upload-label">
                   <input id="pay-screenshot" type="file" accept="image/*" />
-                  <span id="pay-upload-text">Tap to choose screenshot from gallery</span>
+                  <span id="pay-upload-text">Tap gallery screenshot</span>
                 </label>
                 <img id="pay-preview" class="pay-preview hidden" alt="Preview" />
-                <label class="full pay-utr-label">
-                  UTR / Ref (optional)
-                  <input
-                    id="pay-utr"
-                    type="text"
-                    maxlength="22"
-                    placeholder="From bank SMS / payment app"
-                    autocomplete="off"
-                  />
-                </label>
-                <button type="button" id="submit-pay-btn" class="auth-btn">Submit screenshot</button>
               </div>
               <div id="pay-wait-block" class="pay-wait-block hidden" role="status" aria-live="polite">
                 <div class="pay-wait-spinner" aria-hidden="true"></div>
                 <p class="pay-wait-title">Waiting for approval</p>
                 <p id="pay-wait-text" class="pay-hint">
-                  Screenshot received. Hours unlock when bank SMS matches or admin approves.
+                  Stay here — unlock when SMS matches or admin approves.
                 </p>
                 <button type="button" id="pay-refresh-status" class="auth-btn pay-refresh-btn">
                   Refresh status
@@ -626,7 +614,7 @@
               <div id="pay-success-block" class="pay-success-block hidden" role="status" aria-live="polite">
                 <p class="pay-wait-title">Hours added ✓</p>
                 <p id="pay-success-text" class="pay-hint">
-                  Payment approved. Check your timer — you can continue chatting.
+                  Check your timer — continue chatting.
                 </p>
               </div>
               <div id="pay-pending-banner" class="pay-pending-banner hidden" role="status" aria-live="polite"></div>
@@ -634,7 +622,8 @@
               <div id="my-payments" class="pay-history hidden" aria-hidden="true"></div>
             </div>
             <div class="pay-nav-row pay-nav-sticky" id="pay-proof-nav">
-              <button type="button" id="pay-back-2" class="btn-outline pay-nav-btn">← Scan</button>
+              <button type="button" id="pay-back-2" class="btn-outline pay-nav-btn">← Pay</button>
+              <button type="button" id="submit-pay-btn" class="auth-btn pay-nav-btn">Submit</button>
               <button type="button" id="pay-close-after" class="auth-btn pay-nav-btn hidden">
                 Close &amp; chat
               </button>

@@ -119,7 +119,6 @@
   const packageSelect = document.getElementById("package-select");
   const packageCardsEl = document.getElementById("package-cards");
   const payScreenshot = document.getElementById("pay-screenshot");
-  const payUtrEl = document.getElementById("pay-utr");
   const payUploadLabel = document.getElementById("pay-upload-label");
   const payUploadText = document.getElementById("pay-upload-text");
   const payPreview = document.getElementById("pay-preview");
@@ -1275,11 +1274,16 @@
   }
 
   function setPayProofNav(mode) {
+    if (submitPayBtn) {
+      submitPayBtn.classList.toggle("hidden", mode !== "upload" && mode !== "rejected");
+    }
     if (payCloseAfterBtn) {
       payCloseAfterBtn.classList.toggle("hidden", mode !== "success");
     }
     if (payBack2) {
-      payBack2.textContent = mode === "success" ? "← Pay again" : "← Scan";
+      if (mode === "success") payBack2.textContent = "← Pay again";
+      else if (mode === "waiting") payBack2.textContent = "← Pay";
+      else payBack2.textContent = "← Pay";
       payBack2.classList.toggle("hidden", false);
     }
   }
@@ -1329,22 +1333,16 @@
             ") and submit again.";
         } else {
           payProofSummary.textContent = pack
-            ? "Upload screenshot of ₹" +
-              pack.priceInr +
-              " payment (note " +
-              uid +
-              "), then tap Submit."
-            : "Choose your payment screenshot from gallery, then tap Submit.";
+            ? "₹" + pack.priceInr + " · note " + uid + " · screenshot → Submit"
+            : "Pick payment screenshot, then Submit.";
         }
       }
     }
 
     if (mode === "waiting" && payWaitText) {
       payWaitText.textContent = amount
-        ? "Screenshot for ₹" +
-          amount +
-          " received. Stay here — hours unlock when bank SMS matches or admin approves."
-        : "Screenshot received. Stay here — hours unlock when bank SMS matches or admin approves.";
+        ? "₹" + amount + " screenshot received. Stay here until unlock."
+        : "Screenshot received. Stay here until unlock.";
     }
 
     if (mode === "success" && paySuccessText) {
@@ -1680,7 +1678,7 @@
           "</b></span>";
       }
       if (submitPayBtn) {
-        submitPayBtn.textContent = "Submit ₹" + pack.priceInr + " screenshot";
+        submitPayBtn.textContent = "Submit ₹" + pack.priceInr;
       }
       if (payInstructions) {
         payInstructions.innerHTML = "";
@@ -1693,7 +1691,7 @@
         paySelectedSummary.classList.add("hidden");
         paySelectedSummary.innerHTML = "";
       }
-      if (submitPayBtn) submitPayBtn.textContent = "Submit screenshot";
+      if (submitPayBtn) submitPayBtn.textContent = "Submit";
     }
   }
 
@@ -1939,7 +1937,7 @@
             (upiNoteEl && upiNoteEl.value.trim()) ||
             (currentUser && currentUser.userId) ||
             "",
-          utr: (payUtrEl && payUtrEl.value.trim()) || "",
+          utr: "",
         }),
       });
       const data = await res.json();
@@ -1962,12 +1960,11 @@
       setPayProofUi("waiting", payment);
       goPayStep(3);
       if (payScreenshot) payScreenshot.value = "";
-      if (payUtrEl) payUtrEl.value = "";
       if (payPreview) {
         payPreview.classList.add("hidden");
         payPreview.removeAttribute("src");
       }
-      if (payUploadText) payUploadText.textContent = "Tap to choose screenshot from gallery";
+      if (payUploadText) payUploadText.textContent = "Tap gallery screenshot";
       if (payUploadLabel) payUploadLabel.classList.remove("has-file");
       await loadMyPayments();
       startPayPoll();
@@ -3982,6 +3979,7 @@
       if (payWaitBlock) payWaitBlock.classList.add("hidden");
       if (payUploadBlock) payUploadBlock.classList.remove("hidden");
       if (payCloseAfterBtn) payCloseAfterBtn.classList.add("hidden");
+      if (submitPayBtn) submitPayBtn.classList.remove("hidden");
       goPayStep(2);
       pingPayIntent("scan_qr");
     });
@@ -4038,7 +4036,7 @@
       const file = payScreenshot.files && payScreenshot.files[0];
       if (!file) {
         if (payPreview) payPreview.classList.add("hidden");
-        if (payUploadText) payUploadText.textContent = "Tap to choose screenshot from gallery";
+        if (payUploadText) payUploadText.textContent = "Tap gallery screenshot";
         if (payUploadLabel) payUploadLabel.classList.remove("has-file");
         return;
       }
