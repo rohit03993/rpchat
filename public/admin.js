@@ -10,6 +10,7 @@
   const paymentsEl = document.getElementById("payments");
   const usersEl = document.getElementById("users");
   const usersCount = document.getElementById("users-count");
+  const liveSyncMeta = document.getElementById("live-sync-meta");
   const usersPager = document.getElementById("users-pager");
   const usersPageLabel = document.getElementById("users-page-label");
   const usersPrevBtn = document.getElementById("users-prev");
@@ -127,6 +128,9 @@
   let pendingQrBase64 = null;
   const expandedUserIds = new Set();
   let usersPage = 1;
+  let softRefreshBusy = false;
+  let softRefreshQueued = false;
+  let lastLiveSyncAt = 0;
 
   const USER_CHEVRON =
     "<svg class='user-card-chevron' viewBox='0 0 20 20' fill='none' aria-hidden='true'>" +
@@ -852,6 +856,61 @@
     return pad(h) + ":" + pad(m) + ":" + pad(s);
   }
 
+  function markLiveSync(ok) {
+    lastLiveSyncAt = Date.now();
+    if (!liveSyncMeta) return;
+    liveSyncMeta.textContent = ok === false ? "Sync failed · retrying…" : "Live · just now";
+    liveSyncMeta.classList.toggle("is-err", ok === false);
+  }
+
+  function paintLiveSyncAge() {
+    if (!liveSyncMeta || !lastLiveSyncAt) return;
+    if (liveSyncMeta.classList.contains("is-err")) return;
+    const sec = Math.max(0, Math.round((Date.now() - lastLiveSyncAt) / 1000));
+    if (sec < 3) liveSyncMeta.textContent = "Live · just now";
+    else liveSyncMeta.textContent = "Live · " + sec + "s ago";
+  }
+
+  /** Tick remaining clocks locally between server polls (online users only). */
+  function paintLiveClocks() {
+    if (!usersEl) return;
+    const cards = usersEl.querySelectorAll(".user-card[data-hours]");
+    cards.forEach(function (card) {
+      const online = card.getAttribute("data-online") === "1";
+      const base = Number(card.getAttribute("data-hours") || 0);
+      const fetchedAt = Number(card.getAttribute("data-fetched-at") || 0);
+      let hours = base;
+      if (online && fetchedAt > 0) {
+        hours = Math.max(0, base - (Date.now() - fetchedAt) / 3600000);
+      }
+      const clock = card.querySelector(".user-card-clock");
+      if (clock) clock.textContent = formatClock(hours);
+    });
+    paintLiveSyncAge();
+  }
+
+  async function softRefreshNow() {
+    if (!token) return;
+    if (document.hidden) return;
+    if (softRefreshBusy) {
+      softRefreshQueued = true;
+      return;
+    }
+    softRefreshBusy = true;
+    try {
+      await refreshAll({ soft: true });
+      markLiveSync(true);
+    } catch (e) {
+      markLiveSync(false);
+    } finally {
+      softRefreshBusy = false;
+      if (softRefreshQueued) {
+        softRefreshQueued = false;
+        softRefreshNow();
+      }
+    }
+  }
+
   function usersPageSize() {
     const n = Number(usersPageSizeEl && usersPageSizeEl.value);
     return n === 10 || n === 50 ? n : 20;
@@ -1234,6 +1293,12 @@
           (isOpen ? " is-open" : "") +
           "' data-user-id='" +
           uid +
+          "' data-hours='" +
+          Number(u.hoursBalance || 0) +
+          "' data-online='" +
+          (u.sessionActive ? "1" : "0") +
+          "' data-fetched-at='" +
+          Date.now() +
           "'>" +
           "<div class='user-card-summary'>" +
           "<button type='button' class='id-pill id-link' title='Open chat' data-view-chat='" +
@@ -1517,6 +1582,7 @@
     const allPays = await loadPayments({ soft: soft });
     const analytics = await loadAnalytics();
     updateStats(users, allPays, analytics);
+    if (!soft) markLiveSync(true);
   }
 
   async function adjustHours(userId, hours, mode) {
@@ -2612,10 +2678,22 @@
     await refreshAll();
   })();
 
-  // Live remaining time in admin — soft poll every 20s (no Loading flash / scroll jump)
+  // Soft live poll every 5s — stats, online/idle, remaining time (no Loading flash)
   setInterval(function () {
-    if (!token) return;
-    if (document.hidden) return;
-    refreshAll({ soft: true }).catch(function () {});
-  }, 20000);
+    softRefreshNow();
+  }, 5000);
+
+  // Countdown clocks between polls
+  setInterval(function () {
+    if (!token || document.hidden) return;
+    paintLiveClocks();
+  }, 1000);
+
+  // Immediate sync when tab/app comes back
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") softRefreshNow();
+  });
+  window.addEventListener("focus", function () {
+    softRefreshNow();
+  });
 })();

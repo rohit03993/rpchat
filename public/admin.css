@@ -649,14 +649,14 @@ button {
   justify-self: end;
 }
 
-.users-pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 8px 4px 4px;
-  flex-wrap: wrap;
+.live-sync-meta {
+  color: var(--ok);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.live-sync-meta.is-err {
+  color: var(--danger);
 }
 
 .users-pager .btn-ghost:disabled {
@@ -1309,10 +1309,10 @@ code {
     min-height: 52px;
   }
 
-  .user-card-toggle {
-    grid-template-columns: minmax(4.8rem, auto) minmax(0, 1fr) auto;
-    gap: 6px 8px;
-    min-height: 44px;
+  .live-sync-meta {
+    font-size: 0.72rem;
+    width: 100%;
+    order: 20;
   }
 
   .user-card-clock {

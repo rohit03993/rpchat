@@ -975,9 +975,12 @@
     timerRunning = true;
     paintLiveBadge();
     timerTickId = setInterval(paintLiveBadge, 1000);
+    // Keep sessionActive alive for admin "In session" (stale window ~90s)
     timerSyncId = setInterval(function () {
-      refreshMe();
-    }, 15000);
+      resumeSession().then(function () {
+        refreshMe();
+      });
+    }, 10000);
   }
 
   async function resumeSession() {
