@@ -1115,7 +1115,12 @@
   function renderUsers(list, soft) {
     const scrollParent = usersEl;
     const prevScroll = soft && scrollParent ? scrollParent.scrollTop : 0;
-    const filtered = filterUsersList(list || []);
+    const filtered = filterUsersList(list || []).slice().sort(function (a, b) {
+      const ao = a.sessionActive ? 1 : 0;
+      const bo = b.sessionActive ? 1 : 0;
+      if (ao !== bo) return bo - ao;
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+    });
     const pageSize = usersPageSize();
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
     if (usersPage > totalPages) usersPage = totalPages;

@@ -74,13 +74,17 @@
               <b id="stat-users">0</b>
               <span>Total users</span>
             </button>
+            <button type="button" class="stat stat-hot" data-stat-action="users" data-user-filter="online" title="Show users in session now">
+              <b id="stat-active">0</b>
+              <span>In session</span>
+            </button>
+            <button type="button" class="stat warn" data-stat-action="payments" data-pay-status="pending" title="Open pending payments">
+              <b id="stat-pending">0</b>
+              <span>Pending pay</span>
+            </button>
             <button type="button" class="stat" data-stat-action="users" data-user-filter="unique-today" title="Users who used the app today (IST)">
               <b id="stat-unique-today">0</b>
               <span>Unique today</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="repeat-today" title="Returning users active today (created before today)">
-              <b id="stat-repeat-today">0</b>
-              <span>Repeat today</span>
             </button>
             <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="New signups today (IST)">
               <b id="stat-today">0</b>
@@ -90,13 +94,9 @@
               <b id="stat-paid">0</b>
               <span>Paid users</span>
             </button>
-            <button type="button" class="stat stat-hot" data-stat-action="users" data-user-filter="online" title="Show users in session now">
-              <b id="stat-active">0</b>
-              <span>In session</span>
-            </button>
-            <button type="button" class="stat warn" data-stat-action="payments" data-pay-status="pending" title="Open pending payments">
-              <b id="stat-pending">0</b>
-              <span>Pending pay</span>
+            <button type="button" class="stat" data-stat-action="users" data-user-filter="repeat-today" title="Returning users active today (created before today)">
+              <b id="stat-repeat-today">0</b>
+              <span>Repeat today</span>
             </button>
             <button type="button" class="stat money" data-stat-action="payments" data-pay-status="approved" title="Open approved payments">
               <b id="stat-money">₹0</b>
