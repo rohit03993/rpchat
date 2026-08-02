@@ -659,6 +659,82 @@
     );
   }
 
+  function formatRelativeShort(ts) {
+    const t = Number(ts) || 0;
+    if (!t) return "never";
+    const diff = Date.now() - t;
+    if (diff < 0) return "just now";
+    if (diff < 45000) return "just now";
+    if (diff < 3600000) return Math.max(1, Math.round(diff / 60000)) + "m ago";
+    if (diff < 86400000) return Math.max(1, Math.round(diff / 3600000)) + "h ago";
+    if (diff < 7 * 86400000) return Math.max(1, Math.round(diff / 86400000)) + "d ago";
+    return new Date(t).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+    });
+  }
+
+  /** Compact visit/pay labels for list rows + expand panel (IST day). */
+  function userVisitInsight(u) {
+    const todayMs = startOfTodayIstMs();
+    const created = Number(u.createdAt || 0);
+    const lastAt = userActivityAt(u);
+    const newToday = created >= todayMs;
+    const activeToday = lastAt >= todayMs;
+    const pending = Number(u.pendingPayments || 0) > 0;
+    const paid = !!u.hasPaid;
+    const approved = Number(u.approvedPayments || 0);
+
+    let visitKey = "idle";
+    let visitLabel = "Quiet";
+    if (newToday) {
+      visitKey = "new";
+      visitLabel = "New today";
+    } else if (activeToday) {
+      visitKey = "repeat";
+      visitLabel = "Repeat today";
+    } else if (created > 0 && lastAt > created + 12 * 3600000) {
+      visitKey = "returning";
+      visitLabel = "Returning";
+    }
+
+    const chips = [];
+    if (visitKey === "new") {
+      chips.push({ key: "new", text: "New" });
+    } else if (visitKey === "repeat") {
+      chips.push({ key: "repeat", text: "Repeat" });
+    }
+    if (pending) chips.push({ key: "pay-wait", text: "Pay?" });
+    else if (paid) chips.push({ key: "paid", text: "Paid" });
+
+    const parts = [];
+    if (visitKey === "new") parts.push("Signed up today");
+    else if (visitKey === "repeat") parts.push("Came back today");
+    else if (visitKey === "returning") parts.push("Has visited before");
+    else parts.push("No activity today");
+
+    if (pending) parts.push("payment waiting review");
+    else if (paid) {
+      parts.push(
+        approved > 1 ? approved + " approved pays" : "paid customer"
+      );
+    } else parts.push("still on trial");
+
+    if (lastAt) parts.push("last seen " + formatRelativeShort(lastAt));
+
+    return {
+      visitKey: visitKey,
+      visitLabel: visitLabel,
+      newToday: newToday,
+      activeToday: activeToday,
+      pending: pending,
+      paid: paid,
+      chips: chips.slice(0, 2),
+      blurb: parts.join(" · "),
+      lastAt: lastAt,
+    };
+  }
+
   function filterUsersList(list) {
     const q = String((userSearch && userSearch.value) || "")
       .trim()
@@ -679,6 +755,7 @@
       if (f === "unique-today" && !activeToday) return false;
       if (f === "repeat-today" && !(activeToday && !newToday)) return false;
       if (!q) return true;
+      const insight = userVisitInsight(u);
       const hay = [
         u.userId,
         u.pin,
@@ -688,8 +765,13 @@
         u.sceneNote,
         u.resistance,
         u.activeMood,
-        u.hasPaid ? "paid" : "unpaid",
+        u.hasPaid ? "paid" : "unpaid trial",
         u.sessionActive ? "online" : "idle",
+        insight.visitLabel,
+        insight.newToday ? "new today" : "",
+        insight.activeToday && !insight.newToday ? "repeat today" : "",
+        insight.pending ? "pending pay" : "",
+        insight.blurb,
       ]
         .join(" ")
         .toLowerCase();
@@ -1076,6 +1158,7 @@
     const cards = pageItems
       .map(function (u) {
         const clock = formatClock(u.hoursBalance);
+        const insight = userVisitInsight(u);
         const chatLabel = u.chatMsgCount
           ? u.chatMsgCount +
             (u.chatSessionCount > 1 ? " / " + u.chatSessionCount + " chats" : "") +
@@ -1090,15 +1173,44 @@
             ? String(u.sceneNote).slice(0, 67) + "…"
             : String(u.sceneNote)
           : "";
-        const paidBadge = u.hasPaid
-          ? "<span class='badge approved'>paid</span>"
-          : "<span class='badge'>unpaid</span>";
         const onlineBadge =
           "<span class='badge " +
           (u.sessionActive ? "online" : "") +
           " user-card-status'>" +
           (u.sessionActive ? "online" : "idle") +
           "</span>";
+        const signalChips = insight.chips
+          .map(function (c) {
+            return (
+              "<span class='uc-chip " +
+              escapeHtml(c.key) +
+              "'>" +
+              escapeHtml(c.text) +
+              "</span>"
+            );
+          })
+          .join("");
+        const detailChips = [
+          {
+            key: insight.visitKey === "new" ? "new" : insight.visitKey === "repeat" ? "repeat" : "quiet",
+            text: insight.visitLabel,
+          },
+          insight.pending
+            ? { key: "pay-wait", text: "Payment pending" }
+            : insight.paid
+              ? { key: "paid", text: "Paid" }
+              : { key: "trial", text: "Trial" },
+        ]
+          .map(function (c) {
+            return (
+              "<span class='uc-chip " +
+              escapeHtml(c.key) +
+              "'>" +
+              escapeHtml(c.text) +
+              "</span>"
+            );
+          })
+          .join("");
         const pays =
           "P " +
           (u.pendingPayments || 0) +
@@ -1112,6 +1224,8 @@
           "<article class='user-card" +
           (u.sessionActive ? " is-online" : "") +
           (Number(u.pendingPayments || 0) > 0 ? " has-pending" : "") +
+          (insight.newToday ? " is-new-today" : "") +
+          (insight.visitKey === "repeat" ? " is-repeat-today" : "") +
           (isOpen ? " is-open" : "") +
           "' data-user-id='" +
           uid +
@@ -1126,25 +1240,45 @@
           uid +
           "' aria-expanded='" +
           (isOpen ? "true" : "false") +
-          "'>" +
+          "' aria-label='User " +
+          uid +
+          " details'>" +
           "<span class='user-card-clock'>" +
           clock +
           "</span>" +
+          "<span class='user-card-signals'>" +
+          signalChips +
           onlineBadge +
+          "</span>" +
           USER_CHEVRON +
           "</button>" +
           "</div>" +
           "<div class='user-card-detail'>" +
+          "<div class='user-card-insights'>" +
+          "<div class='user-card-insight-chips'>" +
+          detailChips +
+          "</div>" +
+          "<p class='user-card-insight-blurb'>" +
+          escapeHtml(insight.blurb) +
+          "</p>" +
+          "</div>" +
           "<div class='user-card-meta'>" +
           "<div><span class='uc-label'>PIN</span> <b class='pin-cell'>" +
           escapeHtml(u.pin || "—") +
-          "</b> " +
-          paidBadge +
-          "</div>" +
+          "</b></div>" +
           "<div><span class='uc-label'>Time</span> " +
           Number(u.hoursBalance || 0).toFixed(2) +
           "h · " +
           clock +
+          "</div>" +
+          "<div><span class='uc-label'>Seen</span> " +
+          escapeHtml(formatRelativeShort(insight.lastAt)) +
+          (insight.lastAt
+            ? " · " + escapeHtml(new Date(insight.lastAt).toLocaleString())
+            : "") +
+          "</div>" +
+          "<div><span class='uc-label'>Joined</span> " +
+          new Date(u.createdAt).toLocaleString() +
           "</div>" +
           "<div><span class='uc-label'>Scene</span> " +
           escapeHtml(scene) +
@@ -1165,9 +1299,6 @@
             : "") +
           "<div><span class='uc-label'>Pays</span> " +
           pays +
-          "</div>" +
-          "<div><span class='uc-label'>Joined</span> " +
-          new Date(u.createdAt).toLocaleString() +
           "</div>" +
           "</div>" +
           "<button type='button' class='user-card-chat' data-view-chat='" +

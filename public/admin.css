@@ -508,9 +508,9 @@ button {
 
 .user-card-toggle {
   display: grid;
-  grid-template-columns: minmax(5.5rem, auto) 1fr auto;
+  grid-template-columns: minmax(5.2rem, auto) minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px 12px;
+  gap: 8px 10px;
   width: 100%;
   min-width: 0;
   border: 0;
@@ -537,7 +537,7 @@ button {
   color: var(--text);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  min-width: 5.5rem;
+  min-width: 5.2rem;
   white-space: nowrap;
 }
 
@@ -545,8 +545,98 @@ button {
   color: var(--ok);
 }
 
+.user-card-signals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+}
+
 .user-card-status {
-  justify-self: end;
+  flex-shrink: 0;
+}
+
+.uc-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 3px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  background: #eef2f4;
+  color: var(--muted);
+}
+
+.uc-chip.new {
+  background: rgba(8, 120, 94, 0.12);
+  color: #0a6b54;
+}
+
+.uc-chip.repeat {
+  background: rgba(36, 99, 140, 0.12);
+  color: #1d567a;
+}
+
+.uc-chip.paid,
+.uc-chip.approved {
+  background: rgba(30, 201, 160, 0.16);
+  color: var(--ok);
+}
+
+.uc-chip.pay-wait {
+  background: rgba(230, 170, 60, 0.2);
+  color: #8a5a00;
+}
+
+.uc-chip.trial,
+.uc-chip.quiet {
+  background: #eef2f4;
+  color: var(--muted);
+}
+
+.user-card-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4f8f7;
+  border: 1px solid rgba(8, 120, 94, 0.1);
+}
+
+.user-card.is-repeat-today .user-card-insights {
+  background: #f3f7fb;
+  border-color: rgba(36, 99, 140, 0.12);
+}
+
+.user-card.has-pending .user-card-insights {
+  background: #fff9ef;
+  border-color: rgba(138, 90, 0, 0.16);
+}
+
+.user-card-insight-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.user-card-insight-chips .uc-chip {
+  font-size: 0.68rem;
+  padding: 4px 8px;
+}
+
+.user-card-insight-blurb {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text);
 }
 
 .user-card-toggle .user-card-chevron {
@@ -1205,18 +1295,42 @@ code {
   }
 
   .user-card-toggle {
-    grid-template-columns: minmax(5.5rem, auto) 1fr auto;
-    gap: 8px;
+    grid-template-columns: minmax(4.8rem, auto) minmax(0, 1fr) auto;
+    gap: 6px 8px;
+    min-height: 44px;
   }
 
   .user-card-clock {
-    font-size: 0.9rem;
-    min-width: 5.5rem;
+    font-size: 0.88rem;
+    min-width: 4.8rem;
+  }
+
+  .user-card-signals {
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .user-card-signals .badge {
+    font-size: 0.62rem;
+    padding: 3px 6px;
+  }
+
+  .uc-chip {
+    font-size: 0.58rem;
+    padding: 3px 6px;
   }
 
   .user-card-detail {
     padding: 0 12px 12px;
     padding-top: 12px;
+  }
+
+  .user-card-insights {
+    padding: 10px;
+  }
+
+  .user-card-insight-blurb {
+    font-size: 0.78rem;
   }
 
   .user-card-actions {
