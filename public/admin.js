@@ -1030,7 +1030,9 @@
     }
   }
 
-  function renderUsers(list) {
+  function renderUsers(list, soft) {
+    const scrollParent = usersEl;
+    const prevScroll = soft && scrollParent ? scrollParent.scrollTop : 0;
     const filtered = filterUsersList(list || []);
     const pageSize = usersPageSize();
     const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize) || 1);
@@ -1214,9 +1216,12 @@
       .join("");
 
     usersEl.innerHTML = "<div class='users-cards'>" + cards + "</div>";
+    if (soft && scrollParent) scrollParent.scrollTop = prevScroll;
   }
 
-  function renderPayments(list) {
+  function renderPayments(list, soft) {
+    const scrollParent = paymentsEl;
+    const prevScroll = soft && scrollParent ? scrollParent.scrollTop : 0;
     const filtered = filterPaymentsList(list || []);
     const approvedSum = (list || [])
       .filter(function (p) {
@@ -1311,10 +1316,14 @@
             : "");
       paymentsEl.appendChild(card);
     });
+    if (soft && scrollParent) scrollParent.scrollTop = prevScroll;
   }
 
-  async function loadUsers() {
-    usersEl.innerHTML = "<p class='meta'>Loading users...</p>";
+  async function loadUsers(opts) {
+    const soft = !!(opts && opts.soft);
+    if (!soft) {
+      usersEl.innerHTML = "<p class='meta'>Loading users...</p>";
+    }
     try {
       const res = await fetch("/api/admin/users", { headers: authHeaders() });
       const data = await res.json().catch(function () {
@@ -1322,21 +1331,26 @@
       });
       if (!res.ok) {
         if (handleAuthFail(res)) return [];
-        usersEl.innerHTML =
-          "<div class='empty'>" + (data.error || "Failed to load users") + "</div>";
-        return [];
+        if (!soft) {
+          usersEl.innerHTML =
+            "<div class='empty'>" + (data.error || "Failed to load users") + "</div>";
+        }
+        return soft ? usersCache : [];
       }
       usersCache = data.users || [];
-      renderUsers(usersCache);
+      renderUsers(usersCache, soft);
       return usersCache;
     } catch (e) {
-      usersEl.innerHTML = "<div class='empty'>Network error</div>";
-      return [];
+      if (!soft) usersEl.innerHTML = "<div class='empty'>Network error</div>";
+      return soft ? usersCache : [];
     }
   }
 
-  async function loadPayments() {
-    paymentsEl.innerHTML = "<p class='meta'>Loading payments...</p>";
+  async function loadPayments(opts) {
+    const soft = !!(opts && opts.soft);
+    if (!soft) {
+      paymentsEl.innerHTML = "<p class='meta'>Loading payments...</p>";
+    }
     try {
       const res = await fetch("/api/admin/payments?status=all", {
         headers: authHeaders(),
@@ -1346,22 +1360,25 @@
       });
       if (!res.ok) {
         if (handleAuthFail(res)) return [];
-        paymentsEl.innerHTML =
-          "<div class='empty'>" + (data.error || "Failed") + "</div>";
-        return [];
+        if (!soft) {
+          paymentsEl.innerHTML =
+            "<div class='empty'>" + (data.error || "Failed") + "</div>";
+        }
+        return soft ? paymentsCache : [];
       }
       paymentsCache = data.payments || [];
-      renderPayments(paymentsCache);
+      renderPayments(paymentsCache, soft);
       return paymentsCache;
     } catch (e) {
-      paymentsEl.innerHTML = "<div class='empty'>Network error</div>";
-      return [];
+      if (!soft) paymentsEl.innerHTML = "<div class='empty'>Network error</div>";
+      return soft ? paymentsCache : [];
     }
   }
 
-  async function refreshAll() {
-    const users = await loadUsers();
-    const allPays = await loadPayments();
+  async function refreshAll(opts) {
+    const soft = !!(opts && opts.soft);
+    const users = await loadUsers({ soft: soft });
+    const allPays = await loadPayments({ soft: soft });
     const analytics = await loadAnalytics();
     updateStats(users, allPays, analytics);
   }
@@ -2459,10 +2476,10 @@
     await refreshAll();
   })();
 
-  // Live remaining time in admin — settle stale ONLINE rows every 20s
+  // Live remaining time in admin — soft poll every 20s (no Loading flash / scroll jump)
   setInterval(function () {
     if (!token) return;
     if (document.hidden) return;
-    refreshAll().catch(function () {});
+    refreshAll({ soft: true }).catch(function () {});
   }, 20000);
 })();
