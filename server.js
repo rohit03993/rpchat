@@ -858,6 +858,26 @@ app.delete("/api/admin/settings/qr", requireAdmin, (_req, res) => {
   res.json(billing.clearUpiQr());
 });
 
+app.post("/api/admin/settings/packages/:id/qr", requireAdmin, (req, res) => {
+  try {
+    const result = billing.savePackageQrBase64(
+      req.params.id,
+      req.body?.imageBase64
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Pack QR upload failed" });
+  }
+});
+
+app.delete("/api/admin/settings/packages/:id/qr", requireAdmin, (req, res) => {
+  try {
+    res.json(billing.clearPackageQr(req.params.id));
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Pack QR clear failed" });
+  }
+});
+
 // Venice-style: list public characters (same source venice.ai uses via API)
 app.get("/api/characters", requireUser, requireHours, async (req, res) => {
   try {

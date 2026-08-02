@@ -1419,6 +1419,39 @@ code {
   font-size: 0.95rem;
 }
 
+.pkg-qr-block {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pkg-qr-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.pkg-qr-preview {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.pkg-qr-actions {
+  flex-wrap: wrap;
+}
+
+.pkg-qr-msg {
+  margin: 0;
+}
+
 .pkg-field {
   display: flex;
   flex-direction: column;

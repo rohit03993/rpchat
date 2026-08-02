@@ -330,7 +330,10 @@
               <span id="set-cache-meta" class="meta"></span>
             </div>
             <div class="qr-admin-block">
-              <p class="field"><span>UPI QR image</span></p>
+              <p class="field"><span>Fallback UPI QR</span></p>
+              <p class="meta setup-lead">
+                Used only if a pack has no QR of its own. Prefer uploading a QR on each pack below.
+              </p>
               <img id="set-qr-preview" class="admin-qr-preview" alt="UPI QR" />
               <div class="row-actions">
                 <label class="btn-ghost btn-sm file-label">
@@ -344,10 +347,10 @@
               </div>
               <p id="set-qr-msg" class="meta"></p>
             </div>
-            <h4 class="setup-heading">Packages (hours &amp; cost)</h4>
+            <h4 class="setup-heading">Packages (hours, cost &amp; QR)</h4>
             <p class="meta setup-lead pkg-help">
-              <b>Sell price</b> = what user pays · <b>List price</b> = old price (for “save” line).
-              Leave list = sell if no discount.
+              <b>Sell price</b> = what user pays · upload a <b>QR for that amount</b> on each pack.
+              When user picks ₹70, the ₹70 QR shows automatically.
             </p>
             <div id="set-packages" class="pkg-editor"></div>
             <div class="row-actions pkg-actions">

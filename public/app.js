@@ -1646,6 +1646,22 @@
     }
     if (packageSelect) packageSelect.value = selectedPackId;
 
+    if (upiQr) {
+      var qrUrl =
+        (pack && pack.qrImageUrl) ||
+        pay.qrImageUrl ||
+        "/upi-qr.svg";
+      if (upiQr.getAttribute("src") !== qrUrl) {
+        upiQr.src = qrUrl;
+      }
+      upiQr.onerror = function () {
+        upiQr.alt = "Payment QR";
+        if (pay.qrImageUrl && upiQr.src.indexOf(pay.qrImageUrl) === -1) {
+          upiQr.src = pay.qrImageUrl;
+        }
+      };
+    }
+
     if (pack) {
       if (copyPayDetailsBtn) copyPayDetailsBtn.classList.remove("hidden");
       var saveHtml =
@@ -1768,14 +1784,7 @@
     }
     if (!selectedPackId && packs[0]) selectedPackId = packs[0].id;
     renderPackageCards(packs);
-
-    if (upiQr && payCatalog.payment.qrImageUrl) {
-      upiQr.src = payCatalog.payment.qrImageUrl;
-      upiQr.classList.remove("hidden");
-      upiQr.onerror = function () {
-        upiQr.alt = "Payment QR";
-      };
-    }
+    if (upiQr) upiQr.classList.remove("hidden");
     syncPayUi();
     await loadMyPayments();
   }

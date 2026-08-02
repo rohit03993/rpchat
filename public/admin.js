@@ -252,13 +252,18 @@
         const sell = p.priceInr != null ? p.priceInr : "";
         const listP =
           p.listPriceInr != null ? p.listPriceInr : p.priceInr != null ? p.priceInr : "";
+        const qrUrl = p.qrImageUrl || "";
+        const qrSrc = qrUrl || "/upi-qr.svg";
         return (
           '<article class="pkg-card" data-i="' +
           i +
+          '" data-pkg-id="' +
+          String(p.id || "").replace(/"/g, "&quot;") +
           '">' +
           '<div class="pkg-card-head">' +
           "<strong>Pack " +
           (i + 1) +
+          (sell !== "" ? " · ₹" + sell : "") +
           "</strong>" +
           '<button type="button" class="btn-danger btn-sm" data-del-pkg="' +
           i +
@@ -295,6 +300,26 @@
           '<input data-f="id" type="hidden" value="' +
           String(p.id || "").replace(/"/g, "&quot;") +
           '" />' +
+          '<input data-f="qrImageUrl" type="hidden" value="' +
+          String(qrUrl).replace(/"/g, "&quot;") +
+          '" />' +
+          '<div class="pkg-qr-block">' +
+          "<p class='pkg-qr-label'>QR for this pack" +
+          (sell !== "" ? " (₹" + sell + ")" : "") +
+          "</p>" +
+          '<img class="pkg-qr-preview" alt="Pack QR" src="' +
+          String(qrSrc).replace(/"/g, "&quot;") +
+          '" />' +
+          '<div class="row-actions pkg-qr-actions">' +
+          '<label class="btn-ghost btn-sm file-label">Choose QR' +
+          '<input type="file" accept="image/*" data-pkg-qr-file hidden /></label>' +
+          '<button type="button" class="btn btn-sm" data-pkg-qr-upload>Upload QR</button>' +
+          '<button type="button" class="btn-danger btn-sm" data-pkg-qr-clear>Clear</button>' +
+          "</div>" +
+          '<p class="meta pkg-qr-msg">' +
+          (qrUrl ? "Pack QR set" : "No pack QR yet — fallback QR will show") +
+          "</p>" +
+          "</div>" +
           "</article>"
         );
       })
@@ -317,6 +342,7 @@
       const listEl = get("listPriceInr");
       const badgeEl = get("badge");
       const popEl = get("popular");
+      const qrEl = get("qrImageUrl");
       if (!labelEl || !hoursEl || !priceEl) return;
       out.push({
         id: idEl ? idEl.value : "",
@@ -326,9 +352,96 @@
         listPriceInr: Number(listEl ? listEl.value : priceEl.value),
         badge: badgeEl ? badgeEl.value : "",
         popular: popEl ? popEl.checked : false,
+        qrImageUrl: qrEl ? qrEl.value : "",
       });
     });
     return out;
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        resolve(reader.result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadPackQr(card) {
+    if (!card) return;
+    const idEl = card.querySelector('[data-f="id"]');
+    const pkgId = idEl ? String(idEl.value || "").trim() : "";
+    if (!pkgId) {
+      toast("Save pack first (Save UPI & prices), then upload QR", "err");
+      return;
+    }
+    const fileInput = card.querySelector("[data-pkg-qr-file]");
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) {
+      toast("Choose a QR image first", "err");
+      return;
+    }
+    const msg = card.querySelector(".pkg-qr-msg");
+    if (msg) msg.textContent = "Uploading…";
+    try {
+      const b64 = await fileToDataUrl(file);
+      const res = await fetch(
+        "/api/admin/settings/packages/" + encodeURIComponent(pkgId) + "/qr",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ imageBase64: b64 }),
+        }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        if (msg) msg.textContent = data.error || "Upload failed";
+        toast(data.error || "Pack QR upload failed", "err");
+        return;
+      }
+      toast("Pack QR uploaded", "ok");
+      if (data.settings && data.settings.packages) {
+        renderPackageEditor(data.settings.packages);
+      }
+    } catch (e) {
+      toast("Network error", "err");
+    }
+  }
+
+  async function clearPackQr(card) {
+    if (!card) return;
+    const idEl = card.querySelector('[data-f="id"]');
+    const pkgId = idEl ? String(idEl.value || "").trim() : "";
+    if (!pkgId) return;
+    if (!confirm("Clear QR for this pack?")) return;
+    try {
+      const res = await fetch(
+        "/api/admin/settings/packages/" + encodeURIComponent(pkgId) + "/qr",
+        {
+          method: "DELETE",
+          headers: authHeaders(),
+        }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Clear failed", "err");
+        return;
+      }
+      toast("Pack QR cleared", "ok");
+      if (data.settings && data.settings.packages) {
+        renderPackageEditor(data.settings.packages);
+      }
+    } catch (e) {
+      toast("Network error", "err");
+    }
   }
 
   async function loadPaySettings() {
@@ -2086,11 +2199,36 @@
 
   if (setPackages) {
     setPackages.addEventListener("click", function (e) {
-      const del = e.target.getAttribute("data-del-pkg");
-      if (del == null) return;
-      const packs = collectPackagesFromEditor();
-      packs.splice(Number(del), 1);
-      renderPackageEditor(packs);
+      const t = e.target;
+      if (!t) return;
+      const del = t.getAttribute("data-del-pkg");
+      if (del != null) {
+        const packs = collectPackagesFromEditor();
+        packs.splice(Number(del), 1);
+        renderPackageEditor(packs);
+        return;
+      }
+      if (t.getAttribute("data-pkg-qr-upload") != null) {
+        const card = t.closest(".pkg-card");
+        uploadPackQr(card);
+        return;
+      }
+      if (t.getAttribute("data-pkg-qr-clear") != null) {
+        const card = t.closest(".pkg-card");
+        clearPackQr(card);
+      }
+    });
+    setPackages.addEventListener("change", function (e) {
+      const t = e.target;
+      if (!t || !t.getAttribute("data-pkg-qr-file")) return;
+      const card = t.closest(".pkg-card");
+      const preview = card && card.querySelector(".pkg-qr-preview");
+      const file = t.files && t.files[0];
+      if (!file || !preview) return;
+      const url = URL.createObjectURL(file);
+      preview.src = url;
+      const msg = card.querySelector(".pkg-qr-msg");
+      if (msg) msg.textContent = "Ready — tap Upload QR";
     });
   }
   if (setPkgAdd) {
@@ -2104,6 +2242,7 @@
         listPriceInr: 130,
         badge: "",
         popular: false,
+        qrImageUrl: "",
       });
       renderPackageEditor(packs);
     });
