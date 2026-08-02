@@ -201,6 +201,7 @@
   const SAVED_ID_KEY = "savedUserId";
   const SAVED_PIN_KEY = "savedUserPin";
   let pendingNewCreds = null;
+  let pendingRegisterSession = null;
 
   const DOB_MONTHS = [
     "Jan",
@@ -744,6 +745,7 @@
       localStorage.removeItem(SAVED_PIN_KEY);
     } catch (e) {}
     pendingNewCreds = null;
+    pendingRegisterSession = null;
     syncForgetSavedBtn();
   }
 
@@ -829,8 +831,67 @@
     if (registerCredsIdEl) registerCredsIdEl.textContent = userId;
     if (registerCredsPinEl) registerCredsPinEl.textContent = pin;
     if (registerCredsEl) registerCredsEl.classList.remove("hidden");
+    if (credsContinueLoginBtn) {
+      credsContinueLoginBtn.disabled = false;
+      credsContinueLoginBtn.textContent = pendingRegisterSession
+        ? "Got it — Start chatting"
+        : "Got it — Continue to Login";
+    }
     openRegisterCredsSheet();
     toast("Account created · save your ID & PIN", "ok");
+  }
+
+  /** Shared path after a successful user login (normal login or post-register). */
+  async function enterChatAsUser(data, pinForSave) {
+    if (!data || !data.token || !data.user) return false;
+    authToken = data.token;
+    localStorage.setItem("userToken", authToken);
+    localStorage.removeItem("adminToken");
+    currentUser = data.user;
+    if (currentUser && currentUser.userId) {
+      localStorage.setItem("userId", currentUser.userId);
+    }
+    if (pinForSave && (!loginRememberEl || loginRememberEl.checked)) {
+      saveCredentials(
+        (currentUser && currentUser.userId) || "",
+        pinForSave
+      );
+    }
+    setHoursBadge(currentUser);
+    setUserChip(currentUser);
+    await showApp();
+    syncPanels();
+    const restored = await restoreChatSession();
+    if (!restored) {
+      resetChat();
+    }
+    updateSetupStatus();
+    await loadBillingInfo();
+    return true;
+  }
+
+  async function loginUserWithPin(userId, pin) {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userId,
+        pin: pin,
+      }),
+    });
+    const data = await res.json().catch(function () {
+      return {};
+    });
+    if (!res.ok) {
+      return { ok: false, error: data.error || "Login failed" };
+    }
+    if (data.role === "admin") {
+      return { ok: false, error: "Admin login not allowed here" };
+    }
+    if (!data.token || !data.user) {
+      return { ok: false, error: "Login failed" };
+    }
+    return { ok: true, data: data };
   }
 
   function authHeaders(json) {
@@ -1147,6 +1208,7 @@
     authToken = "";
     currentUser = null;
     localHours = 0;
+    pendingRegisterSession = null;
     localStorage.removeItem("userToken");
     // Keep saved ID/PIN on this browser for next login
     showAuth();
@@ -4084,7 +4146,7 @@
   }
 
   if (credsContinueLoginBtn) {
-    credsContinueLoginBtn.addEventListener("click", function () {
+    credsContinueLoginBtn.addEventListener("click", async function () {
       var id =
         (pendingNewCreds && pendingNewCreds.userId) ||
         (registerCredsIdEl && registerCredsIdEl.textContent) ||
@@ -4094,6 +4156,28 @@
         (registerCredsPinEl && registerCredsPinEl.textContent) ||
         "";
       closeRegisterCredsSheet();
+
+      // Preferred: already logged in after New ID
+      if (pendingRegisterSession && pendingRegisterSession.data) {
+        credsContinueLoginBtn.disabled = true;
+        try {
+          const ok = await enterChatAsUser(
+            pendingRegisterSession.data,
+            pendingRegisterSession.pin || pin
+          );
+          pendingRegisterSession = null;
+          if (ok) {
+            toast("Welcome · ID " + id + " · trial ready", "ok");
+            return;
+          }
+        } catch (e) {
+          pendingRegisterSession = null;
+        } finally {
+          credsContinueLoginBtn.disabled = false;
+        }
+      }
+
+      // Fallback: same as old flow — open Login with fields filled
       if (typeof window.__showLoginTab === "function") {
         window.__showLoginTab({
           userId: id,
@@ -4185,29 +4269,11 @@
           window.location.href = "/admin.html";
           return;
         }
-        authToken = data.token;
-        localStorage.setItem("userToken", authToken);
-        localStorage.removeItem("adminToken");
-        currentUser = data.user;
-        if (currentUser && currentUser.userId) {
-          localStorage.setItem("userId", currentUser.userId);
+        const ok = await enterChatAsUser(data, pin);
+        if (!ok) {
+          authError.textContent = "Login failed";
+          return;
         }
-        if (!loginRememberEl || loginRememberEl.checked) {
-          saveCredentials(
-            (currentUser && currentUser.userId) || userId,
-            pin
-          );
-        }
-        setHoursBadge(currentUser);
-        setUserChip(currentUser);
-        await showApp();
-        syncPanels();
-        const restored = await restoreChatSession();
-        if (!restored) {
-          resetChat();
-        }
-        updateSetupStatus();
-        await loadBillingInfo();
         toast("Logged in · ID " + ((currentUser && currentUser.userId) || userId), "ok");
       } catch (e) {
         authError.textContent = "Network error";
@@ -4304,9 +4370,21 @@
           registerResult.classList.add("hidden");
           registerResult.textContent = "";
         }
-        showRegisterCreds(data.userId, pin);
         if (loginIdEl) loginIdEl.value = data.userId;
         if (loginPinEl) loginPinEl.value = pin;
+
+        // Auto-login with the PIN they just set (same /api/auth/login as normal)
+        pendingRegisterSession = null;
+        try {
+          const login = await loginUserWithPin(data.userId, pin);
+          if (login.ok) {
+            pendingRegisterSession = { data: login.data, pin: pin };
+          }
+        } catch (e) {
+          pendingRegisterSession = null;
+        }
+
+        showRegisterCreds(data.userId, pin);
         toast("ID " + data.userId + " created · saved on this browser", "ok");
       } catch (e) {
         authError.textContent = "Network error";
