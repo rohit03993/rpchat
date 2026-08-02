@@ -2,9 +2,12 @@ package online.rpdesichat.adminsms
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -30,6 +33,7 @@ import java.util.concurrent.Executors
  */
 class MainActivity : AppCompatActivity() {
   private val io = Executors.newSingleThreadExecutor()
+  private val permRequestCode = 42
 
   private lateinit var web: WebView
   private lateinit var adminShell: LinearLayout
@@ -37,6 +41,7 @@ class MainActivity : AppCompatActivity() {
   private lateinit var listenBar: LinearLayout
   private lateinit var status: TextView
   private lateinit var listenLabel: TextView
+  private lateinit var smsPermBtn: Button
   private var tokenInjected = false
 
   @SuppressLint("SetJavaScriptEnabled")
@@ -51,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     listenBar = findViewById(R.id.listenBar)
     status = findViewById(R.id.status)
     listenLabel = findViewById(R.id.listenLabel)
+    smsPermBtn = findViewById(R.id.smsPermBtn)
 
     val baseUrl = findViewById<TextInputEditText>(R.id.baseUrl)
     val adminId = findViewById<TextInputEditText>(R.id.adminId)
@@ -63,8 +69,10 @@ class MainActivity : AppCompatActivity() {
 
     setupWebView()
 
+    smsPermBtn.setOnClickListener { requestPerms(forceSettingsIfBlocked = true) }
+
     loginBtn.setOnClickListener {
-      requestPerms()
+      requestPerms(forceSettingsIfBlocked = false)
       val url = baseUrl.text?.toString()?.trim().orEmpty()
       val id = adminId.text?.toString()?.trim().orEmpty()
       val pass = adminPass.text?.toString()?.trim().orEmpty()
@@ -117,11 +125,38 @@ class MainActivity : AppCompatActivity() {
     )
 
     if (Prefs.isLoggedIn(this)) {
-      requestPerms()
+      requestPerms(forceSettingsIfBlocked = false)
       AlertPollService.start(this)
       openAdminWeb(forceReload = false)
     } else {
       showLogin()
+    }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    if (adminShell.visibility == View.VISIBLE) {
+      refreshSmsStatusUi()
+    }
+  }
+
+  @Deprecated("Deprecated in Java")
+  override fun onRequestPermissionsResult(
+    requestCode: Int,
+    permissions: Array<out String>,
+    grantResults: IntArray
+  ) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    if (requestCode != permRequestCode) return
+    refreshSmsStatusUi()
+    if (!hasSmsPermission()) {
+      Toast.makeText(
+        this,
+        "SMS still off. Tap Allow SMS, or Settings → Apps → DesiChat Admin → Permissions → SMS",
+        Toast.LENGTH_LONG
+      ).show()
+    } else {
+      Toast.makeText(this, "SMS permission granted", Toast.LENGTH_SHORT).show()
     }
   }
 
@@ -167,7 +202,8 @@ class MainActivity : AppCompatActivity() {
     loginPanel.visibility = View.GONE
     adminShell.visibility = View.VISIBLE
     listenBar.visibility = View.VISIBLE
-    listenLabel.text = "SMS unlock + alerts on"
+    refreshSmsStatusUi()
+    requestPerms(forceSettingsIfBlocked = false)
     val url = Prefs.baseUrl(this) + "/admin.html"
     if (forceReload || web.url.isNullOrBlank()) {
       tokenInjected = false
@@ -184,7 +220,7 @@ class MainActivity : AppCompatActivity() {
     status.text = "Login to open full admin on this phone"
   }
 
-  private fun requestPerms() {
+  private fun smsPermissions(): List<String> {
     val need = mutableListOf(
       Manifest.permission.RECEIVE_SMS,
       Manifest.permission.READ_SMS
@@ -192,11 +228,67 @@ class MainActivity : AppCompatActivity() {
     if (Build.VERSION.SDK_INT >= 33) {
       need += Manifest.permission.POST_NOTIFICATIONS
     }
-    val missing = need.filter {
+    return need
+  }
+
+  private fun hasSmsPermission(): Boolean {
+    return ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) ==
+      PackageManager.PERMISSION_GRANTED &&
+      ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) ==
+      PackageManager.PERMISSION_GRANTED
+  }
+
+  private fun missingPermissions(): List<String> {
+    return smsPermissions().filter {
       ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
     }
-    if (missing.isNotEmpty()) {
-      ActivityCompat.requestPermissions(this, missing.toTypedArray(), 42)
+  }
+
+  private fun refreshSmsStatusUi() {
+    if (!::listenLabel.isInitialized) return
+    if (hasSmsPermission()) {
+      listenLabel.text = "SMS unlock + alerts on"
+      listenLabel.setTextColor(0xFF1EC9A0.toInt())
+      smsPermBtn.visibility = View.GONE
+    } else {
+      listenLabel.text = "SMS permission OFF — auto-unlock will not work"
+      listenLabel.setTextColor(0xFFFF8A80.toInt())
+      smsPermBtn.visibility = View.VISIBLE
     }
+  }
+
+  private fun openAppPermissionSettings() {
+    val intent = Intent(
+      Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+      Uri.fromParts("package", packageName, null)
+    )
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    startActivity(intent)
+    Toast.makeText(
+      this,
+      "Open Permissions → SMS → Allow",
+      Toast.LENGTH_LONG
+    ).show()
+  }
+
+  private fun requestPerms(forceSettingsIfBlocked: Boolean) {
+    val missing = missingPermissions()
+    if (missing.isEmpty()) {
+      refreshSmsStatusUi()
+      return
+    }
+
+    val canShowRationale = missing.any {
+      ActivityCompat.shouldShowRequestPermissionRationale(this, it)
+    }
+    val alreadyAsked = Prefs.smsPermAsked(this)
+    // After "Don't ask again", dialog never appears — send user to Settings.
+    if (forceSettingsIfBlocked && alreadyAsked && !canShowRationale) {
+      openAppPermissionSettings()
+      return
+    }
+
+    Prefs.setSmsPermAsked(this, true)
+    ActivityCompat.requestPermissions(this, missing.toTypedArray(), permRequestCode)
   }
 }

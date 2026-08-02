@@ -35,4 +35,13 @@ object Prefs {
   }
 
   fun isLoggedIn(ctx: Context): Boolean = token(ctx).isNotBlank()
+
+  fun smsPermAsked(ctx: Context): Boolean =
+    ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getBoolean("smsPermAsked", false)
+
+  fun setSmsPermAsked(ctx: Context, asked: Boolean = true) {
+    ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
+      .putBoolean("smsPermAsked", asked)
+      .apply()
+  }
 }
