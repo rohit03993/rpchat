@@ -70,9 +70,21 @@
 
         <section id="dash" class="hidden">
           <div class="stats" id="admin-stats">
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="Show all users">
+            <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="All accounts ever">
               <b id="stat-users">0</b>
-              <span>Users</span>
+              <span>Total users</span>
+            </button>
+            <button type="button" class="stat" data-stat-action="users" data-user-filter="unique-today" title="Users who used the app today (IST)">
+              <b id="stat-unique-today">0</b>
+              <span>Unique today</span>
+            </button>
+            <button type="button" class="stat" data-stat-action="users" data-user-filter="repeat-today" title="Returning users active today (created before today)">
+              <b id="stat-repeat-today">0</b>
+              <span>Repeat today</span>
+            </button>
+            <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="New signups today (IST)">
+              <b id="stat-today">0</b>
+              <span>New today</span>
             </button>
             <button type="button" class="stat" data-stat-action="users" data-user-filter="paid" title="Show paid users">
               <b id="stat-paid">0</b>
@@ -105,10 +117,6 @@
             <button type="button" class="stat" data-stat-action="reports" title="Open AI reports">
               <b id="stat-reports">0</b>
               <span>AI reports</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="Show users joined today">
-              <b id="stat-today">0</b>
-              <span>New today</span>
             </button>
           </div>
 
@@ -146,6 +154,8 @@
                 <option value="unpaid">Unpaid</option>
                 <option value="has-time">Has time</option>
                 <option value="no-time">No time</option>
+                <option value="unique-today">Unique today</option>
+                <option value="repeat-today">Repeat today</option>
                 <option value="today">New today</option>
               </select>
               <select id="users-page-size" title="Users per page">

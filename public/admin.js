@@ -85,6 +85,8 @@
   const statMsgs = document.getElementById("stat-msgs");
   const statReports = document.getElementById("stat-reports");
   const statToday = document.getElementById("stat-today");
+  const statUniqueToday = document.getElementById("stat-unique-today");
+  const statRepeatToday = document.getElementById("stat-repeat-today");
   const userSearch = document.getElementById("user-search");
   const chatDrawer = document.getElementById("chat-drawer");
   const chatDrawerTitle = document.getElementById("chat-drawer-title");
@@ -600,7 +602,23 @@
       statReports.textContent = String(a.aiReports != null ? a.aiReports : "—");
     }
     if (statToday) {
-      statToday.textContent = String(a.usersToday != null ? a.usersToday : "—");
+      statToday.textContent = String(
+        a.usersNewToday != null
+          ? a.usersNewToday
+          : a.usersToday != null
+            ? a.usersToday
+            : "—"
+      );
+    }
+    if (statUniqueToday) {
+      statUniqueToday.textContent = String(
+        a.usersUniqueToday != null ? a.usersUniqueToday : "—"
+      );
+    }
+    if (statRepeatToday) {
+      statRepeatToday.textContent = String(
+        a.usersRepeatToday != null ? a.usersRepeatToday : "—"
+      );
     }
   }
 
@@ -619,22 +637,47 @@
       return null;
     }
   }
+  function startOfTodayIstMs() {
+    const now = Date.now();
+    const istOffsetMin = 330;
+    const shifted = new Date(now + istOffsetMin * 60000);
+    return (
+      Date.UTC(
+        shifted.getUTCFullYear(),
+        shifted.getUTCMonth(),
+        shifted.getUTCDate()
+      ) -
+      istOffsetMin * 60000
+    );
+  }
+
+  function userActivityAt(u) {
+    return Math.max(
+      Number(u && u.lastSeenAt) || 0,
+      Number(u && u.lastTickAt) || 0,
+      Number(u && u.createdAt) || 0
+    );
+  }
+
   function filterUsersList(list) {
     const q = String((userSearch && userSearch.value) || "")
       .trim()
       .toLowerCase();
     const f = (userFilter && userFilter.value) || "all";
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const todayMs = startOfToday.getTime();
+    const todayMs = startOfTodayIstMs();
     return list.filter(function (u) {
+      const created = Number(u.createdAt || 0);
+      const activeToday = userActivityAt(u) >= todayMs;
+      const newToday = created >= todayMs;
       if (f === "online" && !u.sessionActive) return false;
       if (f === "idle" && u.sessionActive) return false;
       if (f === "paid" && !u.hasPaid) return false;
       if (f === "unpaid" && u.hasPaid) return false;
       if (f === "has-time" && Number(u.hoursBalance || 0) <= 0.0001) return false;
       if (f === "no-time" && Number(u.hoursBalance || 0) > 0.0001) return false;
-      if (f === "today" && !(Number(u.createdAt || 0) >= todayMs)) return false;
+      if (f === "today" && !newToday) return false;
+      if (f === "unique-today" && !activeToday) return false;
+      if (f === "repeat-today" && !(activeToday && !newToday)) return false;
       if (!q) return true;
       const hay = [
         u.userId,

@@ -537,7 +537,8 @@ app.get("/api/billing/me", requireUser, (req, res) => {
       supportPopup: supportPopup,
     });
   }
-  res.json({ user: billing.publicUser(user), supportPopup: supportPopup });
+  const pub = billing.touchLastSeen(req.userId) || billing.publicUser(user);
+  res.json({ user: pub, supportPopup: supportPopup });
 });
 
 app.post("/api/support/seen", requireUser, (req, res) => {
