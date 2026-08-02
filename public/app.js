@@ -1664,34 +1664,9 @@
 
     if (pack) {
       if (copyPayDetailsBtn) copyPayDetailsBtn.classList.remove("hidden");
-      var saveHtml =
-        pack.saveInr > 0
-          ? " · <span class='sum-save'>You save ₹" + pack.saveInr + "</span>"
-          : "";
-      var listHtml =
-        pack.saveInr > 0
-          ? " <span class='sum-was'>₹" + pack.listPriceInr + "</span>"
-          : "";
       if (payAmountLine) {
         payAmountLine.innerHTML =
-          "Pay <b>₹" + pack.priceInr + "</b>" + listHtml + " · " + pack.label;
-      }
-      if (paySelectedSummary) {
-        paySelectedSummary.classList.remove("hidden");
-        paySelectedSummary.innerHTML =
-          '<span class="sum-amount">₹' +
-          pack.priceInr +
-          listHtml +
-          "</span>" +
-          '<span class="sum-detail">Selected: <b>' +
-          pack.label +
-          "</b> · ₹" +
-          pack.perHourInr +
-          "/hr" +
-          saveHtml +
-          "<br/>Payment note = User ID <b>" +
-          uid +
-          "</b></span>";
+          "Pay <b>₹" + pack.priceInr + "</b> · " + pack.label;
       }
       if (submitPayBtn) {
         submitPayBtn.textContent = "Submit ₹" + pack.priceInr;
