@@ -33,6 +33,7 @@ const {
   looksLikeSaasTuToDamad,
   looksLikeInventedClothing,
   looksLikeBriefIgnore,
+  looksLikeBriefDump,
   looksLikePaceTooFast,
   looksLikeReplyEcho,
   looksLikeGarbledOutput,
@@ -1044,24 +1045,30 @@ app.post("/api/chat/opener", requireUser, requireHours, async (req, res) => {
     }
 
     const brief = extractSetupBrief(setupText);
-    if (reply && brief && looksLikeBriefIgnore(reply, brief)) {
+    const badDump = reply && brief && looksLikeBriefDump(reply, brief);
+    const badIgnore = reply && brief && looksLikeBriefIgnore(reply, brief);
+    if (reply && brief && (badDump || badIgnore)) {
       const fix = await callVenice(CLEAR_MODEL, [
         ...payload,
         { role: "assistant", content: reply },
         {
           role: "user",
           content:
-            `SCENE FIX: Your opener ignored the USER RP BRIEF. Rewrite ONLY the opening line INSIDE this scene: "${brief}". ` +
-            `Mention the place/situation. FORBIDDEN: jaldi ghar aa / kitchen / padhai hello. ` +
+            (badDump
+              ? `SCENE FIX: You PASTED the user's RP note into the chat. Delete that. `
+              : `SCENE FIX: Your opener ignored the USER RP BRIEF. `) +
+            `Write a fresh opening INSIDE the scene (place/mood only) — NEVER quote or copy the brief text. ` +
+            `Brief (setting only, do not paste): "${brief.slice(0, 160)}". ` +
+            `FORBIDDEN: jaldi ghar aa / kitchen / padhai hello / dumping the note. ` +
             `Stay as ${name}. Short WhatsApp 1–3 lines. Format: ${name}: ...`,
         },
       ], {
         temperature: 0.55,
-        max_tokens: 180,
+        max_tokens: 120,
       });
       if (fix.response.ok) {
         const fixed = extractText(fix.data?.choices?.[0]?.message);
-        if (fixed && fixed.trim().length > 8) {
+        if (fixed && fixed.trim().length > 8 && !looksLikeBriefDump(fixed, brief)) {
           reply = fixMaaGenderSlips(fixed, charOverrides)
             .replace(/^["'\s]+|["'\s]+$/g, "")
             .trim();
@@ -1069,6 +1076,10 @@ app.post("/api/chat/opener", requireUser, requireHours, async (req, res) => {
             reply = name + ": " + reply.replace(/^[^:]{0,40}:\s*/, "");
           }
         }
+      }
+      // Still dumped after fix — reject so client uses clean local opener
+      if (brief && looksLikeBriefDump(reply, brief)) {
+        reply = "";
       }
     }
 

@@ -3450,17 +3450,30 @@
     return "jaan";
   }
 
+  function sceneHintFromBrief(brief) {
+    const t = String(brief || "").toLowerCase();
+    if (!t) return "";
+    if (/hotel|resort|room\b|waiter/.test(t)) return "hotel room";
+    if (/gaon|shaadi|shadi|marriage|vivah/.test(t)) return "shaadi / gaon scene";
+    if (/hospital|clinic|nurse/.test(t)) return "hospital";
+    if (/office|boss|cabin/.test(t)) return "office";
+    if (/car|gaadi|ride/.test(t)) return "car";
+    if (/bathroom|nahane|shower/.test(t)) return "bathroom";
+    if (/kitchen|rasoi/.test(t)) return "kitchen";
+    if (/night|raat|bedroom|bed\b|kamra/.test(t)) return "private room";
+    return "private scene";
+  }
+
   function buildRoleOpener(roles) {
     const name = roles.characterName || "Chat";
     const you = userAddressName(roles.userRole);
     const bot = String(roles.botRole || "").toLowerCase();
     const brief = rpNoteEl ? rpNoteEl.value.trim() : "";
     const vibe = rpVibeEl ? String(rpVibeEl.value || "") : "";
-    const clip =
-      brief.length > 85 ? brief.slice(0, 82).replace(/\s+\S*$/, "") + "…" : brief;
+    // NEVER paste RP notes into chat — only a short place/mood hint
+    const sceneHint = sceneHintFromBrief(brief);
 
-    // User wrote a scene — open inside it (all roles)
-    if (clip) {
+    if (sceneHint) {
       if (roleIsClient(bot, "saas")) {
         const u = String(roles.userRole || "").toLowerCase();
         const male = u === "jamai" || u === "damad";
@@ -3468,18 +3481,20 @@
           return (
             name +
             ": Damad ji… " +
-            clip +
-            ". Main yahi scene mein hu — boliye, ab kya? 💕"
+            sceneHint +
+            " mein hu. Soft boliyega — ab kya karna hai? 💕"
           );
         }
-        return name + ": Bahu… " + clip + ". Main yahi scene mein hu — bol. 💕";
+        return (
+          name + ": Bahu… " + sceneHint + " mein hu. Bol — ab kya? 💕"
+        );
       }
       if (roleIsClient(bot, "sasur")) {
         return (
           name +
           ": Bahu… " +
-          clip +
-          ". Papa ji yahi scene mein — bol, ab kya? 💕"
+          sceneHint +
+          " — Papa ji yahi. Bol, ab kya? 💕"
         );
       }
       if (roleIsClient(bot, "mom", "mummy", "maa", "mother")) {
@@ -3488,8 +3503,8 @@
           ": " +
           you +
           "… " +
-          clip +
-          ". Main yahi hu is scene mein — bol, ab kya karna hai? 💕"
+          sceneHint +
+          " mein hu. Sharam aa rahi hai — bol, ab kya karna hai? 💕"
         );
       }
       return (
@@ -3497,8 +3512,8 @@
         ": " +
         you +
         "… " +
-        clip +
-        ". Main yahi scene mein hu — bol. 💕"
+        sceneHint +
+        " mein hu. Bol, ab kya? 💕"
       );
     }
 
@@ -3624,14 +3639,30 @@
     const roles = getRpRoles();
     let opener = buildRoleOpener(roles);
 
+    // Show local opener immediately — never wait ~30s just to start
+    addBubble(opener, "incoming");
+    history.push({ role: "assistant", content: opener });
+    history.push({
+      role: "assistant",
+      content: "Setup locked for this chat: " + rpSetup,
+    });
+    scheduleSaveChatSession();
+    maybeShowWelcomeTip();
+    input.focus();
+
     if (isMaaMode()) {
-      setBusy(true, "typing...");
-      showTyping();
+      // Optional better Venice opener — short timeout; keep local if slow/paste
+      var openerAbort =
+        typeof AbortController !== "undefined" ? new AbortController() : null;
+      var openerTimer = setTimeout(function () {
+        if (openerAbort) openerAbort.abort();
+      }, 9000);
       try {
         await ensureHoursCounting();
         const res = await fetch("/api/chat/opener", {
           method: "POST",
           headers: authHeaders(),
+          signal: openerAbort ? openerAbort.signal : undefined,
           body: JSON.stringify({
             rpSetup: rpSetup,
             language: languageEl ? languageEl.value : "hinglish",
@@ -3645,27 +3676,49 @@
         const data = await res.json().catch(function () {
           return {};
         });
-        if (res.ok && data.reply && String(data.reply).trim().length > 8) {
-          opener = String(data.reply).trim();
+        var next = res.ok && data.reply ? String(data.reply).trim() : "";
+        var note = rpNoteEl ? rpNoteEl.value.trim() : "";
+        var dumpsNote =
+          note.length > 20 &&
+          next &&
+          next.toLowerCase().indexOf(note.toLowerCase().slice(0, 40)) !== -1;
+        if (next.length > 8 && !dumpsNote && next !== opener) {
+          opener = next;
+          var first = messagesEl.querySelector(".bubble.incoming");
+          if (first) {
+            var reportBtn = first.querySelector(".bubble-report-btn");
+            first.innerHTML =
+              formatRpHtml(opener) +
+              '<span class="meta">' +
+              timeNow() +
+              "</span>";
+            if (reportBtn) {
+              reportBtn.addEventListener("click", function () {
+                openReportSheet(String(opener || ""), reportBtn);
+              });
+              first.appendChild(reportBtn);
+            } else {
+              var btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "bubble-report-btn";
+              btn.textContent = "Report";
+              btn.title = "Report bad AI reply";
+              btn.addEventListener("click", function () {
+                openReportSheet(String(opener || ""), btn);
+              });
+              first.appendChild(btn);
+            }
+          }
+          history[0] = { role: "assistant", content: opener };
+          scheduleSaveChatSession();
         }
         if (typeof data.hoursBalance === "number") applyTimeFromResponse(data);
       } catch (e) {
-        /* keep template opener */
+        /* keep instant local opener */
       } finally {
-        hideTyping();
-        setBusy(false);
+        clearTimeout(openerTimer);
       }
     }
-
-    addBubble(opener, "incoming");
-    history.push({ role: "assistant", content: opener });
-    history.push({
-      role: "assistant",
-      content: "Setup locked for this chat: " + rpSetup,
-    });
-    scheduleSaveChatSession();
-    maybeShowWelcomeTip();
-    input.focus();
   }
 
   function updateSetupStatus() {
