@@ -584,6 +584,32 @@ app.post("/api/billing/pay-intent", requireUser, (req, res) => {
   res.json(result);
 });
 
+/** Checkout funnel stages: open | pack | scan_qr | ive_paid | submitted | success | abandon */
+app.post("/api/billing/pay-event", requireUser, (req, res) => {
+  const result = billing.recordPayEvent({
+    userId: req.userId,
+    stage: req.body?.stage,
+    packageId: req.body?.packageId,
+    note: req.body?.note,
+  });
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+/** Abandoned checkout → ask Support for a discount */
+app.post("/api/billing/discount-ask", requireUser, (req, res) => {
+  const result = billing.requestPayDiscount({
+    userId: req.userId,
+    note: req.body?.note,
+  });
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
+app.get("/api/admin/pay-leads", requireAdmin, (req, res) => {
+  res.json({ leads: billing.listPayLeads() });
+});
+
 app.post("/api/billing/submit", requireUser, (req, res) => {
   try {
     const payment = billing.submitPayment({

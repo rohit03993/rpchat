@@ -45,6 +45,7 @@
   const refreshSupportBtn = document.getElementById("refresh-support-btn");
   let supportThreadsCache = [];
   let openSupportUserId = "";
+  let supportFilterMode = "all"; // all | pay-leads
   let supportPollId = null;
 
   function setSupportMobileMode(mode) {
@@ -78,6 +79,7 @@
   let reportsDigestCache = null;
   const statUsers = document.getElementById("stat-users");
   const statPending = document.getElementById("stat-pending");
+  const statPayLeads = document.getElementById("stat-pay-leads");
   const statHours = document.getElementById("stat-hours");
   const statMoney = document.getElementById("stat-money");
   const statPaid = document.getElementById("stat-paid");
@@ -547,6 +549,13 @@
             }).length
       );
     }
+    if (statPayLeads) {
+      statPayLeads.textContent = String(
+        a.payLeadsOpen != null
+          ? a.payLeadsOpen
+          : Number(a.discountAsksOpen || 0) + Number(a.payAbandonedOpen || 0)
+      );
+    }
     if (statHours) {
       const hours =
         a.hoursLive != null
@@ -794,6 +803,7 @@
       if (action === "users" && a === "users" && uf === userFilterValue) on = true;
       if (action === "payments" && a === "payments" && ps === payStatus) on = true;
       if (action === "reports" && a === "reports") on = true;
+      if (action === "support" && a === "support") on = true;
       el.classList.toggle("is-active", on);
     });
   }
@@ -802,10 +812,17 @@
     const action = btn.getAttribute("data-stat-action") || "users";
     const uf = btn.getAttribute("data-user-filter") || "all";
     const payStatus = btn.getAttribute("data-pay-status") || "all";
+    const supportFilter = btn.getAttribute("data-support-filter") || "all";
 
     if (action === "reports") {
       syncStatActive("reports");
       showReportsTab();
+      return;
+    }
+    if (action === "support") {
+      supportFilterMode = supportFilter === "pay-leads" ? "pay-leads" : "all";
+      syncStatActive("support");
+      showSupportTab();
       return;
     }
     if (action === "payments") {
@@ -816,6 +833,7 @@
       return;
     }
 
+    supportFilterMode = "all";
     if (userFilter) userFilter.value = uf;
     if (userSearch) userSearch.value = "";
     usersPage = 1;
@@ -1993,18 +2011,35 @@
   }
   tabUsers.addEventListener("click", showUsersTab);
   tabPayments.addEventListener("click", showPaymentsTab);
-  if (tabSupport) tabSupport.addEventListener("click", showSupportTab);
+  if (tabSupport) {
+    tabSupport.addEventListener("click", function () {
+      supportFilterMode = "all";
+      showSupportTab();
+    });
+  }
   if (tabReports) tabReports.addEventListener("click", showReportsTab);
   if (tabPaySetup) tabPaySetup.addEventListener("click", showPaySetupTab);
 
   function renderSupportThreadList(list) {
     if (!supportThreadList) return;
-    if (!(list || []).length) {
+    var rows = list || [];
+    if (supportFilterMode === "pay-leads") {
+      rows = rows.filter(function (t) {
+        return (
+          t.payLead ||
+          (t.payFunnel && (t.payFunnel.discountAsked || t.payFunnel.abandoned)) ||
+          /\[DISCOUNT_ASK\]|\[PAY_LEAD\]/i.test(String(t.lastText || ""))
+        );
+      });
+    }
+    if (!rows.length) {
       supportThreadList.innerHTML =
-        "<div class='empty'>No support messages yet.<br/>Users open Settings → Support.</div>";
+        supportFilterMode === "pay-leads"
+          ? "<div class='empty'>No pay / discount leads yet.<br/>Shows when users leave checkout or ask for a discount.</div>"
+          : "<div class='empty'>No support messages yet.<br/>Users open Settings → Support.</div>";
       return;
     }
-    supportThreadList.innerHTML = list
+    supportThreadList.innerHTML = rows
       .map(function (t) {
         const active = String(t.userId) === String(openSupportUserId) ? " active" : "";
         const needs = t.needsAdmin ? " needs-admin" : "";
@@ -2021,6 +2056,24 @@
           : t.awaitingUserSeen
             ? "unseen by user"
             : escapeHtml(t.status || "open");
+        const leadChip = t.payLead
+          ? "<span class='badge pending' style='margin-left:6px'>discount?</span>"
+          : t.payFunnel && t.payFunnel.abandoned
+            ? "<span class='badge' style='margin-left:6px'>left pay @" +
+              escapeHtml(t.payFunnel.stage || "?") +
+              "</span>"
+            : "";
+        const funnelHint =
+          t.payFunnel && (t.payFunnel.stage || t.payFunnel.packageId)
+            ? " · left @" +
+              escapeHtml(t.payFunnel.stage || "?") +
+              (t.payFunnel.packageId
+                ? " · " + escapeHtml(String(t.payFunnel.packageId))
+                : "") +
+              (t.payFunnel.amountInr != null
+                ? " ₹" + escapeHtml(String(t.payFunnel.amountInr))
+                : "")
+            : "";
         return (
           "<button type='button' class='support-thread-card" +
           active +
@@ -2037,6 +2090,7 @@
           "'>" +
           badgeText +
           "</span>" +
+          leadChip +
           "</div>" +
           "<div class='sth-preview'>" +
           escapeHtml(t.lastText || "—") +
@@ -2044,6 +2098,7 @@
           (t.messageCount || 0) +
           " msgs · " +
           escapeHtml(when) +
+          escapeHtml(funnelHint) +
           "</span></div>" +
           "</button>"
         );
@@ -2070,6 +2125,53 @@
         return;
       }
       supportThreadsCache = data.threads || [];
+
+      // Merge checkout abandons that never opened Support yet
+      if (supportFilterMode === "pay-leads") {
+        try {
+          const lr = await fetch("/api/admin/pay-leads", {
+            headers: authHeaders(),
+          });
+          const ld = await lr.json().catch(function () {
+            return {};
+          });
+          if (lr.ok && Array.isArray(ld.leads)) {
+            const byId = {};
+            supportThreadsCache.forEach(function (t) {
+              byId[String(t.userId)] = t;
+            });
+            ld.leads.forEach(function (lead) {
+              const id = String(lead.userId || "");
+              if (!id) return;
+              if (byId[id]) {
+                byId[id].payFunnel = lead;
+                byId[id].payLead = byId[id].payLead || !!lead.discountAsked;
+              } else {
+                byId[id] = {
+                  userId: id,
+                  status: "open",
+                  updatedAt: lead.updatedAt || lead.abandonedAt || 0,
+                  needsAdmin: !!lead.discountAsked,
+                  awaitingUserSeen: false,
+                  messageCount: 0,
+                  lastFrom: "user",
+                  lastText: lead.discountAsked
+                    ? "[DISCOUNT_ASK] waiting in Support"
+                    : "[PAY_LEAD] Left after " +
+                      (lead.stage || "?") +
+                      (lead.packageId ? " · " + lead.packageId : "") +
+                      (lead.amountInr != null ? " · ₹" + lead.amountInr : ""),
+                  lastAt: lead.abandonedAt || lead.updatedAt || 0,
+                  payLead: !!lead.discountAsked,
+                  payFunnel: lead,
+                };
+                supportThreadsCache.push(byId[id]);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
       if (supportCount) {
         const waiting = supportThreadsCache.filter(function (t) {
           return t.needsAdmin;
@@ -2078,7 +2180,8 @@
           supportThreadsCache.length +
           " thread" +
           (supportThreadsCache.length === 1 ? "" : "s") +
-          (waiting ? " · " + waiting + " waiting" : "");
+          (waiting ? " · " + waiting + " waiting" : "") +
+          (supportFilterMode === "pay-leads" ? " · pay leads filter" : "");
       }
       renderSupportThreadList(supportThreadsCache);
     } catch (e) {

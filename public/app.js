@@ -159,8 +159,14 @@
   const adminNoticeTextEl = document.getElementById("admin-notice-text");
   const adminNoticeGotItBtn = document.getElementById("admin-notice-got-it");
   const adminNoticeReplyBtn = document.getElementById("admin-notice-reply");
+  const discountOfferEl = document.getElementById("discount-offer");
+  const discountOfferYesBtn = document.getElementById("discount-offer-yes");
+  const discountOfferNoBtn = document.getElementById("discount-offer-no");
   let openAdminNoticeId = null;
   let payWizardStep = 1;
+  let payDeepestStep = 1;
+  let payFunnelTouched = false;
+  let discountOfferPending = false;
   let payProofMode = "idle"; // idle | upload | waiting | success | rejected
   let paySubmittedAt = 0;
   const tabLogin = document.getElementById("tab-login");
@@ -1092,7 +1098,9 @@
   }
 
   function pauseOnLeave() {
-    if (!authToken || !hoursCounting) return;
+    if (!authToken) return;
+    flushPayAbandonOnLeave();
+    if (!hoursCounting) return;
     stopLiveTimer();
     try {
       fetch("/api/billing/pause", {
@@ -1109,11 +1117,13 @@
   async function resumeOnReturn() {
     if (!authToken || !hoursCounting) {
       resumePayProofIfNeeded();
+      setTimeout(maybeShowPendingDiscountOffer, 500);
       return;
     }
     await resumeSession();
     if (hoursCounting && !timerRunning) startLiveTimer();
     resumePayProofIfNeeded();
+    setTimeout(maybeShowPendingDiscountOffer, 500);
   }
 
   function formatTime(u) {
@@ -1451,6 +1461,7 @@
     goPayStep(3);
     showPayUploadUi();
     pingPayIntent("ive_paid");
+    trackPayEvent("ive_paid");
     startPayPoll();
     if (payIntentRenewId) clearInterval(payIntentRenewId);
     payIntentRenewId = setInterval(function () {
@@ -1480,6 +1491,8 @@
 
   function setPaySteps(activeStep) {
     payWizardStep = activeStep;
+    if (activeStep > payDeepestStep) payDeepestStep = activeStep;
+    if (payDeepestStep >= 2) persistPayFunnelDepth();
     payStepEls.forEach(function (el) {
       const n = Number(el.getAttribute("data-step"));
       el.classList.toggle("active", n === activeStep);
@@ -1504,6 +1517,7 @@
     syncPayUi();
     if (step === 2) {
       pingPayIntent("scan_qr");
+      trackPayEvent("scan_qr");
     }
     if (step === 3 && payProofMode === "upload") {
       showPayUploadUi();
@@ -1800,6 +1814,7 @@
       btn.addEventListener("click", function () {
         selectedPackId = p.id;
         syncPayUi();
+        trackPayEvent("pack");
       });
       packageCardsEl.appendChild(btn);
     });
@@ -2003,6 +2018,9 @@
       };
       paySubmittedAt = Date.now();
       markPayProofHold();
+      trackPayEvent("submitted");
+      clearPayFunnelDepth();
+      hideDiscountOffer();
       payMsg.className = "pay-msg";
       payMsg.textContent = "";
       toast("Screenshot submitted · waiting for approval", "ok");
@@ -2181,19 +2199,27 @@
     }
   }
 
+  function formatSupportMessageText(raw) {
+    var t = String(raw || "");
+    if (/\[DISCOUNT_ASK\]/i.test(t)) {
+      return t.replace(/\[DISCOUNT_ASK\]\s*/i, "").trim();
+    }
+    return t;
+  }
+
   function renderSupportMessages(thread) {
     if (!supportMessagesEl) return;
     const msgs = (thread && thread.messages) || [];
     if (!msgs.length) {
       supportMessagesEl.innerHTML =
-        "<div class='support-empty'>Message admin about payment, unlock, or any doubt.<br/>You can also attach a payment screenshot.</div>";
+        "<div class='support-empty'>Message our team about payment, unlock, discount, or any doubt.<br/>You can also attach a screenshot.</div>";
       return;
     }
     supportMessagesEl.innerHTML = msgs
       .map(function (m) {
-        const who = m.from === "admin" ? "Admin" : "You";
+        const who = m.from === "admin" ? "Team" : "You";
         const cls = m.from === "admin" ? "admin" : "user";
-        const text = escapeHtml(m.text || "");
+        const text = escapeHtml(formatSupportMessageText(m.text || ""));
         const img = m.screenshotUrl
           ? "<a href='" +
             escapeHtml(m.screenshotUrl) +
@@ -2255,17 +2281,39 @@
     if (supportUploadLabel) supportUploadLabel.classList.remove("has-file");
   }
 
-  async function openSupportSheet() {
+  async function openSupportSheet(opts) {
+    var options = opts || {};
     if (!authToken) {
       toast("Login required", "err");
       return;
     }
     closeSidebar();
+    hideDiscountOffer();
     await markSupportPopupSeen();
     if (supportUserIdEl) supportUserIdEl.textContent = displayUserId(currentUser) || "—";
+    var tipEl = document.getElementById("support-tip");
+    if (tipEl) {
+      if (options.fromDiscount) {
+        tipEl.textContent =
+          "Your discount request is below. Type anything else here — pack, budget, problem — team replies in this chat.";
+        tipEl.classList.add("is-highlight");
+      } else {
+        tipEl.textContent =
+          "Chat with our team here. Ask for unlock, payment help, or a discount — type below anytime.";
+        tipEl.classList.remove("is-highlight");
+      }
+    }
     if (supportMsgEl) {
       supportMsgEl.className = "pay-msg";
-      supportMsgEl.textContent = "";
+      supportMsgEl.textContent = options.fromDiscount
+        ? "Request sent · add more below if you want"
+        : "";
+    }
+    if (supportInput) {
+      supportInput.placeholder = options.fromDiscount
+        ? "Add more details for the team…"
+        : "Type your message to the team…";
+      if (options.fromDiscount) supportInput.value = "";
     }
     if (supportSheet) {
       supportSheet.classList.remove("hidden");
@@ -2278,7 +2326,11 @@
       if (!supportSheet || supportSheet.classList.contains("hidden")) return;
       loadSupportThread();
     }, 12000);
-    if (supportInput) supportInput.focus();
+    if (supportInput) {
+      setTimeout(function () {
+        supportInput.focus();
+      }, 200);
+    }
   }
 
   async function sendSupportMessage() {
@@ -2346,7 +2398,22 @@
   }
 
   if (openSupportBtn) {
-    openSupportBtn.addEventListener("click", openSupportSheet);
+    openSupportBtn.addEventListener("click", function () {
+      openSupportSheet();
+    });
+  }
+  var headerSupportBtn = document.getElementById("header-support-btn");
+  if (headerSupportBtn) {
+    headerSupportBtn.addEventListener("click", function () {
+      openSupportSheet();
+    });
+  }
+  var payOpenSupportBtn = document.getElementById("pay-open-support");
+  if (payOpenSupportBtn) {
+    payOpenSupportBtn.addEventListener("click", function () {
+      closePaySheet({ skipOffer: true });
+      openSupportSheet();
+    });
   }
   if (supportCloseBtn) supportCloseBtn.addEventListener("click", closeSupportSheet);
   if (supportBackdrop) supportBackdrop.addEventListener("click", closeSupportSheet);
@@ -3971,6 +4038,9 @@
     if (!billingPanel) return;
     billingPanel.classList.remove("hidden");
     billingPanel.setAttribute("aria-hidden", "false");
+    hideDiscountOffer();
+    payDeepestStep = 1;
+    payFunnelTouched = false;
     var uid = displayUserId(currentUser);
     setUserChip(currentUser);
     if (billingUserEl) {
@@ -3991,6 +4061,7 @@
         payHoursAtWaitStart = remainingHoursNow();
         if (billingPanel) billingPanel.classList.add("pay-proof-hold");
         goPayStep(3);
+        trackPayEvent("ive_paid");
         loadMyPayments().then(function (list) {
           var state = syncPayStatusFromList(list || []);
           if (state === "none" || state === "upload") showPayUploadUi();
@@ -4003,6 +4074,7 @@
     payProofMode = "idle";
     paySubmittedAt = 0;
     goPayStep(1);
+    trackPayEvent("open");
     refreshMe();
     loadBillingInfo().then(function () {
       loadMyPayments().then(function (list) {
@@ -4029,11 +4101,18 @@
     });
   }
 
-  function closePaySheet() {
+  function closePaySheet(opts) {
     if (!billingPanel) return;
+    var options = opts || {};
     // During proof hold, closing is allowed — we reopen on return / next Pay tap
+    var wasOpen = !billingPanel.classList.contains("hidden");
     billingPanel.classList.add("hidden");
     billingPanel.setAttribute("aria-hidden", "true");
+    if (wasOpen && !options.skipOffer) {
+      maybeAbandonPayFunnel(true);
+    } else if (wasOpen && options.skipOffer) {
+      maybeAbandonPayFunnel(false);
+    }
   }
 
   if (hoursBadge) {
@@ -4074,10 +4153,224 @@
     } catch (e) {}
   }
 
+  function discountOfferStorageKey() {
+    var uid = (currentUser && currentUser.userId) || "anon";
+    return "dscOfferShown:" + uid;
+  }
+
+  function discountPendingKey() {
+    var uid = (currentUser && currentUser.userId) || "anon";
+    return "dscOfferPending:" + uid;
+  }
+
+  function payDepthStorageKey() {
+    var uid = (currentUser && currentUser.userId) || "anon";
+    return "payFunnelDepth:" + uid;
+  }
+
+  function persistPayFunnelDepth() {
+    if (!authToken || payDeepestStep < 2) return;
+    try {
+      localStorage.setItem(payDepthStorageKey(), String(payDeepestStep));
+      if (selectedPackId) {
+        localStorage.setItem(
+          "payFunnelPack:" + ((currentUser && currentUser.userId) || "anon"),
+          selectedPackId
+        );
+      }
+    } catch (e) {}
+  }
+
+  function clearPayFunnelDepth() {
+    try {
+      localStorage.removeItem(payDepthStorageKey());
+      localStorage.removeItem(
+        "payFunnelPack:" + ((currentUser && currentUser.userId) || "anon")
+      );
+      localStorage.removeItem(discountPendingKey());
+    } catch (e) {}
+  }
+
+  function storedPayDepth() {
+    try {
+      return Number(localStorage.getItem(payDepthStorageKey()) || 0) || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function markDiscountOfferPending() {
+    try {
+      localStorage.setItem(discountPendingKey(), String(Date.now()));
+    } catch (e) {}
+  }
+
+  function clearDiscountOfferPending() {
+    try {
+      localStorage.removeItem(discountPendingKey());
+    } catch (e) {}
+  }
+
+  function hasDiscountOfferPending() {
+    try {
+      return !!localStorage.getItem(discountPendingKey());
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function trackPayEvent(stage) {
+    if (!authToken || !stage) return;
+    payFunnelTouched = true;
+    try {
+      await fetch("/api/billing/pay-event", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          stage: stage,
+          packageId: selectedPackId || undefined,
+        }),
+      });
+    } catch (e) {}
+  }
+
+  /** Fire-and-forget for app kill / tab close (same keepalive style as pause). */
+  function trackPayEventKeepalive(stage) {
+    if (!authToken || !stage) return;
+    payFunnelTouched = true;
+    try {
+      fetch("/api/billing/pay-event", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          stage: stage,
+          packageId: selectedPackId || undefined,
+        }),
+        keepalive: true,
+      });
+    } catch (e) {}
+  }
+
+  function canShowDiscountOffer() {
+    if (!authToken || !discountOfferEl) return false;
+    if (payProofMode === "waiting" || payProofMode === "success") return false;
+    if (paySubmittedAt) return false;
+    var pending = hasDiscountOfferPending();
+    var deepEnough = payDeepestStep >= 2 || storedPayDepth() >= 2 || pending;
+    if (!deepEnough) return false;
+    // Pending after kill/close always wins once; otherwise respect cooldown
+    if (!pending) {
+      try {
+        var raw = localStorage.getItem(discountOfferStorageKey());
+        if (raw && Date.now() - Number(raw) < 20 * 3600000) return false;
+      } catch (e) {}
+    }
+    return true;
+  }
+
+  function hideDiscountOffer() {
+    if (!discountOfferEl) return;
+    discountOfferEl.classList.add("hidden");
+  }
+
+  function showDiscountOffer() {
+    if (!canShowDiscountOffer()) return false;
+    clearDiscountOfferPending();
+    try {
+      localStorage.setItem(discountOfferStorageKey(), String(Date.now()));
+    } catch (e) {}
+    if (discountOfferEl) discountOfferEl.classList.remove("hidden");
+    return true;
+  }
+
+  /** Show offer on next visit if they killed the app mid-checkout. */
+  function maybeShowPendingDiscountOffer() {
+    if (!hasDiscountOfferPending() && storedPayDepth() < 2) return false;
+    if (payProofMode === "waiting" || payProofMode === "success") return false;
+    if (paySubmittedAt) return false;
+    // Don't fight an open pay sheet
+    if (billingPanel && !billingPanel.classList.contains("hidden")) return false;
+    return showDiscountOffer();
+  }
+
+  async function maybeAbandonPayFunnel(showOffer) {
+    if (payProofMode === "waiting" || payProofMode === "success") return;
+    if (paySubmittedAt) return;
+    var deep = Math.max(payDeepestStep, storedPayDepth());
+    if (!payFunnelTouched && deep < 2) return;
+    if (deep < 2) return;
+    persistPayFunnelDepth();
+    markDiscountOfferPending();
+    await trackPayEvent("abandon");
+    if (showOffer) {
+      setTimeout(function () {
+        showDiscountOffer();
+      }, 280);
+    }
+  }
+
+  /**
+   * App killed / tab closed mid-pay: still record abandon (keepalive).
+   * Popup can't show then — pending flag shows it on next open.
+   */
+  function flushPayAbandonOnLeave() {
+    if (!authToken) return;
+    if (payProofMode === "waiting" || payProofMode === "success") return;
+    if (paySubmittedAt) return;
+    var sheetOpen =
+      billingPanel && !billingPanel.classList.contains("hidden");
+    var deep = Math.max(payDeepestStep, storedPayDepth());
+    if (!sheetOpen && deep < 2 && !payFunnelTouched) return;
+    if (deep < 2 && !sheetOpen) return;
+    if (deep < 2 && sheetOpen && payWizardStep < 2) return;
+    persistPayFunnelDepth();
+    markDiscountOfferPending();
+    trackPayEventKeepalive("abandon");
+  }
+
+  if (discountOfferNoBtn) {
+    discountOfferNoBtn.addEventListener("click", function () {
+      clearDiscountOfferPending();
+      hideDiscountOffer();
+    });
+  }
+  if (discountOfferYesBtn) {
+    discountOfferYesBtn.addEventListener("click", async function () {
+      discountOfferYesBtn.disabled = true;
+      try {
+        const res = await fetch("/api/billing/discount-ask", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ note: "" }),
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        hideDiscountOffer();
+        if (!res.ok) {
+          toast(data.error || "Could not send — try Support", "err");
+          await openSupportSheet({ fromDiscount: true });
+          return;
+        }
+        toast("Opened Support — add more if you want", "ok");
+        await openSupportSheet({ fromDiscount: true });
+      } catch (e) {
+        hideDiscountOffer();
+        toast("Network error — open Support", "err");
+        try {
+          await openSupportSheet({ fromDiscount: true });
+        } catch (e2) {}
+      } finally {
+        discountOfferYesBtn.disabled = false;
+      }
+    });
+  }
+
   if (payGoto2) {
     payGoto2.addEventListener("click", function () {
       goPayStep(2);
       pingPayIntent("choose_pack");
+      trackPayEvent("pack");
     });
   }
   if (payGoto3) {
@@ -4543,6 +4836,7 @@
           }
         }
         updateSetupStatus();
+        setTimeout(maybeShowPendingDiscountOffer, 700);
         return;
       }
     }

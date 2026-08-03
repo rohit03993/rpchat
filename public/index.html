@@ -228,6 +228,9 @@
         <div class="header-actions">
           <button type="button" id="user-id-chip" class="user-chip" title="Tap to copy User ID" aria-label="Your User ID"></button>
           <span id="hours-badge" class="hours-badge" title="Time left">--:--</span>
+          <button type="button" id="header-support-btn" class="reset-btn support-header-btn" title="Message Support">
+            Help
+          </button>
           <button type="button" id="billing-toggle" class="reset-btn">Pay</button>
           <button type="button" id="logout-btn" class="reset-btn logout-btn">Logout</button>
         </div>
@@ -255,6 +258,24 @@
         <div class="admin-notice-actions">
           <button type="button" id="admin-notice-got-it" class="btn-outline">Got it</button>
           <button type="button" id="admin-notice-reply" class="auth-btn">Reply in Support</button>
+        </div>
+      </div>
+
+      <div
+        id="discount-offer"
+        class="admin-notice discount-offer hidden"
+        role="dialog"
+        aria-labelledby="discount-offer-title"
+        aria-modal="true"
+      >
+        <p class="admin-notice-kicker">Special offer</p>
+        <p id="discount-offer-title" class="admin-notice-title">Want a discount?</p>
+        <p class="admin-notice-text">
+          Looks like you checked payment but didn’t finish. We’ll open Support so you can ask for a discount and type any extra details for the team.
+        </p>
+        <div class="admin-notice-actions">
+          <button type="button" id="discount-offer-no" class="btn-outline">Not now</button>
+          <button type="button" id="discount-offer-yes" class="auth-btn">Open Support</button>
         </div>
       </div>
 
@@ -593,6 +614,9 @@
               <button type="button" id="pay-back-1" class="btn-outline pay-nav-btn">← Pack</button>
               <button type="button" id="pay-goto-3" class="auth-btn pay-nav-btn">I’ve paid →</button>
             </div>
+            <button type="button" id="pay-open-support" class="pay-support-link">
+              Need help or discount? Message Support →
+            </button>
           </section>
 
           <!-- STEP 3 -->
@@ -689,6 +713,9 @@
           </div>
           <button type="button" id="support-close-btn" class="chip-btn">Close</button>
         </div>
+        <div id="support-tip" class="support-tip" role="status">
+          Chat with our team here. Ask for unlock, payment help, or a discount — type below anytime.
+        </div>
         <div id="support-messages" class="support-messages" aria-live="polite"></div>
         <div class="support-compose">
           <label class="pay-upload support-upload" id="support-upload-label">
@@ -701,7 +728,7 @@
               id="support-input"
               type="text"
               maxlength="2000"
-              placeholder="Message admin…"
+              placeholder="Type your message to the team…"
               autocomplete="off"
             />
             <button type="button" id="support-send-btn" class="auth-btn">Send</button>
