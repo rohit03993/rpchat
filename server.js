@@ -20,6 +20,7 @@ const {
   wantsLongReply,
   looksIncompleteReply,
   looksLikeStockOpener,
+  looksLikeIrrelevantBubbles,
   looksLikeOffTopicPivot,
   looksLikeSoftWashDirty,
   looksLikeBrokenGuestCall,
@@ -34,6 +35,7 @@ const {
   looksLikeInventedClothing,
   looksLikeBriefIgnore,
   looksLikeBriefDump,
+  looksLikeInventedCrowd,
   looksLikePaceTooFast,
   looksLikeReplyEcho,
   looksLikeGarbledOutput,
@@ -293,6 +295,26 @@ function extractText(message) {
       .trim();
   }
   return (message.reasoning || message.refusal || "").toString().trim();
+}
+
+/** Hide raw Venice/provider errors from the chat UI. */
+function friendlyChatError(raw, fallback) {
+  const msg = String(raw || "").trim();
+  const low = msg.toLowerCase();
+  if (
+    /inference\s+processing\s+failed|timeout|overloaded|rate\s*limit|capacity|503|502|500|upstream|provider/i.test(
+      low
+    )
+  ) {
+    return (
+      fallback ||
+      "Reply delayed — tap send again in a few seconds."
+    );
+  }
+  if (!msg || msg.length > 160) {
+    return fallback || "Could not get a reply — try again.";
+  }
+  return msg;
 }
 
 async function callVenice(model, messages, options = {}) {
@@ -1241,7 +1263,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         (stillResisting
           ? `RESISTANCE ACTIVE: dirty talk OK, but DENY body-yes — no "Theek hai aaja", panty off, or sex start. Use shy deny / galat hai beta / make them beg. Still allow 1–2 short *feature/mann* bubbles. `
           : `Match heat; short WhatsApp lines with feature/mann *bubbles* when flirty/dirty. `) +
-        `ACTIONS from SCENE CARD: soft=none; light=1–2 short *feature + mann ki baat* then dialogue; full=more for long/peak. Never 3+ novel *blocks*. Never stock chehra-laal/pallu every turn. ` +
+        `ACTIONS from SCENE CARD: soft/clarify=none (ZERO bubbles). flirty/dirty=light ONLY if a real reaction helps — else plain talk. Never stock jhatka/shocked/chehra-laal. Never 3+ novel *blocks*. ` +
         (String(charOverrides.botRole || "").toLowerCase().match(/^(mom|mummy|maa|mother)$/)
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
           : "");
@@ -1283,7 +1305,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         if (!retry.response.ok) {
           const message =
             data?.error?.message || data?.error || "Maa agent chat failed";
-          return res.status(response.status).json({ error: String(message) });
+          return res.status(response.status).json({
+            error: friendlyChatError(message),
+          });
         }
         data = retry.data;
       }
@@ -1330,6 +1354,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         reply &&
         (looksLikeOffTopicPivot(reply, lastUser) ||
           looksLikeStockOpener(reply) ||
+          looksLikeIrrelevantBubbles(reply, lastUser) ||
           looksLikeStickyBreak(reply, stickyFacts) ||
           looksLikeAddressSpam(reply, lastBotMsg) ||
           looksLikeGaaliSpam(reply, lastBotMsg, lastUser) ||
@@ -1345,6 +1370,11 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             extractSetupBrief(setupText)
           ) ||
           looksLikeBriefIgnore(reply, extractSetupBrief(setupText)) ||
+          looksLikeInventedCrowd(
+            reply,
+            lastUser,
+            extractSetupBrief(setupText)
+          ) ||
           looksLikePaceTooFast(reply, lastUser, setupText) ||
           looksLikeReplyEcho(reply, lastBotMsg) ||
           (setupResistanceLevel(setupText) === "easy" &&
@@ -1366,6 +1396,11 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         const stanceHint = looksLikeResistThenApprove(reply)
           ? " STANCE FIX: Draft denies THEN soft-approves in ONE bubble — rewrite to ONE stance only. Either keep resisting that ask (short scold + tiny hook, NO 'koshish/agar chahta/sabar') OR lean in with sharam (NO fresh 'mat soch/mummy hoon/gandi soch' open). Short WhatsApp 1–3 lines. NEVER half-deny + soft-yes."
           : "";
+        const bubbleHint =
+          looksLikeIrrelevantBubbles(reply, lastUser) ||
+          looksLikeStockOpener(reply)
+            ? " BUBBLE FIX: Soft/clarify = ZERO *action* / *(mann mein)* bubbles. Strip jhatka / shocked / itni himmat / empty theatre. If nothing real to show, plain spoken WhatsApp only."
+            : "";
         const nakhreHint = looksLikeNakhreSpam(reply, lastUser, hist)
           ? " NAKHRE FIX: Too much coy deny for this beat — soft/casual = warm natural chat; mid-heat = erotic continuity without 'arey pagal abhi nahi' every line."
           : "";
@@ -1421,12 +1456,14 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 easyDirtyHint +
                 guestCallHint +
                 stanceHint +
+                bubbleHint +
                 nakhreHint +
                 inventHint +
                 povHint +
                 saasTuHint +
                 clothHint +
                 briefHint +
+                crowdHint +
                 paceHint +
                 echoHint +
                 ` Language: ${langStyle}. Short fresh WhatsApp. Output ONLY the reply.\n\n` +
@@ -1659,7 +1696,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             data?.error?.message ||
             data?.error ||
             "Venice character chat failed";
-          return res.status(response.status).json({ error: String(message) });
+          return res.status(response.status).json({ error: friendlyChatError(message) });
         }
         data = retry.data;
       }
@@ -1733,7 +1770,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       if (!retry.response.ok) {
         const message =
           data?.error?.message || data?.error || "Venice request failed";
-        return res.status(response.status).json({ error: String(message) });
+        return res.status(response.status).json({ error: friendlyChatError(message) });
       }
       data = retry.data;
     }
