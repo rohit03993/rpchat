@@ -1289,7 +1289,7 @@
   }
 
   let payCatalog = { packages: [], payment: {} };
-  let selectedPackId = "5h";
+  let selectedPackId = "";
   let payPollId = null;
   let payIntentRenewId = null;
   let payWaitUploadTimer = null;
