@@ -31,6 +31,7 @@ const {
   looksLikeInventedLecture,
   looksLikePovSwap,
   looksLikeSaasTuToDamad,
+  looksLikeInventedClothing,
   looksLikeGarbledOutput,
   looksLikeHinglishLeak,
   scrubGarbledTail,
@@ -1267,6 +1268,12 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeInventedLecture(reply, lastUser) ||
           looksLikePovSwap(reply, charOverrides) ||
           looksLikeSaasTuToDamad(reply, charOverrides) ||
+          looksLikeInventedClothing(
+            reply,
+            stickyFacts,
+            hist,
+            extractSetupBrief(setupText)
+          ) ||
           (setupResistanceLevel(setupText) === "easy" &&
             looksLikeSoftWashDirty(reply, lastUser)) ||
           looksLikeBrokenGuestCall(reply, lastUser))
@@ -1298,6 +1305,14 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         const saasTuHint = looksLikeSaasTuToDamad(reply, charOverrides)
           ? " SAAS ADDRESS FIX: Never call damad/jamai 'tu/tum/tera'. Use aap / damad ji / bacha / mehman (if brief)."
           : "";
+        const clothHint = looksLikeInventedClothing(
+          reply,
+          stickyFacts,
+          hist,
+          extractSetupBrief(setupText)
+        )
+          ? " CLOTHES FIX: Strip invented saree/blouse/pallu/buttons — clothes ONLY if sticky/brief/chat already set them. Keep *(mann mein)* + feeling only."
+          : "";
         const stayFix = await callVenice(
           voiceModel,
           [
@@ -1306,15 +1321,16 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               role: "user",
               content:
                 "BEAT FIX (all roles): React FIRST to the user's latest line/action. " +
-                "If flirty/dirty: keep or add 1–2 short *feature / mann ki baat* bubbles, then spoken dialogue. Soft: plain chat OK. " +
+                "If flirty/dirty: 1–2 short *mann/feeling* bubbles tied to THIS ask — clothes ONLY if sticky. Soft: plain chat OK. " +
                 "Do NOT invent kitchen/khana/kamra/padhai/weather if they asked hug/kiss/dirty/body/fantasy. " +
+                "Do NOT invent saree/blouse/pallu/buttons with no clothing context. " +
                 "Do NOT open with stock aankhein-phat / chehra-laal / nazrein-jhuka / pallu / jhatka / peeche-hat / 'Main teri X hoon' essay. " +
-                "ONE stance only — NEVER resist then soft-approve in the same bubble (no 'galat/mat soch' + 'koshish/agar chahta/sabar'). " +
+                "ONE stance only — NEVER resist then soft-approve (no 'pagal/mat soch' + 'lekin theek/agar chahta/chal/jayenge'). " +
                 "Do NOT nakhre on every talk — only on new early dirty push. " +
                 "Do NOT change room/clothes/props already set." +
                 " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
-                " Do NOT strip healthy 1–2 light *feature/mann* bubbles — only trim 3+ novel *action* spam." +
+                " Do NOT strip healthy 1–2 light *mann/feeling* bubbles — only trim invented wardrobe or 3+ novel spam." +
                 stickyHint +
                 easyDirtyHint +
                 guestCallHint +
@@ -1323,6 +1339,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 inventHint +
                 povHint +
                 saasTuHint +
+                clothHint +
                 ` Language: ${langStyle}. Short fresh WhatsApp. Output ONLY the reply.\n\n` +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
