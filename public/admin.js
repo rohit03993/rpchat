@@ -1405,9 +1405,18 @@
           "<button type='button' class='btn-ghost btn-sm' data-add-hours5='" +
           uid +
           "'>+5h</button>" +
-          "<button type='button' class='btn-danger btn-sm' title='Set time to zero' data-clear-hours='" +
+          "<button type='button' class='btn-ghost btn-sm' title='Remove 30 minutes' data-sub-hours-m='" +
           uid +
-          "'>Clear</button>" +
+          "'>−30m</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Remove 1 hour' data-sub-hours='" +
+          uid +
+          "'>−1h</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Set exact hours left' data-set-hours='" +
+          uid +
+          "'>Set…</button>" +
+          "<button type='button' class='btn-danger btn-sm' title='Reset time to zero' data-clear-hours='" +
+          uid +
+          "'>Reset 0</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-reset-pin='" +
           uid +
           "'>PIN</button>" +
@@ -1620,7 +1629,11 @@
       toast(data.error || "Failed", "err");
       return;
     }
-    toast("Hours updated", "ok");
+    const left =
+      data.user && data.user.hoursBalance != null
+        ? Number(data.user.hoursBalance).toFixed(2) + "h left"
+        : "updated";
+    toast("Hours " + left, "ok");
     await refreshAll();
   }
 
@@ -1644,7 +1657,7 @@
 
     const t = e.target.closest
       ? e.target.closest(
-          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
+          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
         )
       : e.target;
     if (!t) return;
@@ -1689,13 +1702,39 @@
     if (t.getAttribute("data-add-hours5")) {
       adjustHours(t.getAttribute("data-add-hours5"), 5, "add");
     }
+    if (t.getAttribute("data-sub-hours-m")) {
+      adjustHours(t.getAttribute("data-sub-hours-m"), -0.5, "add");
+    }
+    if (t.getAttribute("data-sub-hours")) {
+      adjustHours(t.getAttribute("data-sub-hours"), -1, "add");
+    }
+    if (t.getAttribute("data-set-hours")) {
+      const id = t.getAttribute("data-set-hours");
+      const card = t.closest(".user-card");
+      const current = card
+        ? Number(card.getAttribute("data-hours") || 0)
+        : 0;
+      const raw = prompt(
+        "Set hours left for " + id + " (e.g. 0.5 = 30 min, 2 = 2 hours).\nCurrent ≈ " +
+          current.toFixed(2) +
+          "h",
+        String(Math.max(0, Math.round(current * 100) / 100))
+      );
+      if (raw == null) return;
+      const val = Number(String(raw).trim());
+      if (!Number.isFinite(val) || val < 0) {
+        toast("Enter a number ≥ 0", "err");
+        return;
+      }
+      adjustHours(id, val, "set");
+    }
     if (t.getAttribute("data-clear-hours")) {
       const id = t.getAttribute("data-clear-hours");
       if (
         !confirm(
-          "Clear time for " +
+          "Reset time to 0 for " +
             id +
-            "?\n\nSets hours to 0 and ends their live chat (copy kept in admin archive for 5 days)."
+            "?\n\nEnds their live session (chat copy kept in admin archive)."
         )
       ) {
         return;
