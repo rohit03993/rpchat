@@ -32,6 +32,9 @@ const {
   looksLikePovSwap,
   looksLikeSaasTuToDamad,
   looksLikeInventedClothing,
+  looksLikeBriefIgnore,
+  looksLikePaceTooFast,
+  looksLikeReplyEcho,
   looksLikeGarbledOutput,
   looksLikeHinglishLeak,
   scrubGarbledTail,
@@ -40,6 +43,7 @@ const {
   parseSetupMeta,
   looksLikeEarlySexYes,
   setupResistanceLevel,
+  setupPaceLevel,
   strictStillResisting,
 } = require("./lib/maaAgent");
 const { roleIs } = require("./lib/roles");
@@ -1013,6 +1017,35 @@ app.post("/api/chat/opener", requireUser, requireHours, async (req, res) => {
       reply = name + ": " + reply.replace(/^[^:]{0,40}:\s*/, "");
     }
 
+    const brief = extractSetupBrief(setupText);
+    if (reply && brief && looksLikeBriefIgnore(reply, brief)) {
+      const fix = await callVenice(CLEAR_MODEL, [
+        ...payload,
+        { role: "assistant", content: reply },
+        {
+          role: "user",
+          content:
+            `SCENE FIX: Your opener ignored the USER RP BRIEF. Rewrite ONLY the opening line INSIDE this scene: "${brief}". ` +
+            `Mention the place/situation. FORBIDDEN: jaldi ghar aa / kitchen / padhai hello. ` +
+            `Stay as ${name}. Short WhatsApp 1–3 lines. Format: ${name}: ...`,
+        },
+      ], {
+        temperature: 0.55,
+        max_tokens: 180,
+      });
+      if (fix.response.ok) {
+        const fixed = extractText(fix.data?.choices?.[0]?.message);
+        if (fixed && fixed.trim().length > 8) {
+          reply = fixMaaGenderSlips(fixed, charOverrides)
+            .replace(/^["'\s]+|["'\s]+$/g, "")
+            .trim();
+          if (!new RegExp("^" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*:", "i").test(reply)) {
+            reply = name + ": " + reply.replace(/^[^:]{0,40}:\s*/, "");
+          }
+        }
+      }
+    }
+
     if (!reply || reply.length < 8) {
       return res.json({
         ok: false,
@@ -1274,6 +1307,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             hist,
             extractSetupBrief(setupText)
           ) ||
+          looksLikeBriefIgnore(reply, extractSetupBrief(setupText)) ||
+          looksLikePaceTooFast(reply, lastUser, setupText) ||
+          looksLikeReplyEcho(reply, lastBotMsg) ||
           (setupResistanceLevel(setupText) === "easy" &&
             looksLikeSoftWashDirty(reply, lastUser)) ||
           looksLikeBrokenGuestCall(reply, lastUser))
@@ -1313,6 +1349,18 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         )
           ? " CLOTHES FIX: Strip invented saree/blouse/pallu/buttons — clothes ONLY if sticky/brief/chat already set them. Keep *(mann mein)* + feeling only."
           : "";
+        const briefHint = looksLikeBriefIgnore(
+          reply,
+          extractSetupBrief(setupText)
+        )
+          ? ` SCENE BRIEF FIX: Stay inside USER RP BRIEF "${extractSetupBrief(setupText)}". Do NOT invent jaldi ghar aa / kitchen / padhai when brief set another place.`
+          : "";
+        const paceHint = looksLikePaceTooFast(reply, lastUser, setupText)
+          ? ` PACE FIX (${setupPaceLevel(setupText)}): User chose Slow — soft/casual lines stay warm soft. NEVER sexualize "maje/acha hu". No chup-kyun / hiding / bechaini interrogation after they already answered. Match their softness.`
+          : "";
+        const echoHint = looksLikeReplyEcho(reply, lastBotMsg)
+          ? " ECHO FIX: This draft repeats your last reply (same deny / same chup-kyun / same 'khud dekh lungi'). Write a FRESH next beat — new words, move the scene one small step, do not loop."
+          : "";
         const stayFix = await callVenice(
           voiceModel,
           [
@@ -1331,6 +1379,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
                 " Do NOT strip healthy 1–2 light *mann/feeling* bubbles — only trim invented wardrobe or 3+ novel spam." +
+                " OBEY PACE LOCK + VIBE LOCK from setup — Slow = soft replies to soft lines; never outpace." +
                 stickyHint +
                 easyDirtyHint +
                 guestCallHint +
@@ -1340,6 +1389,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 povHint +
                 saasTuHint +
                 clothHint +
+                briefHint +
+                paceHint +
+                echoHint +
                 ` Language: ${langStyle}. Short fresh WhatsApp. Output ONLY the reply.\n\n` +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },

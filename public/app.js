@@ -3240,6 +3240,21 @@
       ? "USER RP BRIEF (HARD SCENE LOCK for early chat — place, mood, pace, what to do; OBEY): " +
         brief
       : "USER RP BRIEF: none — ask lightly in chat where you are; do NOT assume bedroom-at-night.";
+    const paceLock =
+      /faster|dirty faster/i.test(pace)
+        ? "fast"
+        : /match/i.test(pace)
+          ? "match"
+          : "slow";
+    const vibeLock = String(vibe || "shy and flirty")
+      .toLowerCase()
+      .includes("already heated")
+      ? "already heated"
+      : String(vibe || "")
+            .toLowerCase()
+            .includes("romantic")
+        ? "soft romantic"
+        : "shy and flirty";
     return (
       "Character name: " +
       roles.characterName +
@@ -3263,6 +3278,10 @@
       vibe +
       ". Pace: " +
       pace +
+      ". PACE LOCK: " +
+      paceLock +
+      ". VIBE LOCK: " +
+      vibeLock +
       ". " +
       resistanceLine +
       " All adults 18+. " +
@@ -3383,17 +3402,27 @@
             name +
             ": Damad ji… " +
             clip +
-            ". Main yahan hu — bol, ab kya? 💕"
+            ". Main yahi scene mein hu — boliye, ab kya? 💕"
           );
         }
-        return name + ": Bahu… " + clip + ". Main yahan hu — bol. 💕";
+        return name + ": Bahu… " + clip + ". Main yahi scene mein hu — bol. 💕";
       }
       if (roleIsClient(bot, "sasur")) {
         return (
           name +
           ": Bahu… " +
           clip +
-          ". Papa ji yahan hai — bol, ab kya? 💕"
+          ". Papa ji yahi scene mein — bol, ab kya? 💕"
+        );
+      }
+      if (roleIsClient(bot, "mom", "mummy", "maa", "mother")) {
+        return (
+          name +
+          ": " +
+          you +
+          "… " +
+          clip +
+          ". Main yahi hu is scene mein — bol, ab kya karna hai? 💕"
         );
       }
       return (
@@ -3402,7 +3431,7 @@
         you +
         "… " +
         clip +
-        ". Main yahan hu — bol. 💕"
+        ". Main yahi scene mein hu — bol. 💕"
       );
     }
 
