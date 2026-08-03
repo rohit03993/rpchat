@@ -2533,6 +2533,7 @@
       sali: 1,
       bahu: 1,
       beti: 1,
+      daughter: 1,
       bhanji: 1,
       poti: 1,
       bhatiji: 1,
@@ -2660,6 +2661,8 @@
   const ROLE_SMART = {
     mummy: { userRole: "beta", name: "Maa", hint: "Maa↔beta · private 1-on-1 first; family only if you ask." },
     dad: { userRole: "beti", name: "Papa", hint: "Papa↔beti · correct address + guests." },
+    son: { userRole: "mummy", name: "Beta", hint: "Beta/Son ↔ Mummy (or Papa) · young desi beta voice." },
+    daughter: { userRole: "mummy", name: "Beti", hint: "Beti/Daughter ↔ Mummy (or Papa) · young desi beti voice." },
     mausi: { userRole: "beta", name: "Mausi", hint: "Mausi ↔ beta (F↔M)." },
     mausa: { userRole: "beti", name: "Mausa", hint: "Mausa ↔ beti (M↔F)." },
     mama: { userRole: "bhanji", name: "Mama", hint: "Mama ↔ bhanji (M↔F)." },
@@ -2745,6 +2748,8 @@
   const WIZARD_ROLE_ORDER = [
     "mummy",
     "dad",
+    "son",
+    "daughter",
     "saas",
     "sasur",
     "bhabhi",
@@ -2775,6 +2780,16 @@
     dad: [
       "Ghar pe soft baat",
       "Padhai ke baad private",
+      "Dirty only jab main push karun",
+    ],
+    son: [
+      "Ghar pe Mummy se soft baat",
+      "Raat room soft",
+      "Dirty only jab main push karun",
+    ],
+    daughter: [
+      "Ghar pe Mummy se soft baat",
+      "Raat room soft",
       "Dirty only jab main push karun",
     ],
     saas: [
@@ -2819,6 +2834,8 @@
   const NAME_IDEAS = {
     mummy: ["Maa", "Neetu", "Sunita", "Poonam"],
     dad: ["Papa", "Rajesh", "Suresh"],
+    son: ["Beta", "Aryan", "Rohan", "Kabir"],
+    daughter: ["Beti", "Ananya", "Riya", "Sneha"],
     saas: ["Saas", "Kamla", "Sunita"],
     sasur: ["Sasur", "Ramesh", "Omprakash"],
     bhabhi: ["Bhabhi", "Priya", "Anjali"],
@@ -2860,6 +2877,8 @@
     if (ROLE_SMART[key] && ROLE_SMART[key].name) {
       if (key === "mummy") return "Mummy / Maa";
       if (key === "dad") return "Papa / Dad";
+      if (key === "son") return "Beta / Son";
+      if (key === "daughter") return "Beti / Daughter";
       if (key === "sister") return "Didi / Bahan";
       if (key === "girlfriend") return "Girlfriend";
       if (key === "custom") return "Custom…";
@@ -3310,6 +3329,14 @@
       beta: "beta",
       son: "beta",
       beti: "beti",
+      daughter: "beti",
+      mummy: "Mummy",
+      maa: "Mummy",
+      mom: "Mummy",
+      mother: "Mummy",
+      dad: "Papa",
+      papa: "Papa",
+      father: "Papa",
       bhatija: "bhatija",
       bhanja: "bhanja",
       bhanji: "bhanji",
@@ -3394,6 +3421,22 @@
         ": Hello " +
         you +
         "... Mummy yahan hai. Bol, kya haal hai? 💕"
+      );
+    }
+    if (roleIsClient(bot, "son", "beta")) {
+      return (
+        name +
+        ": Hello " +
+        you +
+        "... Beta yahan hai. Bol, kya haal hai? 💕"
+      );
+    }
+    if (roleIsClient(bot, "daughter", "beti")) {
+      return (
+        name +
+        ": Hello " +
+        you +
+        "... Beti yahan hai. Bol, kya haal hai? 💕"
       );
     }
     if (roleIsClient(bot, "sasur")) {
