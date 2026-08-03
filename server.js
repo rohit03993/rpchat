@@ -28,6 +28,8 @@ const {
   looksLikeGaaliSpam,
   looksLikeResistThenApprove,
   looksLikeNakhreSpam,
+  looksLikeInventedLecture,
+  looksLikePovSwap,
   looksLikeGarbledOutput,
   looksLikeHinglishLeak,
   scrubGarbledTail,
@@ -1105,7 +1107,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               : `Mirror heat. Do not jump ahead of user.\n`) +
             `MUST_ANSWER must react to the latest user line FIRST — never ignore hug/kiss/dirty ask for kitchen/padhai/weather.\n` +
             `If user answered your previous question, MUST_ANSWER = react to that answer — NEVER re-ask "dimaag/soch/kaisa laga".\n` +
-            `Default LENGTH=short and ACTIONS=none unless user asked for long/story/listen/guest.\n\n` +
+            `Default LENGTH=short. Soft → ACTIONS=none. Flirty/dirty/rough → ACTIONS=light (feature + mann *bubbles*). Full only for long/story/guest.\n\n` +
             `Write the SCENE CARD now.`,
         },
       ];
@@ -1165,9 +1167,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         `Never say you hooked up with "teri nani/mummy" as a third person. Never use opposite-gender grammar on yourself. ` +
         `USER_HEAT=${userHeat}. ` +
         (stillResisting
-          ? `RESISTANCE ACTIVE: dirty talk OK, but DENY body-yes — no "Theek hai aaja", panty off, or sex start. Use shy deny / galat hai beta / make them beg. `
-          : `Match heat; short WhatsApp lines. `) +
-        `Prefer short WhatsApp lines. No *action* spam unless SCENE CARD ACTIONS says light/full. ` +
+          ? `RESISTANCE ACTIVE: dirty talk OK, but DENY body-yes — no "Theek hai aaja", panty off, or sex start. Use shy deny / galat hai beta / make them beg. Still allow 1–2 short *feature/mann* bubbles. `
+          : `Match heat; short WhatsApp lines with feature/mann *bubbles* when flirty/dirty. `) +
+        `ACTIONS from SCENE CARD: soft=none; light=1–2 short *feature + mann ki baat* then dialogue; full=more for long/peak. Never 3+ novel *blocks*. Never stock chehra-laal/pallu every turn. ` +
         (String(charOverrides.botRole || "").toLowerCase().match(/^(mom|mummy|maa|mother)$/)
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
           : "");
@@ -1261,6 +1263,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeGaaliSpam(reply, lastBotMsg, lastUser) ||
           looksLikeResistThenApprove(reply) ||
           looksLikeNakhreSpam(reply, lastUser, hist) ||
+          looksLikeInventedLecture(reply, lastUser) ||
+          looksLikePovSwap(reply, charOverrides) ||
           (setupResistanceLevel(setupText) === "easy" &&
             looksLikeSoftWashDirty(reply, lastUser)) ||
           looksLikeBrokenGuestCall(reply, lastUser))
@@ -1278,10 +1282,16 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           ? " GUEST-CALL FIX: For each named man write labeled dialogues. Husband=pati ji (Papa:). Nana=mere Papa NEVER pati ji; Nana male verbs + calls you beti. Dada=Papa ji. If he asked ek bed/lund patao: filthy seduction lines not soft baithenge/zaroorat."
           : "";
         const stanceHint = looksLikeResistThenApprove(reply)
-          ? " STANCE FIX: Draft denies THEN approves in ONE bubble — rewrite to ONE stance only (either keep resisting that new ask OR continue/approve with sharam). NEVER 'galat hai… theek hai kar lo'."
+          ? " STANCE FIX: Draft denies THEN soft-approves in ONE bubble — rewrite to ONE stance only. Either keep resisting that ask (short scold + tiny hook, NO 'koshish/agar chahta/sabar') OR lean in with sharam (NO fresh 'mat soch/mummy hoon/gandi soch' open). Short WhatsApp 1–3 lines. NEVER half-deny + soft-yes."
           : "";
         const nakhreHint = looksLikeNakhreSpam(reply, lastUser, hist)
           ? " NAKHRE FIX: Too much coy deny for this beat — soft/casual = warm natural chat; mid-heat = erotic continuity without 'arey pagal abhi nahi' every line."
+          : "";
+        const inventHint = looksLikeInventedLecture(reply, lastUser)
+          ? " INVENT FIX: Delete invented lectures (English-English mat kar / Hindi mein baat / kisne bataya / hotel moralizing). Answer ONLY what user just asked. Stay on USER RP BRIEF scene."
+          : "";
+        const povHint = looksLikePovSwap(reply, charOverrides)
+          ? ` POV FIX: You are ${charOverrides.botRole || "the AI role"} talking TO the user (${charOverrides.userRole || "user"}). NEVER speak as the user or say "Haan Mummy, boliye". Saas speaks as Mummy ji TO damad ji.`
           : "";
         const stayFix = await callVenice(
           voiceModel,
@@ -1291,19 +1301,22 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               role: "user",
               content:
                 "BEAT FIX (all roles): React FIRST to the user's latest line/action. " +
-                "Dialogue-first WhatsApp — strip *action* novel spam (at most one short *action* or none). " +
+                "If flirty/dirty: keep or add 1–2 short *feature / mann ki baat* bubbles, then spoken dialogue. Soft: plain chat OK. " +
                 "Do NOT invent kitchen/khana/kamra/padhai/weather if they asked hug/kiss/dirty/body/fantasy. " +
                 "Do NOT open with stock aankhein-phat / chehra-laal / nazrein-jhuka / pallu / jhatka / peeche-hat / 'Main teri X hoon' essay. " +
-                "ONE stance only — NEVER resist then approve in the same bubble (no 'galat/abhi nahi' + 'theek hai/chalo kar lo'). " +
+                "ONE stance only — NEVER resist then soft-approve in the same bubble (no 'galat/mat soch' + 'koshish/agar chahta/sabar'). " +
                 "Do NOT nakhre on every talk — only on new early dirty push. " +
                 "Do NOT change room/clothes/props already set." +
                 " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
+                " Do NOT strip healthy 1–2 light *feature/mann* bubbles — only trim 3+ novel *action* spam." +
                 stickyHint +
                 easyDirtyHint +
                 guestCallHint +
                 stanceHint +
                 nakhreHint +
+                inventHint +
+                povHint +
                 ` Language: ${langStyle}. Short fresh WhatsApp. Output ONLY the reply.\n\n` +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
@@ -1421,8 +1434,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               content:
                 `Keep reaction to what user said. ${genderHint}\n` +
                 (wantLong
-                  ? "Keep FULL phone dialogue — do not shorten.\n"
-                  : "Keep SHORT WhatsApp style — do not pad with extra *actions* or long paragraphs.\n") +
+                  ? "Keep FULL phone dialogue — do not shorten. Keep existing *feature/mann* bubbles.\n"
+                  : "Keep SHORT WhatsApp style — keep 1–2 existing *feature/mann* bubbles; do not pad to novel *action* spam or long paragraphs.\n") +
                 (stickyFacts.place || stickyFacts.clothing
                   ? `STICKY FACTS — keep unless user changed them: place=${stickyFacts.place || "n/a"}; clothes/props=${stickyFacts.clothing || "n/a"}; heat=${stickyFacts.heatStage || "n/a"}.\n`
                   : "") +
