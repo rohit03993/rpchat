@@ -30,6 +30,7 @@ const {
   looksLikeNakhreSpam,
   looksLikeInventedLecture,
   looksLikePovSwap,
+  looksLikeSaasTuToDamad,
   looksLikeGarbledOutput,
   looksLikeHinglishLeak,
   scrubGarbledTail,
@@ -1265,6 +1266,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeNakhreSpam(reply, lastUser, hist) ||
           looksLikeInventedLecture(reply, lastUser) ||
           looksLikePovSwap(reply, charOverrides) ||
+          looksLikeSaasTuToDamad(reply, charOverrides) ||
           (setupResistanceLevel(setupText) === "easy" &&
             looksLikeSoftWashDirty(reply, lastUser)) ||
           looksLikeBrokenGuestCall(reply, lastUser))
@@ -1288,10 +1290,13 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           ? " NAKHRE FIX: Too much coy deny for this beat — soft/casual = warm natural chat; mid-heat = erotic continuity without 'arey pagal abhi nahi' every line."
           : "";
         const inventHint = looksLikeInventedLecture(reply, lastUser)
-          ? " INVENT FIX: Delete invented lectures (English-English mat kar / Hindi mein baat / kisne bataya / hotel moralizing). Answer ONLY what user just asked. Stay on USER RP BRIEF scene."
+          ? " INVENT FIX (ALL roles): Delete invented lectures (English-English mat kar / Hindi mein baat / kisne bataya / hotel moralizing). Answer ONLY what user just asked. Stay on USER RP BRIEF scene."
           : "";
         const povHint = looksLikePovSwap(reply, charOverrides)
-          ? ` POV FIX: You are ${charOverrides.botRole || "the AI role"} talking TO the user (${charOverrides.userRole || "user"}). NEVER speak as the user or say "Haan Mummy, boliye". Saas speaks as Mummy ji TO damad ji.`
+          ? ` POV FIX (ALL roles): You are ${charOverrides.botRole || "the AI role"} talking TO the user (${charOverrides.userRole || "user"}). NEVER speak as the user or say "Haan ${charOverrides.botRole || "role"}, boliye".`
+          : "";
+        const saasTuHint = looksLikeSaasTuToDamad(reply, charOverrides)
+          ? " SAAS ADDRESS FIX: Never call damad/jamai 'tu/tum/tera'. Use aap / damad ji / bacha / mehman (if brief)."
           : "";
         const stayFix = await callVenice(
           voiceModel,
@@ -1317,6 +1322,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 nakhreHint +
                 inventHint +
                 povHint +
+                saasTuHint +
                 ` Language: ${langStyle}. Short fresh WhatsApp. Output ONLY the reply.\n\n` +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
