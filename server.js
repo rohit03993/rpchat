@@ -28,6 +28,9 @@ const {
   looksLikeGaaliSpam,
   looksLikeResistThenApprove,
   looksLikeNakhreSpam,
+  looksLikeGarbledOutput,
+  looksLikeHinglishLeak,
+  scrubGarbledTail,
   extractStickySceneFacts,
   extractSetupBrief,
   parseSetupMeta,
@@ -1141,14 +1144,18 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
 
       // --- Step 2: Voice ---
       const wantsHinglish = lang !== "english";
+      const langStyle = wantsHinglish
+        ? "Easy Hinglish WhatsApp"
+        : "clear natural English WhatsApp (NO Hinglish/Hindi words)";
       const wantLong = wantsLongReply(lastUser, sceneCard);
       const tokenBudget = replyTokenBudget(lastUser, sceneCard);
-      const voiceModel = wantsHinglish ? CLEAR_MODEL : LUST_MODEL;
+      // English: clearer model + lower temp (stops garbled tails / language flip)
+      const voiceModel = CLEAR_MODEL;
       const voiceTemp = wantsHinglish
         ? sceneHeatIsDirty(sceneCard)
           ? 0.75
           : 0.5
-        : 0.9;
+        : 0.65;
 
       const stillResisting = strictStillResisting(setupText, hist);
       const identitySticky =
@@ -1194,9 +1201,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       });
 
       if (!response.ok) {
-        const fallbackModel = wantsHinglish ? LUST_MODEL : CLEAR_MODEL;
+        const fallbackModel = LUST_MODEL;
         const retry = await callVenice(fallbackModel, voicePayload, {
-          temperature: 0.85,
+          temperature: wantsHinglish ? 0.85 : 0.7,
           max_tokens: tokenBudget,
         });
         if (!retry.response.ok) {
@@ -1221,9 +1228,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             {
               role: "user",
               content:
-                "LOOP FIX: Do NOT repeat your last question (no more 'dimaag mein kya / kya soch / kaisa laga' if already asked). " +
+                "LOOP FIX: Do NOT repeat your last question (no more 'dimaag mein kya / kya soch / kaisa laga' / 'what are you thinking' if already asked). " +
                 "User's latest message IS the answer — react to it and advance the scene. " +
-                "No same *sharmaati hai* opener every time. Fresh Easy Hinglish. Short WhatsApp.",
+                `No same shy-opener every time. Fresh ${langStyle}. Short WhatsApp.`,
             },
           ],
           {
@@ -1297,7 +1304,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 guestCallHint +
                 stanceHint +
                 nakhreHint +
-                " Short fresh WhatsApp. Output ONLY the reply.\n\n" +
+                ` Language: ${langStyle}. Short fresh WhatsApp. Output ONLY the reply.\n\n` +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
           ],
@@ -1355,7 +1362,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             {
               role: "user",
               content:
-                `Rewrite: user wants to LISTEN. Write the full phone conversation out loud (${charOverrides.characterName || "Character"} phone lines + other person if needed). No summary like 'sab bata diya'. Easy Hinglish. Finish completely.`,
+                `Rewrite: user wants to LISTEN. Write the full phone conversation out loud (${charOverrides.characterName || "Character"} phone lines + other person if needed). No summary like 'sab bata diya'. ${langStyle}. Finish completely.`,
             },
           ],
           { temperature: Math.min(voiceTemp + 0.1, 1), max_tokens: tokenBudget }
@@ -1376,9 +1383,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               role: "system",
               content:
                 `You are ${charOverrides.characterName || "Character"} (${charOverrides.botRole || "mummy"}). ` +
-    `Rewrite as seedhi-saadi desi ${charOverrides.botRole || "character"}: daily/natural WhatsApp tone like real Indian relation, change topic or soft resist, tiny hooked tease only. ` +
+                `Rewrite as seedhi-saadi desi ${charOverrides.botRole || "character"}: daily/natural WhatsApp tone like real Indian relation, change topic or soft resist, tiny hooked tease only. ` +
                 `RESISTANCE stays STRICT — FORBIDDEN: "theek hai aaja", panty off, starting sex, "main ready". ` +
-                `Easy Hinglish WhatsApp short. Output ONLY the chat reply.`,
+                `${langStyle}. Output ONLY the chat reply.`,
             },
             {
               role: "user",
@@ -1433,6 +1440,42 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         if (polish.response.ok) {
           const fixed = extractText(polish.data?.choices?.[0]?.message);
           if (fixed && fixed.length > 8) reply = fixed;
+        }
+      }
+
+      // English: never leave Hinglish leak or garbled unicode tails
+      if (reply && !wantsHinglish) {
+        reply = scrubGarbledTail(reply);
+        if (
+          looksLikeGarbledOutput(reply) ||
+          looksLikeHinglishLeak(reply) ||
+          looksBrokenHinglish(reply)
+        ) {
+          const engFix = await callVenice(
+            CLEAR_MODEL,
+            [
+              {
+                role: "system",
+                content:
+                  `You are ${charOverrides.characterName || "Character"} (${charOverrides.botRole || "girlfriend"}). ` +
+                  "Rewrite as clear natural ENGLISH WhatsApp text only. " +
+                  "Same meaning, flirty/adult tone OK. 1-3 short lines. " +
+                  "FORBIDDEN: Hinglish, Hindi, Roman Hindi (haan/theek/sharam/tumhe/dil dhadak), Chinese, garbage letters. " +
+                  "Output ONLY the chat reply.",
+              },
+              {
+                role: "user",
+                content:
+                  `User said: "${lastUser}"\n\nDraft to rewrite in English:\n${reply}`,
+              },
+            ],
+            { temperature: 0.25, max_tokens: tokenBudget }
+          );
+          steps += 1;
+          if (engFix.response.ok) {
+            const fixed = extractText(engFix.data?.choices?.[0]?.message);
+            if (fixed && fixed.length > 8) reply = fixed;
+          }
         }
       }
 
