@@ -560,12 +560,25 @@ body {
 .chat-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 12px 18px;
   padding-top: max(12px, env(safe-area-inset-top));
   background: linear-gradient(180deg, #ffffff 0%, var(--header) 100%);
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+  min-width: 0;
+}
+
+.header-text {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.header-text .chat-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reset-btn {
@@ -655,8 +668,10 @@ body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
+  flex-shrink: 0;
+  max-width: 62%;
 }
 
 .hours-badge {
@@ -720,12 +735,24 @@ body {
 
 @media (max-width: 560px) {
   .user-chip {
-    display: inline-flex;
-    padding: 5px 8px;
-    font-size: 0.68rem;
+    display: none; /* ID lives in ☰ Settings — frees header space */
   }
   .logout-btn {
     padding: 7px 10px;
+  }
+  .header-actions {
+    gap: 4px;
+    max-width: none;
+  }
+  .hours-badge {
+    padding: 5px 8px;
+    font-size: 0.74rem;
+    min-width: 0;
+  }
+  .header-actions .reset-btn {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+    min-height: 32px;
   }
 }
 
@@ -2658,6 +2685,18 @@ body {
   padding: 11px 12px;
 }
 
+.sidebar-logout-btn {
+  margin-top: 4px;
+  width: 100%;
+  background: #fff5f6;
+  border-color: rgba(184, 50, 64, 0.35);
+  color: var(--danger);
+}
+
+.sidebar-logout-btn:hover {
+  background: #ffe8eb;
+}
+
 /* Desktop web-app frame */
 @media (min-width: 900px) {
   html,
@@ -2875,8 +2914,19 @@ body {
   }
 
   .chat-header {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 8px 10px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    gap: 6px;
+  }
+
+  .header-text .chat-title-text {
+    font-size: 0.98rem;
+  }
+
+  .header-actions .reset-btn {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+    min-height: 32px;
   }
 
   .messages {
@@ -2886,11 +2936,6 @@ body {
   .composer {
     padding-left: 12px;
     padding-right: 12px;
-  }
-
-  .header-actions .reset-btn {
-    padding: 7px 8px;
-    font-size: 0.7rem;
   }
 
   /* All overlays centered in the phone — never bottom-sheet */
