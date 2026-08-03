@@ -146,5 +146,15 @@ assert(
   "no pending → no_match"
 );
 
+assert(parseCreditSms("OTP 482910 for Rs.130 UPI. Do not share").isCredit === false, "OTP not credit");
+assert(
+  parseCreditSms("Rs.200 debited from A/c XX11 to merchant").isCredit === false,
+  "debit not credit"
+);
+assert(
+  parseCreditSms("Avl Bal Rs.200. Thank you").isCredit === false,
+  "balance SMS not credit"
+);
+
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed ? 1 : 0);

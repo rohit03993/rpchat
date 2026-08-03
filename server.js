@@ -26,6 +26,8 @@ const {
   looksLikeStickyBreak,
   looksLikeAddressSpam,
   looksLikeGaaliSpam,
+  looksLikeResistThenApprove,
+  looksLikeNakhreSpam,
   extractStickySceneFacts,
   extractSetupBrief,
   parseSetupMeta,
@@ -1250,6 +1252,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           looksLikeStickyBreak(reply, stickyFacts) ||
           looksLikeAddressSpam(reply, lastBotMsg) ||
           looksLikeGaaliSpam(reply, lastBotMsg, lastUser) ||
+          looksLikeResistThenApprove(reply) ||
+          looksLikeNakhreSpam(reply, lastUser, hist) ||
           (setupResistanceLevel(setupText) === "easy" &&
             looksLikeSoftWashDirty(reply, lastUser)) ||
           looksLikeBrokenGuestCall(reply, lastUser))
@@ -1266,6 +1270,12 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         const guestCallHint = looksLikeBrokenGuestCall(reply, lastUser)
           ? " GUEST-CALL FIX: For each named man write labeled dialogues. Husband=pati ji (Papa:). Nana=mere Papa NEVER pati ji; Nana male verbs + calls you beti. Dada=Papa ji. If he asked ek bed/lund patao: filthy seduction lines not soft baithenge/zaroorat."
           : "";
+        const stanceHint = looksLikeResistThenApprove(reply)
+          ? " STANCE FIX: Draft denies THEN approves in ONE bubble — rewrite to ONE stance only (either keep resisting that new ask OR continue/approve with sharam). NEVER 'galat hai… theek hai kar lo'."
+          : "";
+        const nakhreHint = looksLikeNakhreSpam(reply, lastUser, hist)
+          ? " NAKHRE FIX: Too much coy deny for this beat — soft/casual = warm natural chat; mid-heat = erotic continuity without 'arey pagal abhi nahi' every line."
+          : "";
         const stayFix = await callVenice(
           voiceModel,
           [
@@ -1277,14 +1287,17 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
                 "Dialogue-first WhatsApp — strip *action* novel spam (at most one short *action* or none). " +
                 "Do NOT invent kitchen/khana/kamra/padhai/weather if they asked hug/kiss/dirty/body/fantasy. " +
                 "Do NOT open with stock aankhein-phat / chehra-laal / nazrein-jhuka / pallu / jhatka / peeche-hat / 'Main teri X hoon' essay. " +
-                "ONE stance only — no long resist then full obey in the same bubble. " +
+                "ONE stance only — NEVER resist then approve in the same bubble (no 'galat/abhi nahi' + 'theek hai/chalo kar lo'). " +
+                "Do NOT nakhre on every talk — only on new early dirty push. " +
                 "Do NOT change room/clothes/props already set." +
                 " Do NOT stamp pota/bhatija/bhanja/damad ji every line — prefer beta/name/bare dialogue. " +
                 " Do NOT open soft/mid lines with bhenchod/madarchod — peak wild only; never if last reply already used it." +
                 stickyHint +
                 easyDirtyHint +
                 guestCallHint +
-                " Short fresh WhatsApp. Resist/shame OK. Output ONLY the reply.\n\n" +
+                stanceHint +
+                nakhreHint +
+                " Short fresh WhatsApp. Output ONLY the reply.\n\n" +
                 `User said: "${lastUser}"\nDraft to fix:\n${reply}`,
             },
           ],
