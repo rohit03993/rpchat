@@ -229,7 +229,7 @@
               </button>
             </div>
             <p class="meta setup-lead">
-              Users message from Settings → Support. Each card shows their User ID.
+              Users message from Help / Support. You and the user can both send photos from device.
             </p>
             <div class="support-admin-layout">
               <div id="support-thread-list" class="support-thread-list"></div>
@@ -260,11 +260,20 @@
                   <div class="empty">Pick a support thread on the left.</div>
                 </div>
                 <div id="support-admin-compose" class="support-admin-compose hidden">
+                  <label class="support-admin-upload" id="support-admin-upload-label">
+                    <input
+                      id="support-admin-file"
+                      type="file"
+                      accept="image/*"
+                    />
+                    <span id="support-admin-upload-text">Attach photo from device</span>
+                  </label>
+                  <img id="support-admin-preview" class="support-admin-preview hidden" alt="Preview" />
                   <textarea
                     id="support-admin-input"
                     rows="3"
                     maxlength="2000"
-                    placeholder="Reply to user…"
+                    placeholder="Reply to user… (photo optional)"
                   ></textarea>
                   <button type="button" id="support-admin-send" class="btn">Send reply</button>
                 </div>

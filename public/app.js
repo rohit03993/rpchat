@@ -2277,7 +2277,7 @@
       supportPreview.classList.add("hidden");
       supportPreview.removeAttribute("src");
     }
-    if (supportUploadText) supportUploadText.textContent = "Add screenshot (optional)";
+    if (supportUploadText) supportUploadText.textContent = "Photo from device (optional)";
     if (supportUploadLabel) supportUploadLabel.classList.remove("has-file");
   }
 
@@ -2341,7 +2341,7 @@
     if (!text && !file) {
       if (supportMsgEl) {
         supportMsgEl.className = "pay-msg err";
-        supportMsgEl.textContent = "Write a message or add a screenshot.";
+        supportMsgEl.textContent = "Write a message or pick a photo from your device.";
       }
       return;
     }
@@ -2433,7 +2433,7 @@
         clearSupportAttachment();
         return;
       }
-      if (supportUploadText) supportUploadText.textContent = file.name || "Screenshot selected";
+      if (supportUploadText) supportUploadText.textContent = file.name || "Photo selected";
       if (supportUploadLabel) supportUploadLabel.classList.add("has-file");
       if (supportPreview) {
         const url = URL.createObjectURL(file);

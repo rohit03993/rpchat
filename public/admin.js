@@ -39,6 +39,10 @@
   const supportAdminCompose = document.getElementById("support-admin-compose");
   const supportAdminInput = document.getElementById("support-admin-input");
   const supportAdminSend = document.getElementById("support-admin-send");
+  const supportAdminFile = document.getElementById("support-admin-file");
+  const supportAdminUploadText = document.getElementById("support-admin-upload-text");
+  const supportAdminUploadLabel = document.getElementById("support-admin-upload-label");
+  const supportAdminPreview = document.getElementById("support-admin-preview");
   const supportCloseThreadBtn = document.getElementById("support-close-thread-btn");
   const supportBackBtn = document.getElementById("support-back-btn");
   const supportCount = document.getElementById("support-count");
@@ -2303,21 +2307,94 @@
     }
   }
 
+  function fileToBase64(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        resolve(reader.result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function compressImageFile(file) {
+    return new Promise(function (resolve) {
+      if (!file || !/^image\//.test(file.type)) {
+        resolve(null);
+        return;
+      }
+      if (file.size < 900000) {
+        fileToBase64(file)
+          .then(resolve)
+          .catch(function () {
+            resolve(null);
+          });
+        return;
+      }
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = function () {
+        const maxW = 1280;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        fileToBase64(file)
+          .then(resolve)
+          .catch(function () {
+            resolve(null);
+          });
+      };
+      img.src = url;
+    });
+  }
+
+  function clearAdminSupportAttachment() {
+    if (supportAdminFile) supportAdminFile.value = "";
+    if (supportAdminPreview) {
+      supportAdminPreview.classList.add("hidden");
+      supportAdminPreview.removeAttribute("src");
+    }
+    if (supportAdminUploadText) {
+      supportAdminUploadText.textContent = "Attach photo from device";
+    }
+    if (supportAdminUploadLabel) {
+      supportAdminUploadLabel.classList.remove("has-file");
+    }
+  }
+
   async function sendAdminSupportReply() {
     if (!openSupportUserId) return;
     const text = supportAdminInput ? supportAdminInput.value.trim() : "";
-    if (!text) {
-      toast("Write a reply first", "err");
+    const file =
+      supportAdminFile && supportAdminFile.files && supportAdminFile.files[0];
+    if (!text && !file) {
+      toast("Write a reply or attach a photo", "err");
       return;
     }
     if (supportAdminSend) supportAdminSend.disabled = true;
     try {
+      let b64 = null;
+      if (file) {
+        b64 = (await compressImageFile(file)) || (await fileToBase64(file));
+      }
       const res = await fetch(
         "/api/admin/support/" + encodeURIComponent(openSupportUserId) + "/reply",
         {
           method: "POST",
           headers: authHeaders(),
-          body: JSON.stringify({ text: text }),
+          body: JSON.stringify({
+            text: text,
+            screenshotBase64: b64,
+          }),
         }
       );
       const data = await res.json().catch(function () {
@@ -2329,8 +2406,9 @@
         return;
       }
       if (supportAdminInput) supportAdminInput.value = "";
+      clearAdminSupportAttachment();
       renderSupportAdminMessages(data.thread);
-      toast("Reply sent", "ok");
+      toast(file ? "Reply + photo sent" : "Reply sent", "ok");
       loadSupportThreads(true);
     } catch (e) {
       toast("Network error", "err");
@@ -2351,6 +2429,27 @@
   }
   if (supportAdminSend) {
     supportAdminSend.addEventListener("click", sendAdminSupportReply);
+  }
+  if (supportAdminFile) {
+    supportAdminFile.addEventListener("change", function () {
+      const file =
+        supportAdminFile.files && supportAdminFile.files[0];
+      if (!file) {
+        clearAdminSupportAttachment();
+        return;
+      }
+      if (supportAdminUploadText) {
+        supportAdminUploadText.textContent = file.name || "Photo selected";
+      }
+      if (supportAdminUploadLabel) {
+        supportAdminUploadLabel.classList.add("has-file");
+      }
+      if (supportAdminPreview) {
+        const url = URL.createObjectURL(file);
+        supportAdminPreview.src = url;
+        supportAdminPreview.classList.remove("hidden");
+      }
+    });
   }
   if (refreshSupportBtn) {
     refreshSupportBtn.addEventListener("click", function () {
