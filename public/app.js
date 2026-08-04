@@ -293,8 +293,8 @@
   function paintSignupDeviceHint(oneId) {
     if (!registerDeviceHint) return;
     registerDeviceHint.textContent = oneId
-      ? "18+ only. Enter DOB, choose a 4-digit PIN, then we create your User ID (free trial). One ID per device — save ID + PIN."
-      : "18+ only. Enter DOB, choose your own 4-digit PIN, then we create your User ID (free trial). Save your ID + PIN.";
+      ? "18+ · DOB + 4-digit PIN · one ID per device — save ID & PIN."
+      : "18+ · DOB + 4-digit PIN · free trial — save your ID & PIN.";
   }
   window.__paintSignupDeviceHint = paintSignupDeviceHint;
   if (typeof window.__oneIdPerDevice === "boolean") {
@@ -4578,6 +4578,7 @@
       tabRegister.classList.remove("active");
       loginForm.classList.remove("hidden");
       registerForm.classList.add("hidden");
+      if (authGate) authGate.classList.remove("is-register");
       if (authCardTitle) authCardTitle.textContent = "Welcome back";
       if (authSub) {
         authSub.textContent =
@@ -4603,9 +4604,10 @@
       tabLogin.classList.remove("active");
       registerForm.classList.remove("hidden");
       loginForm.classList.add("hidden");
+      if (authGate) authGate.classList.add("is-register");
       if (authCardTitle) authCardTitle.textContent = "Create account";
       if (authSub) {
-        authSub.textContent = "Get a unique 4-digit ID and start free trial.";
+        authSub.textContent = "Get a 4-digit ID · free trial.";
       }
       authError.textContent = "";
     });

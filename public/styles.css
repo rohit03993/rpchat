@@ -2985,6 +2985,165 @@ body {
     margin-top: 4px;
   }
 
+  /* New ID: fit entire form on one phone screen (no scroll inside signup) */
+  .auth-gate.is-register {
+    overflow: hidden;
+  }
+
+  .auth-gate.is-register .seo-landing {
+    display: none;
+  }
+
+  .auth-gate.is-register .auth-shell {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .auth-gate.is-register .auth-brand {
+    padding: 8px 14px 4px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    gap: 0;
+  }
+
+  .auth-gate.is-register .brand-kicker {
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+  }
+
+  .auth-gate.is-register .brand-name {
+    font-size: 1.35rem;
+    line-height: 1.05;
+  }
+
+  .auth-gate.is-register .auth-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 6px 14px max(8px, env(safe-area-inset-bottom));
+    gap: 0;
+  }
+
+  .auth-gate.is-register .auth-card-title {
+    font-size: 1.05rem;
+    margin-bottom: 0;
+  }
+
+  .auth-gate.is-register .auth-sub {
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .auth-gate.is-register .auth-tabs {
+    margin-bottom: 6px;
+    padding: 3px;
+  }
+
+  .auth-gate.is-register .auth-tab {
+    padding: 7px 6px;
+    font-size: 0.8rem;
+  }
+
+  .auth-gate.is-register #register-form.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .auth-gate.is-register #register-device-hint {
+    margin: 0;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    color: var(--muted);
+  }
+
+  .auth-gate.is-register .auth-remember-note {
+    margin: 0;
+    padding: 5px 8px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    border-radius: 8px;
+  }
+
+  .auth-gate.is-register .dob-field {
+    margin-bottom: 0;
+  }
+
+  .auth-gate.is-register .dob-label {
+    margin-bottom: 3px;
+    font-size: 0.7rem;
+  }
+
+  .auth-gate.is-register .dob-row {
+    gap: 5px;
+  }
+
+  .auth-gate.is-register .dob-part {
+    gap: 2px;
+    font-size: 0;
+  }
+
+  .auth-gate.is-register .dob-part select {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+    padding-right: 22px;
+    border-radius: 9px;
+    min-height: 38px;
+  }
+
+  .auth-gate.is-register .field-hint {
+    display: none;
+  }
+
+  .auth-gate.is-register .age-check {
+    margin: 0;
+    padding: 6px 8px;
+    gap: 8px;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    border-radius: 8px;
+  }
+
+  .auth-gate.is-register .age-check input {
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+  }
+
+  .auth-gate.is-register #register-form label:not(.age-check):not(.dob-part) {
+    margin-bottom: 0;
+    gap: 3px;
+    font-size: 0.7rem;
+  }
+
+  .auth-gate.is-register #register-form input[type="password"],
+  .auth-gate.is-register #register-form input[type="text"] {
+    padding: 8px 10px;
+    min-height: 38px;
+    border-radius: 9px;
+    font-size: 0.9rem;
+  }
+
+  .auth-gate.is-register #register-form .auth-btn {
+    margin-top: auto;
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 0.92rem;
+    flex-shrink: 0;
+  }
+
+  .auth-gate.is-register .auth-error {
+    margin-top: 4px;
+    min-height: 0;
+    font-size: 0.72rem;
+  }
+
   .app-shell.phone,
   .phone {
     max-width: none;
