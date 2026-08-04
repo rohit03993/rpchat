@@ -1804,7 +1804,7 @@
       var badge =
         p.badge
           ? '<span class="pack-badge">' + p.badge + "</span>"
-          : '<span class="pack-badge pack-badge-muted">Standard</span>';
+          : '<span class="pack-badge pack-badge-muted">Pack</span>';
       var was =
         p.saveInr > 0
           ? '<span class="pack-was">₹' + p.listPriceInr + "</span>"
@@ -1823,19 +1823,26 @@
               ? "1 hour from payment"
               : hrs + " hours from payment";
       btn.innerHTML =
+        '<span class="pack-top">' +
+        '<span class="pack-top-text">' +
         badge +
         '<span class="pack-label">' +
         p.label +
         "</span>" +
+        '<span class="pack-meta">' +
+        meta +
+        "</span>" +
+        "</span>" +
+        '<span class="pack-check" aria-hidden="true"></span>' +
+        "</span>" +
+        '<span class="pack-bottom">' +
         '<span class="pack-price-row">' +
         was +
         '<span class="pack-price">₹' +
         p.priceInr +
         "</span></span>" +
-        '<span class="pack-meta">' +
-        meta +
-        "</span>" +
-        saveLine;
+        saveLine +
+        "</span>";
       btn.addEventListener("click", function () {
         selectedPackId = p.id;
         syncPayUi();
