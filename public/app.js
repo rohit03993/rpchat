@@ -1801,50 +1801,46 @@
       btn.className = "package-card" + extra;
       btn.setAttribute("data-id", p.id);
       btn.setAttribute("role", "option");
-      var badge =
-        p.badge
-          ? '<span class="pack-badge">' + p.badge + "</span>"
-          : '<span class="pack-badge pack-badge-muted">Pack</span>';
-      var was =
-        p.saveInr > 0
-          ? '<span class="pack-was">was ₹' + p.listPriceInr + "</span>"
-          : "";
-      var saveLine =
-        p.saveInr > 0
-          ? '<span class="pack-save">Save ₹' + p.saveInr + "</span>"
-          : '<span class="pack-save pack-save-muted">Real-time access</span>';
+      var badge = p.badge
+        ? '<span class="pack-badge">' + p.badge + "</span>"
+        : "";
       var hrs = Number(p.hours) || 0;
-      var meta =
+      var dur =
         hrs >= 700
-          ? "30 days from payment"
+          ? "30 days"
           : hrs >= 24
-            ? "24 hours from payment"
+            ? "24 hours"
             : hrs === 1
-              ? "1 hour from payment"
+              ? "1 hour"
               : hrs === 0.5
-                ? "30 minutes from payment"
-                : hrs + " hours from payment";
+                ? "30 min"
+                : hrs + "h";
+      var saveBits = [];
+      if (p.saveInr > 0) {
+        saveBits.push("was ₹" + p.listPriceInr);
+        saveBits.push("Save ₹" + p.saveInr);
+      } else {
+        saveBits.push("Real-time access");
+      }
       btn.innerHTML =
-        '<span class="pack-top">' +
-        '<span class="pack-top-text">' +
+        '<span class="pack-main">' +
+        '<span class="pack-title-line">' +
         badge +
         '<span class="pack-label">' +
         p.label +
         "</span>" +
+        "</span>" +
         '<span class="pack-meta">' +
-        meta +
+        dur +
+        " · " +
+        saveBits.join(" · ") +
         "</span>" +
         "</span>" +
-        '<span class="pack-check" aria-hidden="true"></span>' +
-        "</span>" +
-        '<span class="pack-bottom">' +
+        '<span class="pack-right">' +
         '<span class="pack-price">₹' +
         p.priceInr +
         "</span>" +
-        '<span class="pack-price-side">' +
-        was +
-        saveLine +
-        "</span>" +
+        '<span class="pack-check" aria-hidden="true"></span>' +
         "</span>";
       btn.addEventListener("click", function () {
         selectedPackId = p.id;
