@@ -893,20 +893,23 @@
     else liveSyncMeta.textContent = "Live · " + sec + "s ago";
   }
 
-  /** Tick remaining clocks locally between server polls (online users only). */
+  /** Tick remaining clocks locally between server polls (wall-clock always runs). */
   function paintLiveClocks() {
     if (!usersEl) return;
     const cards = usersEl.querySelectorAll(".user-card[data-hours]");
     cards.forEach(function (card) {
-      const online = card.getAttribute("data-online") === "1";
       const base = Number(card.getAttribute("data-hours") || 0);
       const fetchedAt = Number(card.getAttribute("data-fetched-at") || 0);
       let hours = base;
-      if (online && fetchedAt > 0) {
+      if (fetchedAt > 0) {
         hours = Math.max(0, base - (Date.now() - fetchedAt) / 3600000);
       }
       const clock = card.querySelector(".user-card-clock");
       if (clock) clock.textContent = formatClock(hours);
+      const detailClock = card.querySelector(".uc-time-clock");
+      if (detailClock) detailClock.textContent = formatClock(hours);
+      const detailHrs = card.querySelector(".uc-time-hours");
+      if (detailHrs) detailHrs.textContent = hours.toFixed(2) + "h left";
     });
     paintLiveSyncAge();
   }
@@ -1358,10 +1361,23 @@
           "<div><span class='uc-label'>PIN</span> <b class='pin-cell'>" +
           escapeHtml(u.pin || "—") +
           "</b></div>" +
-          "<div><span class='uc-label'>Time</span> " +
-          Number(u.hoursBalance || 0).toFixed(2) +
-          "h · " +
+          "<div class='uc-time-block" +
+          (Number(u.hoursBalance || 0) <= 0.0001 ? " is-empty" : "") +
+          "'>" +
+          "<span class='uc-label'>Access</span>" +
+          "<div class='uc-time-main'>" +
+          "<strong class='uc-time-clock'>" +
           clock +
+          "</strong>" +
+          "<span class='uc-time-hours'>" +
+          Number(u.hoursBalance || 0).toFixed(2) +
+          "h left</span>" +
+          "</div>" +
+          (Number(u.accessExpiresAt) > Date.now()
+            ? "<span class='uc-time-until'>Ends " +
+              escapeHtml(new Date(Number(u.accessExpiresAt)).toLocaleString()) +
+              "</span>"
+            : "<span class='uc-time-until muted'>No active access</span>") +
           "</div>" +
           "<div><span class='uc-label'>Seen</span> " +
           escapeHtml(formatRelativeShort(insight.lastAt)) +
@@ -1400,41 +1416,62 @@
           escapeHtml(chatLabel) +
           "</button>" +
           "<div class='user-card-actions'>" +
-          "<button type='button' class='btn btn-sm' data-msg-user='" +
+          "<div class='uc-action-group'>" +
+          "<p class='uc-action-label'>Add access</p>" +
+          "<div class='uc-action-row uc-action-row-add'>" +
+          "<button type='button' class='btn btn-sm' title='Add 1 hour' data-add-hours='" +
           uid +
-          "'>Support</button>" +
-          "<button type='button' class='btn btn-sm' data-add-hours='" +
+          "'>+1 hour</button>" +
+          "<button type='button' class='btn btn-sm' title='Add 1 full day (24 hours)' data-add-hours-day='" +
           uid +
-          "'>+1h</button>" +
-          "<button type='button' class='btn-ghost btn-sm' data-add-hours5='" +
+          "'>+1 day</button>" +
+          "<button type='button' class='btn btn-sm uc-btn-month' title='Add 30 days (month)' data-add-hours-month='" +
           uid +
-          "'>+5h</button>" +
+          "'>+30 days</button>" +
+          "</div>" +
+          "</div>" +
+          "<div class='uc-action-group'>" +
+          "<p class='uc-action-label'>Adjust / clear</p>" +
+          "<div class='uc-action-row'>" +
           "<button type='button' class='btn-ghost btn-sm' title='Remove 30 minutes' data-sub-hours-m='" +
           uid +
-          "'>−30m</button>" +
+          "'>−30 min</button>" +
           "<button type='button' class='btn-ghost btn-sm' title='Remove 1 hour' data-sub-hours='" +
           uid +
-          "'>−1h</button>" +
-          "<button type='button' class='btn-ghost btn-sm' title='Set exact hours left' data-set-hours='" +
+          "'>−1 hour</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Add 5 hours' data-add-hours5='" +
+          uid +
+          "'>+5 hours</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Set exact time left' data-set-hours='" +
           uid +
           "'>Set…</button>" +
           "<button type='button' class='btn-danger btn-sm' title='Reset time to zero' data-clear-hours='" +
           uid +
-          "'>Reset 0</button>" +
+          "'>Clear</button>" +
+          "</div>" +
+          "</div>" +
+          "<div class='uc-action-group'>" +
+          "<p class='uc-action-label'>Account</p>" +
+          "<div class='uc-action-row'>" +
+          "<button type='button' class='btn btn-sm' data-msg-user='" +
+          uid +
+          "'>Support</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-reset-pin='" +
           uid +
-          "'>PIN</button>" +
+          "'>Reset PIN</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-delete-chats='" +
           uid +
           "'>Del chats</button>" +
           "<button type='button' class='btn-danger btn-sm' data-delete-user='" +
           uid +
-          "'>Del</button>" +
+          "'>Delete user</button>" +
           (u.isLegacy || u.needsFourDigit
             ? "<button type='button' class='btn btn-sm' data-migrate='" +
               uid +
-              "'>→ 4-digit</button>"
+              "'>→ 4-digit ID</button>"
             : "") +
+          "</div>" +
+          "</div>" +
           "</div>" +
           (Number(u.supportUnseen || 0) > 0
             ? "<p class='user-notice-flag unread'>Support: waiting for user (" +
@@ -1637,7 +1674,11 @@
       data.user && data.user.hoursBalance != null
         ? Number(data.user.hoursBalance).toFixed(2) + "h left"
         : "updated";
-    toast("Hours " + left, "ok");
+    const until =
+      data.user && data.user.accessExpiresAt > Date.now()
+        ? " · ends " + new Date(data.user.accessExpiresAt).toLocaleString()
+        : "";
+    toast("Access " + left + until, "ok");
     await refreshAll();
   }
 
@@ -1661,7 +1702,7 @@
 
     const t = e.target.closest
       ? e.target.closest(
-          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
+          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-add-hours-day], [data-add-hours-month], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
         )
       : e.target;
     if (!t) return;
@@ -1706,6 +1747,12 @@
     if (t.getAttribute("data-add-hours5")) {
       adjustHours(t.getAttribute("data-add-hours5"), 5, "add");
     }
+    if (t.getAttribute("data-add-hours-day")) {
+      adjustHours(t.getAttribute("data-add-hours-day"), 24, "add");
+    }
+    if (t.getAttribute("data-add-hours-month")) {
+      adjustHours(t.getAttribute("data-add-hours-month"), 720, "add");
+    }
     if (t.getAttribute("data-sub-hours-m")) {
       adjustHours(t.getAttribute("data-sub-hours-m"), -0.5, "add");
     }
@@ -1719,7 +1766,9 @@
         ? Number(card.getAttribute("data-hours") || 0)
         : 0;
       const raw = prompt(
-        "Set hours left for " + id + " (e.g. 0.5 = 30 min, 2 = 2 hours).\nCurrent ≈ " +
+        "Set hours left for " +
+          id +
+          " (wall-clock from now).\nExamples: 1 = 1h, 24 = 1 day, 720 = 30 days.\nCurrent ≈ " +
           current.toFixed(2) +
           "h",
         String(Math.max(0, Math.round(current * 100) / 100))
