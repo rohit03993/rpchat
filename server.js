@@ -565,16 +565,14 @@ app.get("/api/billing/me", requireUser, (req, res) => {
   const user = billing.getUser(req.userId);
   if (!user) return res.status(404).json({ error: "User not found" });
   const supportPopup = billing.getSupportPopupForUser(req.userId);
-  // Soft tick while user is in the app (live timer)
-  if (user.sessionActive) {
-    const tick = billing.tickUserHours(req.userId);
-    return res.json({
-      user: tick.user || billing.publicUser(user),
-      supportPopup: supportPopup,
-    });
-  }
-  const pub = billing.touchLastSeen(req.userId) || billing.publicUser(user);
-  res.json({ user: pub, supportPopup: supportPopup });
+  // Wall-clock sync; keep presence only if already marked in-session
+  const tick = billing.tickUserHours(req.userId, {
+    markActive: !!user.sessionActive,
+  });
+  return res.json({
+    user: tick.user || billing.publicUser(user),
+    supportPopup: supportPopup,
+  });
 });
 
 app.post("/api/support/seen", requireUser, (req, res) => {
@@ -582,7 +580,7 @@ app.post("/api/support/seen", requireUser, (req, res) => {
   res.json(result);
 });
 
-/** Start / resume draining hours for live countdown while chat app is open */
+/** Heartbeat for admin "online" — wall-clock access does not pause when idle */
 app.post("/api/billing/resume", requireUser, (req, res) => {
   const tick = billing.tickUserHours(req.userId);
   res.json({

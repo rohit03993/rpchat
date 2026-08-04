@@ -920,7 +920,8 @@
   }
 
   function remainingHoursNow() {
-    if (!timerRunning) return Math.max(0, localHours);
+    // Wall-clock: time always runs from last sync, even if chat timer UI paused
+    if (!localSyncedAt) return Math.max(0, localHours);
     const elapsedH = Math.max(0, Date.now() - localSyncedAt) / 3600000;
     return Math.max(0, localHours - elapsedH);
   }
@@ -962,9 +963,9 @@
   function syncLocalClock(user) {
     if (!user) return;
     let next = Number(user.hoursBalance != null ? user.hoursBalance : 0);
-    // While the live timer runs, never rewind from a stale server snapshot
-    // (e.g. chat response captured hours at request start before a long AI wait).
-    if (timerRunning) {
+    // Prefer server when it is lower (wall clock advanced while away).
+    // Prefer client when server is higher (stale snapshot from long AI wait).
+    if (localSyncedAt) {
       const clientLeft = remainingHoursNow();
       if (next > clientLeft + 1 / 3600) {
         next = clientLeft;
@@ -992,18 +993,14 @@
     const left = remainingHoursNow();
     const leftSec = Math.max(0, Math.floor(left * 3600));
     hoursBadge.textContent = formatCountdown(left);
-    hoursBadge.title = timerRunning
-      ? left > 0
-        ? "Time left (counting)"
-        : "Time over — Pay to continue"
-      : left > 0
-        ? "Timer starts after your first message"
-        : "Time over — Pay to continue";
+    hoursBadge.title = left > 0
+      ? "Access left (real-time countdown)"
+      : "Time over — Pay to continue";
     hoursBadge.classList.toggle("hours-low", left > 0 && left < 5 / 60);
     hoursBadge.classList.toggle("hours-empty", left <= 0);
 
     // Warn before time ends (once each)
-    if (timerRunning && left > 0) {
+    if (left > 0) {
       if (!warnedAt60 && leftSec <= 60 && leftSec > 30) {
         warnedAt60 = true;
         toast("1 minute left · Pay soon to keep this scene", "err");
@@ -1042,11 +1039,15 @@
     timerRunning = true;
     paintLiveBadge();
     timerTickId = setInterval(paintLiveBadge, 1000);
-    // Keep sessionActive alive for admin "In session" (stale window ~90s)
+    // Sync wall-clock from server; resume (online) only while chatting
     timerSyncId = setInterval(function () {
-      resumeSession().then(function () {
+      if (hoursCounting) {
+        resumeSession().then(function () {
+          refreshMe();
+        });
+      } else {
         refreshMe();
-      });
+      }
     }, 10000);
   }
 
@@ -1062,17 +1063,18 @@
         currentUser = Object.assign({}, currentUser || {}, data.user);
         syncLocalClock(currentUser);
       }
+      if (data.ok === false && /Time.?s up|Time over|Scene paused/i.test(data.error || "")) {
+        handlePlanEnded(data.error);
+      }
     } catch (e) {
       /* ignore — timer still runs from last known balance */
     }
   }
 
-  /** Timer starts only after user's first message (not on login / open chat). */
+  /** Mark online for admin when user is chatting; wall-clock already runs from showApp. */
   async function ensureHoursCounting() {
     const already = hoursCounting;
     hoursCounting = true;
-    // Always resume + ensure the interval is running (early-return used to leave
-    // hoursCounting=true while timerRunning stayed false after a pause/race).
     await resumeSession();
     if (!already || !timerRunning) {
       startLiveTimer();
@@ -1100,7 +1102,7 @@
   function pauseOnLeave() {
     if (!authToken) return;
     flushPayAbandonOnLeave();
-    if (!hoursCounting) return;
+    // Presence only — access keeps counting on the server
     stopLiveTimer();
     try {
       fetch("/api/billing/pause", {
@@ -1115,13 +1117,16 @@
   }
 
   async function resumeOnReturn() {
-    if (!authToken || !hoursCounting) {
+    if (!authToken) {
       resumePayProofIfNeeded();
       setTimeout(maybeShowPendingDiscountOffer, 500);
       return;
     }
-    await resumeSession();
-    if (hoursCounting && !timerRunning) startLiveTimer();
+    await refreshMe();
+    if (remainingHoursNow() > 0.0001) {
+      if (hoursCounting) await resumeSession();
+      startLiveTimer();
+    }
     resumePayProofIfNeeded();
     setTimeout(maybeShowPendingDiscountOffer, 500);
   }
@@ -1205,11 +1210,15 @@
     setPublicSeoMode(false);
     hoursCounting = false;
     stopLiveTimer();
-    // Wait for first user message before draining time
+    // Presence offline until they chat — wall-clock still runs on the badge
     await pauseBillingQuiet();
     await refreshMe();
     setUserChip(currentUser);
-    paintLiveBadge();
+    if (remainingHoursNow() > 0.0001) {
+      startLiveTimer();
+    } else {
+      paintLiveBadge();
+    }
   }
 
   function logout() {
@@ -1768,12 +1777,19 @@
   function renderPackageCards(packs) {
     if (!packageCardsEl) return;
     packageCardsEl.innerHTML = "";
-    // Prefer Popular (5h) as default if nothing selected yet
+    if (
+      selectedPackId &&
+      !packs.some(function (p) {
+        return p.id === selectedPackId;
+      })
+    ) {
+      selectedPackId = "";
+    }
     if (!selectedPackId) {
       var pop = packs.find(function (p) {
         return p.popular;
       });
-      selectedPackId = (pop && pop.id) || (packs[0] && packs[0].id) || "1h";
+      selectedPackId = (pop && pop.id) || (packs[0] && packs[0].id) || "day";
     }
     packs.forEach(function (p) {
       const btn = document.createElement("button");
@@ -1796,7 +1812,16 @@
       var saveLine =
         p.saveInr > 0
           ? '<span class="pack-save">Save ₹' + p.saveInr + "</span>"
-          : '<span class="pack-save pack-save-muted">No discount</span>';
+          : '<span class="pack-save pack-save-muted">Real-time access</span>';
+      var hrs = Number(p.hours) || 0;
+      var meta =
+        hrs >= 700
+          ? "30 days from payment"
+          : hrs >= 24
+            ? "24 hours from payment"
+            : hrs === 1
+              ? "1 hour from payment"
+              : hrs + " hours from payment";
       btn.innerHTML =
         badge +
         '<span class="pack-label">' +
@@ -1807,9 +1832,9 @@
         '<span class="pack-price">₹' +
         p.priceInr +
         "</span></span>" +
-        '<span class="pack-meta">₹' +
-        p.perHourInr +
-        "/hr</span>" +
+        '<span class="pack-meta">' +
+        meta +
+        "</span>" +
         saveLine;
       btn.addEventListener("click", function () {
         selectedPackId = p.id;
