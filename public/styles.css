@@ -3328,11 +3328,16 @@ body {
   }
 
   .discount-offer {
-    left: 10px;
-    right: 10px;
-    bottom: calc(72px + env(safe-area-inset-bottom));
-    padding: 12px 12px 10px;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    transform: none;
+    width: auto;
+    max-width: none;
+    padding: 12px;
     gap: 6px;
+    box-sizing: border-box;
   }
 
   .discount-offer .admin-notice-title {
@@ -3343,5 +3348,16 @@ body {
     font-size: 0.82rem;
     margin: 0;
     line-height: 1.35;
+  }
+
+  .admin-notice {
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    transform: none;
+    width: auto;
+    max-width: none;
+    box-sizing: border-box;
   }
 }
