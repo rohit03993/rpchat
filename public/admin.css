@@ -735,22 +735,22 @@ button {
 .user-card-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .uc-action-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.02);
 }
 
 .uc-action-label {
   margin: 0;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -758,24 +758,39 @@ button {
 }
 
 .uc-action-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.uc-action-row-add {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.uc-action-row-add,
+.uc-action-row-adjust,
+.uc-action-row-account {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .uc-action-row .btn,
 .uc-action-row .btn-ghost,
-.uc-action-row .btn-danger {
-  min-height: 44px;
-  width: 100%;
+.uc-action-row .btn-danger,
+.uc-action-row-add .btn,
+.uc-action-row-add .btn-ghost,
+.uc-action-row-add .btn-danger,
+.uc-action-row-adjust .btn,
+.uc-action-row-adjust .btn-ghost,
+.uc-action-row-adjust .btn-danger,
+.uc-action-row-account .btn,
+.uc-action-row-account .btn-ghost,
+.uc-action-row-account .btn-danger {
+  min-height: 34px;
+  width: auto;
+  flex: 0 0 auto;
   justify-content: center;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  padding: 10px 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
 }
 
 .uc-btn-month {
@@ -785,10 +800,10 @@ button {
 .uc-time-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  margin: 4px 0 2px;
-  border-radius: 12px;
+  gap: 2px;
+  padding: 8px 10px;
+  margin: 2px 0;
+  border-radius: 10px;
   border: 1px solid rgba(8, 120, 94, 0.28);
   background: rgba(8, 120, 94, 0.08);
 }
@@ -802,11 +817,11 @@ button {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px 12px;
+  gap: 6px 10px;
 }
 
 .uc-time-clock {
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--text);
@@ -814,7 +829,7 @@ button {
 }
 
 .uc-time-hours {
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--ok);
 }
@@ -824,9 +839,9 @@ button {
 }
 
 .uc-time-until {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--text);
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .uc-time-until.muted {
@@ -1434,26 +1449,38 @@ code {
   }
 
   .user-card-actions {
-    gap: 10px;
+    gap: 8px;
   }
 
-  .uc-action-row-add {
-    grid-template-columns: 1fr;
-  }
-
+  .uc-action-row-add,
+  .uc-action-row-adjust,
+  .uc-action-row-account,
   .uc-action-row {
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .uc-action-row .btn,
   .uc-action-row .btn-ghost,
-  .uc-action-row .btn-danger {
-    min-height: 48px;
-    font-size: 0.9rem;
+  .uc-action-row .btn-danger,
+  .uc-action-row-add .btn,
+  .uc-action-row-add .btn-ghost,
+  .uc-action-row-adjust .btn,
+  .uc-action-row-adjust .btn-ghost,
+  .uc-action-row-adjust .btn-danger,
+  .uc-action-row-account .btn,
+  .uc-action-row-account .btn-ghost,
+  .uc-action-row-account .btn-danger {
+    min-height: 36px;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    width: auto;
+    flex: 0 0 auto;
   }
 
   .uc-time-clock {
-    font-size: 1.5rem;
+    font-size: 1.15rem;
   }
 
   .data-table {

@@ -1419,9 +1419,18 @@
           "<div class='uc-action-group'>" +
           "<p class='uc-action-label'>Add access</p>" +
           "<div class='uc-action-row uc-action-row-add'>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Add 10 minutes' data-add-hours-10m='" +
+          uid +
+          "'>+10m</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Add 30 minutes' data-add-hours-30m='" +
+          uid +
+          "'>+30m</button>" +
           "<button type='button' class='btn btn-sm' title='Add 1 hour' data-add-hours='" +
           uid +
-          "'>+1 hour</button>" +
+          "'>+1h</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Add 5 hours' data-add-hours5='" +
+          uid +
+          "'>+5h</button>" +
           "<button type='button' class='btn btn-sm' title='Add 1 full day (24 hours)' data-add-hours-day='" +
           uid +
           "'>+1 day</button>" +
@@ -1432,16 +1441,13 @@
           "</div>" +
           "<div class='uc-action-group'>" +
           "<p class='uc-action-label'>Adjust / clear</p>" +
-          "<div class='uc-action-row'>" +
+          "<div class='uc-action-row uc-action-row-adjust'>" +
           "<button type='button' class='btn-ghost btn-sm' title='Remove 30 minutes' data-sub-hours-m='" +
           uid +
-          "'>−30 min</button>" +
+          "'>−30m</button>" +
           "<button type='button' class='btn-ghost btn-sm' title='Remove 1 hour' data-sub-hours='" +
           uid +
-          "'>−1 hour</button>" +
-          "<button type='button' class='btn-ghost btn-sm' title='Add 5 hours' data-add-hours5='" +
-          uid +
-          "'>+5 hours</button>" +
+          "'>−1h</button>" +
           "<button type='button' class='btn-ghost btn-sm' title='Set exact time left' data-set-hours='" +
           uid +
           "'>Set…</button>" +
@@ -1452,23 +1458,23 @@
           "</div>" +
           "<div class='uc-action-group'>" +
           "<p class='uc-action-label'>Account</p>" +
-          "<div class='uc-action-row'>" +
+          "<div class='uc-action-row uc-action-row-account'>" +
           "<button type='button' class='btn btn-sm' data-msg-user='" +
           uid +
           "'>Support</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-reset-pin='" +
           uid +
-          "'>Reset PIN</button>" +
+          "'>PIN</button>" +
           "<button type='button' class='btn-ghost btn-sm' data-delete-chats='" +
           uid +
           "'>Del chats</button>" +
           "<button type='button' class='btn-danger btn-sm' data-delete-user='" +
           uid +
-          "'>Delete user</button>" +
+          "'>Delete</button>" +
           (u.isLegacy || u.needsFourDigit
             ? "<button type='button' class='btn btn-sm' data-migrate='" +
               uid +
-              "'>→ 4-digit ID</button>"
+              "'>→ 4-digit</button>"
             : "") +
           "</div>" +
           "</div>" +
@@ -1702,7 +1708,7 @@
 
     const t = e.target.closest
       ? e.target.closest(
-          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-add-hours-day], [data-add-hours-month], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
+          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-add-hours-10m], [data-add-hours-30m], [data-add-hours-day], [data-add-hours-month], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
         )
       : e.target;
     if (!t) return;
@@ -1740,6 +1746,12 @@
         if (typeof openSupportThread === "function") openSupportThread(msgUser);
       }
       return;
+    }
+    if (t.getAttribute("data-add-hours-10m")) {
+      adjustHours(t.getAttribute("data-add-hours-10m"), 10 / 60, "add");
+    }
+    if (t.getAttribute("data-add-hours-30m")) {
+      adjustHours(t.getAttribute("data-add-hours-30m"), 0.5, "add");
     }
     if (t.getAttribute("data-add-hours")) {
       adjustHours(t.getAttribute("data-add-hours"), 1, "add");

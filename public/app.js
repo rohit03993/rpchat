@@ -1807,7 +1807,7 @@
           : '<span class="pack-badge pack-badge-muted">Pack</span>';
       var was =
         p.saveInr > 0
-          ? '<span class="pack-was">₹' + p.listPriceInr + "</span>"
+          ? '<span class="pack-was">was ₹' + p.listPriceInr + "</span>"
           : "";
       var saveLine =
         p.saveInr > 0
@@ -1821,7 +1821,9 @@
             ? "24 hours from payment"
             : hrs === 1
               ? "1 hour from payment"
-              : hrs + " hours from payment";
+              : hrs === 0.5
+                ? "30 minutes from payment"
+                : hrs + " hours from payment";
       btn.innerHTML =
         '<span class="pack-top">' +
         '<span class="pack-top-text">' +
@@ -1836,12 +1838,13 @@
         '<span class="pack-check" aria-hidden="true"></span>' +
         "</span>" +
         '<span class="pack-bottom">' +
-        '<span class="pack-price-row">' +
-        was +
         '<span class="pack-price">₹' +
         p.priceInr +
-        "</span></span>" +
+        "</span>" +
+        '<span class="pack-price-side">' +
+        was +
         saveLine +
+        "</span>" +
         "</span>";
       btn.addEventListener("click", function () {
         selectedPackId = p.id;
