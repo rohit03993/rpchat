@@ -1427,6 +1427,13 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         )
           ? ` SCENE BRIEF FIX: Stay inside USER RP BRIEF "${extractSetupBrief(setupText)}". Do NOT invent jaldi ghar aa / kitchen / padhai when brief set another place.`
           : "";
+        const crowdHint = looksLikeInventedCrowd(
+          reply,
+          lastUser,
+          extractSetupBrief(setupText)
+        )
+          ? " CROWD FIX: User/brief = ONLY the pair (mom and beta). Delete pura parivaar / sab jaayenge / Papa gussa. Reply as just the two of them in that shaadi/gaon scene."
+          : "";
         const paceHint = looksLikePaceTooFast(reply, lastUser, setupText)
           ? ` PACE FIX (${setupPaceLevel(setupText)}): User chose Slow — soft/casual lines stay warm soft. NEVER sexualize "maje/acha hu". No chup-kyun / hiding / bechaini interrogation after they already answered. Match their softness.`
           : "";
