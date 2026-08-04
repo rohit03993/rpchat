@@ -227,11 +227,58 @@ button {
   display: none !important;
 }
 
+.stats-wrap {
+  margin-bottom: 18px;
+}
+
+.stats-heading {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.stats-priority {
+  margin-bottom: 8px;
+}
+
+.stats-more-btn {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.stats-more-btn:hover {
+  border-color: rgba(8, 120, 94, 0.4);
+  color: var(--ok);
+}
+
+.stats-more {
+  margin-top: 0;
+}
+
+.stats-more.hidden,
+.stats-more[hidden] {
+  display: none !important;
 }
 
 .stat {
@@ -1296,14 +1343,26 @@ code {
     padding-top: 14px;
   }
 
+  .stats-wrap {
+    margin-bottom: 14px;
+  }
+
   .stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     overflow: hidden;
     padding-bottom: 0;
-    margin-bottom: 14px;
+    margin-bottom: 0;
     scroll-snap-type: none;
+  }
+
+  .stats-priority {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-priority .stat:last-child {
+    grid-column: 1 / -1;
   }
 
   .stats .stat {
@@ -1316,11 +1375,6 @@ code {
     font-size: 1.05rem;
   }
 
-  /* Phone: keep ops tiles (In session / Pending / etc). Hide lower-priority only. */
-  .stats .stat:nth-child(n + 7) {
-    display: none;
-  }
-
   .stats .stat.stat-hot {
     border-color: rgba(8, 120, 94, 0.4);
     background: rgba(8, 120, 94, 0.06);
@@ -1328,6 +1382,12 @@ code {
 
   .stats .stat.warn {
     border-color: rgba(138, 90, 0, 0.35);
+  }
+
+  .stats-more-btn {
+    margin-bottom: 8px;
+    padding: 10px;
+    font-size: 0.82rem;
   }
 
   .tabs {

@@ -69,59 +69,67 @@
         </section>
 
         <section id="dash" class="hidden">
-          <div class="stats" id="admin-stats">
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="All accounts ever">
-              <b id="stat-users">0</b>
-              <span>Total users</span>
+          <div class="stats-wrap">
+            <p class="stats-heading">Needs attention</p>
+            <div class="stats stats-priority" id="admin-stats-priority">
+              <button type="button" class="stat warn" data-stat-action="payments" data-pay-status="pending" title="Payments waiting for you">
+                <b id="stat-pending">0</b>
+                <span>Pending pay</span>
+              </button>
+              <button type="button" class="stat warn" data-stat-action="support" data-support-filter="pay-leads" title="Left checkout or asked discount">
+                <b id="stat-pay-leads">0</b>
+                <span>Pay leads</span>
+              </button>
+              <button type="button" class="stat stat-hot" data-stat-action="users" data-user-filter="online" title="Users chatting right now (~90s)">
+                <b id="stat-active">0</b>
+                <span>In session</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="New signups today (IST)">
+                <b id="stat-today">0</b>
+                <span>New today</span>
+              </button>
+              <button type="button" class="stat money" data-stat-action="payments" data-pay-status="approved" title="Approved payments total">
+                <b id="stat-money">₹0</b>
+                <span>Money in</span>
+              </button>
+            </div>
+            <button type="button" id="stats-more-btn" class="stats-more-btn" aria-expanded="false">
+              Overview stats ▾
             </button>
-            <button type="button" class="stat stat-hot" data-stat-action="users" data-user-filter="online" title="Show users in session now">
-              <b id="stat-active">0</b>
-              <span>In session</span>
-            </button>
-            <button type="button" class="stat warn" data-stat-action="payments" data-pay-status="pending" title="Open pending payments">
-              <b id="stat-pending">0</b>
-              <span>Pending pay</span>
-            </button>
-            <button type="button" class="stat warn" data-stat-action="support" data-support-filter="pay-leads" title="Users who left checkout or asked for discount">
-              <b id="stat-pay-leads">0</b>
-              <span>Pay leads</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="unique-today" title="Users who used the app today (IST)">
-              <b id="stat-unique-today">0</b>
-              <span>Unique today</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="New signups today (IST)">
-              <b id="stat-today">0</b>
-              <span>New today</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="paid" title="Show paid users">
-              <b id="stat-paid">0</b>
-              <span>Paid users</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="repeat-today" title="Returning users active today (created before today)">
-              <b id="stat-repeat-today">0</b>
-              <span>Repeat today</span>
-            </button>
-            <button type="button" class="stat money" data-stat-action="payments" data-pay-status="approved" title="Open approved payments">
-              <b id="stat-money">₹0</b>
-              <span>Money collected</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="payments" data-pay-status="approved" title="Open approved payments">
-              <b id="stat-hours-sold">0</b>
-              <span>Hours sold</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="has-time" title="Show users with time left">
-              <b id="stat-hours">0</b>
-              <span>Hours live</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="Show all users">
-              <b id="stat-msgs">0</b>
-              <span>Chat messages</span>
-            </button>
-            <button type="button" class="stat" data-stat-action="reports" title="Open AI reports">
-              <b id="stat-reports">0</b>
-              <span>AI reports</span>
-            </button>
+            <div class="stats stats-more hidden" id="admin-stats" hidden>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="All accounts">
+                <b id="stat-users">0</b>
+                <span>Total users</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="unique-today" title="Anyone who opened the app today">
+                <b id="stat-unique-today">0</b>
+                <span>Active today</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="paid" title="Ever paid">
+                <b id="stat-paid">0</b>
+                <span>Paid users</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="repeat-today" title="Old users active today">
+                <b id="stat-repeat-today">0</b>
+                <span>Returning</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="payments" data-pay-status="approved" title="Hours from approved packs">
+                <b id="stat-hours-sold">0</b>
+                <span>Hours sold</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="has-time" title="Sum of time still left on all accounts">
+                <b id="stat-hours">0</b>
+                <span>Time left (sum)</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="Stored chat messages">
+                <b id="stat-msgs">0</b>
+                <span>Chat msgs</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="reports" title="Open AI reports">
+                <b id="stat-reports">0</b>
+                <span>AI reports</span>
+              </button>
+            </div>
           </div>
 
           <div class="tabs">

@@ -797,18 +797,19 @@
   }
 
   function syncStatActive(action, userFilterValue, payStatus) {
-    const host = document.getElementById("admin-stats");
-    if (!host) return;
-    host.querySelectorAll(".stat").forEach(function (el) {
-      const a = el.getAttribute("data-stat-action") || "";
-      const uf = el.getAttribute("data-user-filter") || "";
-      const ps = el.getAttribute("data-pay-status") || "";
-      let on = false;
-      if (action === "users" && a === "users" && uf === userFilterValue) on = true;
-      if (action === "payments" && a === "payments" && ps === payStatus) on = true;
-      if (action === "reports" && a === "reports") on = true;
-      if (action === "support" && a === "support") on = true;
-      el.classList.toggle("is-active", on);
+    const hosts = document.querySelectorAll(".stats");
+    hosts.forEach(function (host) {
+      host.querySelectorAll(".stat").forEach(function (el) {
+        const a = el.getAttribute("data-stat-action") || "";
+        const uf = el.getAttribute("data-user-filter") || "";
+        const ps = el.getAttribute("data-pay-status") || "";
+        let on = false;
+        if (action === "users" && a === "users" && uf === userFilterValue) on = true;
+        if (action === "payments" && a === "payments" && ps === payStatus) on = true;
+        if (action === "reports" && a === "reports") on = true;
+        if (action === "support" && a === "support") on = true;
+        el.classList.toggle("is-active", on);
+      });
     });
   }
 
@@ -2122,12 +2123,26 @@
       renderUsers(usersCache);
     });
   }
-  const adminStats = document.getElementById("admin-stats");
-  if (adminStats) {
-    adminStats.addEventListener("click", function (e) {
-      const btn = e.target.closest ? e.target.closest(".stat[data-stat-action]") : null;
-      if (!btn || !adminStats.contains(btn)) return;
+  const adminStatsWrap = document.querySelector(".stats-wrap");
+  if (adminStatsWrap) {
+    adminStatsWrap.addEventListener("click", function (e) {
+      const btn = e.target.closest
+        ? e.target.closest(".stat[data-stat-action]")
+        : null;
+      if (!btn || !adminStatsWrap.contains(btn)) return;
       applyStatClick(btn);
+    });
+  }
+  const statsMoreBtn = document.getElementById("stats-more-btn");
+  const statsMore = document.getElementById("admin-stats");
+  if (statsMoreBtn && statsMore) {
+    statsMoreBtn.addEventListener("click", function () {
+      statsMore.classList.toggle("hidden");
+      const open = !statsMore.classList.contains("hidden");
+      if (open) statsMore.removeAttribute("hidden");
+      else statsMore.setAttribute("hidden", "");
+      statsMoreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      statsMoreBtn.textContent = open ? "Hide overview ▴" : "Overview stats ▾";
     });
   }
   if (usersPageSizeEl) {
