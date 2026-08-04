@@ -728,6 +728,12 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
   res.json(result);
 });
 
+app.post("/api/admin/users/:id/unlink-device", requireAdmin, (req, res) => {
+  const result = billing.adminUnlinkDevice(req.params.id);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  res.json(result);
+});
+
 app.post("/api/admin/chats/purge-old", requireAdmin, (_req, res) => {
   const result = billing.adminPurgeOldChats();
   res.json(result);

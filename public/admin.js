@@ -1468,6 +1468,9 @@
           "<button type='button' class='btn-ghost btn-sm' data-delete-chats='" +
           uid +
           "'>Del chats</button>" +
+          "<button type='button' class='btn-ghost btn-sm' title='Allow this phone to create one new ID (does not delete user)' data-unlink-device='" +
+          uid +
+          "'>Unlink device</button>" +
           "<button type='button' class='btn-danger btn-sm' data-delete-user='" +
           uid +
           "'>Delete</button>" +
@@ -1708,7 +1711,7 @@
 
     const t = e.target.closest
       ? e.target.closest(
-          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-add-hours-10m], [data-add-hours-30m], [data-add-hours-day], [data-add-hours-month], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-delete-user]"
+          "[data-view-chat], [data-msg-user], [data-add-hours], [data-add-hours5], [data-add-hours-10m], [data-add-hours-30m], [data-add-hours-day], [data-add-hours-month], [data-sub-hours], [data-sub-hours-m], [data-set-hours], [data-clear-hours], [data-reset-pin], [data-migrate], [data-delete-chats], [data-unlink-device], [data-delete-user]"
         )
       : e.target;
     if (!t) return;
@@ -1835,6 +1838,39 @@
         if (openChatUserId === deleteChats) closeChatDrawer();
       }
       await refreshAll();
+      return;
+    }
+    const unlinkDevice = t.getAttribute("data-unlink-device");
+    if (unlinkDevice) {
+      if (
+        !confirm(
+          "Unlink device for " +
+            unlinkDevice +
+            "?\n\nLets that phone create one new ID after wipe/clear. Does NOT delete this user."
+        )
+      ) {
+        return;
+      }
+      const res = await fetch(
+        "/api/admin/users/" +
+          encodeURIComponent(unlinkDevice) +
+          "/unlink-device",
+        { method: "POST", headers: authHeaders(), body: "{}" }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        toast(data.error || "Unlink failed", "err");
+      } else {
+        toast(
+          "Device unlinked (" +
+            (data.devicesUnlinked || 0) +
+            ") — phone can Create ID once",
+          "ok"
+        );
+      }
       return;
     }
     const deleteUser = t.getAttribute("data-delete-user");

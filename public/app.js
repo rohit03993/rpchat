@@ -703,22 +703,42 @@
   function getDeviceId() {
     var key = "chatDeviceId";
     var id = "";
+    function readCookie(name) {
+      try {
+        var parts = String(document.cookie || "").split(";");
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i].trim();
+          if (p.indexOf(name + "=") === 0) {
+            return decodeURIComponent(p.slice(name.length + 1));
+          }
+        }
+      } catch (e) {}
+      return "";
+    }
     try {
       id = localStorage.getItem(key) || "";
     } catch (e) {}
+    // If storage was wiped but cookie remains, reuse it (one-ID harden)
+    if (!id || id.length < 10) {
+      var fromCookie = readCookie(key);
+      if (fromCookie && fromCookie.length >= 10) id = fromCookie;
+    }
     if (!id || id.length < 10) {
       id =
         "d_" +
         (window.crypto && crypto.randomUUID
           ? crypto.randomUUID().replace(/-/g, "")
           : String(Date.now()) + Math.random().toString(36).slice(2, 12));
-      try {
-        localStorage.setItem(key, id);
-      } catch (e) {}
     }
     try {
+      localStorage.setItem(key, id);
+    } catch (e) {}
+    try {
       document.cookie =
-        key + "=" + encodeURIComponent(id) + ";max-age=31536000;path=/;SameSite=Lax";
+        key +
+        "=" +
+        encodeURIComponent(id) +
+        ";max-age=31536000;path=/;SameSite=Lax";
     } catch (e) {}
     return id;
   }
@@ -4805,11 +4825,17 @@
         if (!res.ok) {
           authError.textContent = data.error || "Register failed";
           if (data.existingUserId && typeof window.__showLoginTab === "function") {
+            try {
+              localStorage.setItem(SAVED_ID_KEY, String(data.existingUserId));
+            } catch (e) {}
             window.__showLoginTab({
               userId: data.existingUserId,
               clearPin: true,
               focusPin: true,
-              sub: "This device already has an ID — enter your PIN to login.",
+              sub:
+                "This phone already has ID " +
+                data.existingUserId +
+                " — enter your PIN to login.",
               error: data.error || "Register failed",
             });
           }
