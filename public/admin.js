@@ -3015,6 +3015,13 @@
   if (setWinbackPack) {
     setWinbackPack.addEventListener("change", function () {
       savedWinbackPackageId = setWinbackPack.value || "";
+      const pack = winbackPackCache.filter(function (p) {
+        return String(p.id) === String(setWinbackPack.value);
+      })[0];
+      // Live: offer price follows the pack you pick (you can still edit lower for a discount)
+      if (pack && setWinbackPrice && pack.priceInr != null) {
+        setWinbackPrice.value = String(Math.round(Number(pack.priceInr)));
+      }
       paintWinbackSummary();
     });
   }
