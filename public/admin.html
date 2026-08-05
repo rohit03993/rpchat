@@ -88,6 +88,10 @@
                 <b id="stat-app-open">0</b>
                 <span>App open</span>
               </button>
+              <button type="button" class="stat warn" data-stat-action="users" data-user-filter="trial-leads" title="Unpaid + time over + active today — win-back / discount targets">
+                <b id="stat-trial-leads">0</b>
+                <span>Trial leads</span>
+              </button>
               <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="New signups today (IST)">
                 <b id="stat-today">0</b>
                 <span>New today</span>
@@ -166,6 +170,7 @@
                 <option value="all" selected>All users</option>
                 <option value="online">In chat</option>
                 <option value="app-open">App open</option>
+                <option value="trial-leads">Trial leads</option>
                 <option value="idle">Idle</option>
                 <option value="paid">Paid</option>
                 <option value="unpaid">Unpaid</option>
@@ -358,6 +363,55 @@
               <input id="set-one-id-device" type="checkbox" />
               <span>One ID per device (block second signup on same phone)</span>
             </label>
+            <h4 class="setup-heading">Trial win-back offer</h4>
+            <p class="meta setup-lead">
+              When unpaid users hit time = 0, auto-send Support chat with your QR and a special price.
+              Bank credit SMS can auto-unlock if the amount matches (and is unique). Keep
+              <code>android-admin-sms</code> running.
+            </p>
+            <label class="field setup-toggle-row">
+              <input id="set-winback-enabled" type="checkbox" />
+              <span>Enable win-back QR offer on trial / time over</span>
+            </label>
+            <div class="setup-grid-admin">
+              <label class="field">
+                <span>Win-back pack</span>
+                <select id="set-winback-pack" autocomplete="off"></select>
+              </label>
+              <label class="field">
+                <span>Win-back price (₹)</span>
+                <input
+                  id="set-winback-price"
+                  type="number"
+                  min="1"
+                  max="100000"
+                  step="1"
+                  placeholder="50"
+                  autocomplete="off"
+                />
+              </label>
+            </div>
+            <div class="qr-admin-block">
+              <p class="field"><span>Win-back QR (sent in Support message)</span></p>
+              <p class="meta setup-lead">
+                Upload a generic QR for the auto offer. This image goes with the Support
+                message. If empty, pack QR / fallback UPI QR is used instead.
+              </p>
+              <img id="set-winback-qr-preview" class="admin-qr-preview" alt="Win-back QR" />
+              <div class="row-actions">
+                <label class="btn-ghost btn-sm file-label">
+                  Choose QR
+                  <input id="set-winback-qr-file" type="file" accept="image/*" hidden />
+                </label>
+                <button type="button" id="set-winback-qr-upload-btn" class="btn btn-sm">
+                  Upload win-back QR
+                </button>
+                <button type="button" id="set-winback-qr-clear-btn" class="btn-danger btn-sm">
+                  Clear
+                </button>
+              </div>
+              <p id="set-winback-qr-msg" class="meta"></p>
+            </div>
             <h4 class="setup-heading">Clear cache for users</h4>
             <p class="meta setup-lead">
               After you deploy new code, tap this so open chat tabs reload the latest JS/CSS.

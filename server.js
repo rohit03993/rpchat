@@ -612,6 +612,13 @@ app.post("/api/billing/pay-intent", requireUser, (req, res) => {
   res.json(result);
 });
 
+/** Trial/time-over unpaid → Support QR + win-back pay-intent for SMS auto-unlock */
+app.post("/api/billing/winback-offer", requireUser, (req, res) => {
+  const result = billing.grantWinbackOffer(req.userId);
+  if (!result.ok) return res.status(400).json(result);
+  res.json(result);
+});
+
 /** Checkout funnel stages: open | pack | scan_qr | ive_paid | submitted | success | abandon */
 app.post("/api/billing/pay-event", requireUser, (req, res) => {
   const result = billing.recordPayEvent({
@@ -904,6 +911,9 @@ app.put("/api/admin/settings", requireAdmin, (req, res) => {
       packages: req.body?.packages,
       trialMinutes: req.body?.trialMinutes,
       oneIdPerDevice: req.body?.oneIdPerDevice,
+      winbackEnabled: req.body?.winbackEnabled,
+      winbackPackageId: req.body?.winbackPackageId,
+      winbackPriceInr: req.body?.winbackPriceInr,
     });
     res.json(result);
   } catch (err) {
@@ -930,6 +940,19 @@ app.post("/api/admin/settings/qr", requireAdmin, (req, res) => {
 
 app.delete("/api/admin/settings/qr", requireAdmin, (_req, res) => {
   res.json(billing.clearUpiQr());
+});
+
+app.post("/api/admin/settings/winback-qr", requireAdmin, (req, res) => {
+  try {
+    const result = billing.saveWinbackQrBase64(req.body?.imageBase64);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message || "Win-back QR upload failed" });
+  }
+});
+
+app.delete("/api/admin/settings/winback-qr", requireAdmin, (_req, res) => {
+  res.json(billing.clearWinbackQr());
 });
 
 app.post("/api/admin/settings/packages/:id/qr", requireAdmin, (req, res) => {

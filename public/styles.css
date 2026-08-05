@@ -1415,6 +1415,19 @@ body {
   white-space: pre-wrap;
 }
 
+.admin-notice-qr {
+  display: block;
+  width: min(200px, 70vw);
+  height: auto;
+  margin: 8px auto 12px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.admin-notice-qr.hidden {
+  display: none;
+}
+
 .admin-notice-actions {
   display: grid;
   grid-template-columns: 1fr 1.2fr;

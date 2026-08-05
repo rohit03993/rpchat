@@ -89,6 +89,7 @@
   const statPaid = document.getElementById("stat-paid");
   const statActive = document.getElementById("stat-active");
   const statAppOpen = document.getElementById("stat-app-open");
+  const statTrialLeads = document.getElementById("stat-trial-leads");
   const statHoursSold = document.getElementById("stat-hours-sold");
   const statMsgs = document.getElementById("stat-msgs");
   const statReports = document.getElementById("stat-reports");
@@ -108,6 +109,14 @@
   const setUpiName = document.getElementById("set-upi-name");
   const setTrialMinutes = document.getElementById("set-trial-minutes");
   const setOneIdDevice = document.getElementById("set-one-id-device");
+  const setWinbackEnabled = document.getElementById("set-winback-enabled");
+  const setWinbackPack = document.getElementById("set-winback-pack");
+  const setWinbackPrice = document.getElementById("set-winback-price");
+  const setWinbackQrPreview = document.getElementById("set-winback-qr-preview");
+  const setWinbackQrFile = document.getElementById("set-winback-qr-file");
+  const setWinbackQrUploadBtn = document.getElementById("set-winback-qr-upload-btn");
+  const setWinbackQrClearBtn = document.getElementById("set-winback-qr-clear-btn");
+  const setWinbackQrMsg = document.getElementById("set-winback-qr-msg");
   const setBustCacheBtn = document.getElementById("set-bust-cache-btn");
   const setCacheMeta = document.getElementById("set-cache-meta");
   const setQrPreview = document.getElementById("set-qr-preview");
@@ -133,6 +142,7 @@
   let usersCache = [];
   let paymentsCache = [];
   let pendingQrBase64 = null;
+  let pendingWinbackQrBase64 = null;
   const expandedUserIds = new Set();
   let usersPage = 1;
   let softRefreshBusy = false;
@@ -258,6 +268,7 @@
     if (!list.length) {
       setPackages.innerHTML =
         "<div class='empty'>No packs yet. Tap + Add pack.</div>";
+      fillWinbackPackSelect([]);
       return;
     }
     setPackages.innerHTML = list
@@ -337,6 +348,38 @@
         );
       })
       .join("");
+    fillWinbackPackSelect(list);
+  }
+
+  function fillWinbackPackSelect(packages, selectedId) {
+    if (!setWinbackPack) return;
+    const list = packages && packages.length ? packages : [];
+    const cur =
+      selectedId != null && selectedId !== ""
+        ? String(selectedId)
+        : setWinbackPack.value || "";
+    setWinbackPack.innerHTML = list
+      .map(function (p) {
+        const id = String(p.id || "");
+        const label =
+          (p.label || id) +
+          (p.priceInr != null ? " · ₹" + p.priceInr : "");
+        return (
+          '<option value="' +
+          id.replace(/"/g, "&quot;") +
+          '">' +
+          String(label).replace(/</g, "&lt;") +
+          "</option>"
+        );
+      })
+      .join("");
+    if (cur && list.some(function (p) {
+      return String(p.id) === cur;
+    })) {
+      setWinbackPack.value = cur;
+    } else if (list[0]) {
+      setWinbackPack.value = String(list[0].id);
+    }
   }
 
   function collectPackagesFromEditor() {
@@ -479,12 +522,28 @@
             : "5";
       }
       if (setOneIdDevice) setOneIdDevice.checked = !!s.oneIdPerDevice;
+      if (setWinbackEnabled) setWinbackEnabled.checked = !!s.winbackEnabled;
+      if (setWinbackPrice) {
+        setWinbackPrice.value =
+          s.winbackPriceInr != null ? String(s.winbackPriceInr) : "50";
+      }
       paintCacheMeta(s);
       if (setQrPreview) {
         setQrPreview.src = s.qrImageUrl || "/upi-qr.svg";
       }
+      if (setWinbackQrPreview) {
+        setWinbackQrPreview.src =
+          s.winbackQrImageUrl || s.qrImageUrl || "/upi-qr.svg";
+      }
+      if (setWinbackQrMsg) {
+        setWinbackQrMsg.textContent = s.winbackQrImageUrl
+          ? "Win-back QR set — used in Support offer"
+          : "No win-back QR yet — will use pack / fallback QR";
+      }
       pendingQrBase64 = null;
+      pendingWinbackQrBase64 = null;
       renderPackageEditor(s.packages || []);
+      fillWinbackPackSelect(s.packages || [], s.winbackPackageId || "");
     } catch (e) {
       toast("Network error loading settings", "err");
     }
@@ -609,6 +668,18 @@
           : list.filter(function (u) {
               return u.appOpen;
             }).length
+      );
+    }
+    if (statTrialLeads) {
+      const todayMs = startOfTodayIstMs();
+      statTrialLeads.textContent = String(
+        list.filter(function (u) {
+          return (
+            !u.hasPaid &&
+            Number(u.hoursBalance || 0) <= 0.0001 &&
+            userActivityAt(u) >= todayMs
+          );
+        }).length
       );
     }
     if (statHoursSold) {
@@ -774,6 +845,11 @@
       const newToday = created >= todayMs;
       if (f === "online" && !u.sessionActive) return false;
       if (f === "app-open" && !u.appOpen) return false;
+      if (f === "trial-leads") {
+        if (u.hasPaid) return false;
+        if (Number(u.hoursBalance || 0) > 0.0001) return false;
+        if (!activeToday) return false;
+      }
       if (f === "idle" && u.appOpen) return false;
       if (f === "paid" && !u.hasPaid) return false;
       if (f === "unpaid" && u.hasPaid) return false;
@@ -2903,6 +2979,9 @@
             upiName: setUpiName ? setUpiName.value : "",
             trialMinutes: setTrialMinutes ? setTrialMinutes.value : 5,
             oneIdPerDevice: setOneIdDevice ? !!setOneIdDevice.checked : false,
+            winbackEnabled: setWinbackEnabled ? !!setWinbackEnabled.checked : false,
+            winbackPackageId: setWinbackPack ? setWinbackPack.value : "day",
+            winbackPriceInr: setWinbackPrice ? setWinbackPrice.value : 50,
             packages: collectPackagesFromEditor(),
           }),
         });
@@ -2919,11 +2998,21 @@
         toast("Pay setup & trial saved", "ok");
         if (data.settings) {
           renderPackageEditor(data.settings.packages || []);
+          fillWinbackPackSelect(
+            data.settings.packages || [],
+            data.settings.winbackPackageId || ""
+          );
           if (setTrialMinutes && data.settings.trialMinutes != null) {
             setTrialMinutes.value = String(data.settings.trialMinutes);
           }
           if (setOneIdDevice) {
             setOneIdDevice.checked = !!data.settings.oneIdPerDevice;
+          }
+          if (setWinbackEnabled) {
+            setWinbackEnabled.checked = !!data.settings.winbackEnabled;
+          }
+          if (setWinbackPrice && data.settings.winbackPriceInr != null) {
+            setWinbackPrice.value = String(data.settings.winbackPriceInr);
           }
           paintCacheMeta(data.settings);
         }
@@ -3025,6 +3114,86 @@
       }
       if (setQrPreview) setQrPreview.src = data.qrImageUrl || "/upi-qr.svg";
       toast("QR cleared", "ok");
+    });
+  }
+
+  if (setWinbackQrFile) {
+    setWinbackQrFile.addEventListener("change", function () {
+      const file = setWinbackQrFile.files && setWinbackQrFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        pendingWinbackQrBase64 = reader.result;
+        if (setWinbackQrPreview) setWinbackQrPreview.src = pendingWinbackQrBase64;
+        if (setWinbackQrMsg) {
+          setWinbackQrMsg.textContent = "Ready — click Upload win-back QR";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  if (setWinbackQrUploadBtn) {
+    setWinbackQrUploadBtn.addEventListener("click", async function () {
+      if (!pendingWinbackQrBase64) {
+        toast("Choose a win-back QR image first", "err");
+        return;
+      }
+      setWinbackQrUploadBtn.disabled = true;
+      try {
+        const res = await fetch("/api/admin/settings/winback-qr", {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ imageBase64: pendingWinbackQrBase64 }),
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          toast(data.error || "Upload failed", "err");
+          return;
+        }
+        pendingWinbackQrBase64 = null;
+        if (setWinbackQrPreview && data.winbackQrImageUrl) {
+          setWinbackQrPreview.src = data.winbackQrImageUrl;
+        }
+        if (setWinbackQrMsg) {
+          setWinbackQrMsg.textContent = "Win-back QR live in Support offers.";
+        }
+        toast("Win-back QR uploaded", "ok");
+      } catch (e) {
+        toast("Network error", "err");
+      } finally {
+        setWinbackQrUploadBtn.disabled = false;
+      }
+    });
+  }
+  if (setWinbackQrClearBtn) {
+    setWinbackQrClearBtn.addEventListener("click", async function () {
+      if (!confirm("Clear win-back QR? Offers will use pack / fallback QR.")) return;
+      try {
+        const res = await fetch("/api/admin/settings/winback-qr", {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          toast(data.error || "Clear failed", "err");
+          return;
+        }
+        pendingWinbackQrBase64 = null;
+        const fallback =
+          (data.settings && data.settings.qrImageUrl) || "/upi-qr.svg";
+        if (setWinbackQrPreview) setWinbackQrPreview.src = fallback;
+        if (setWinbackQrMsg) {
+          setWinbackQrMsg.textContent =
+            "No win-back QR — will use pack / fallback QR";
+        }
+        toast("Win-back QR cleared", "ok");
+      } catch (e) {
+        toast("Network error", "err");
+      }
     });
   }
 

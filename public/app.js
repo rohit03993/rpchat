@@ -157,6 +157,7 @@
   const adminNoticeEl = document.getElementById("admin-notice");
   const adminNoticeTitleEl = document.getElementById("admin-notice-title");
   const adminNoticeTextEl = document.getElementById("admin-notice-text");
+  const adminNoticeQrEl = document.getElementById("admin-notice-qr");
   const adminNoticeGotItBtn = document.getElementById("admin-notice-got-it");
   const adminNoticeReplyBtn = document.getElementById("admin-notice-reply");
   const discountOfferEl = document.getElementById("discount-offer");
@@ -979,23 +980,28 @@
     await flushChatSessionNow();
     toast("Time over · Pay to continue", "err");
     openPaySheet();
+    // Win-back QR in Support (if enabled) — after pay sheet so they see both
+    setTimeout(function () {
+      maybeRequestWinbackOffer();
+    }, 600);
   }
 
   function syncLocalClock(user) {
     if (!user) return;
+    const prevLeft = remainingHoursNow();
+    // Wall-clock: always trust server hours (admin grants / payments must apply instantly).
+    // Old logic preferred the lower client value and blocked top-ups while time showed 0.
     let next = Number(user.hoursBalance != null ? user.hoursBalance : 0);
-    // Prefer server when it is lower (wall clock advanced while away).
-    // Prefer client when server is higher (stale snapshot from long AI wait).
-    if (localSyncedAt) {
-      const clientLeft = remainingHoursNow();
-      if (next > clientLeft + 1 / 3600) {
-        next = clientLeft;
-      }
-    }
-    localHours = Math.max(0, next);
+    if (!Number.isFinite(next) || next < 0) next = 0;
+
+    localHours = next;
     localSyncedAt = Date.now();
     if (currentUser) {
       currentUser.hoursBalance = localHours;
+      if (user.accessExpiresAt != null) {
+        currentUser.accessExpiresAt = user.accessExpiresAt;
+      }
+      if (user.hasPaid != null) currentUser.hasPaid = user.hasPaid;
       currentUser.timeLabel = formatCountdown(localHours);
       currentUser.secondsLeft = Math.floor(localHours * 3600);
     }
@@ -1007,6 +1013,41 @@
       }
     }
     paintLiveBadge();
+
+    // Admin / payment added time while user was on the page
+    if (localHours > prevLeft + 2 / 3600) {
+      notifyTimeIncreased(localHours, prevLeft);
+    } else if (localHours > 0.0001 && !timerRunning) {
+      startLiveTimer();
+    }
+  }
+
+  function notifyTimeIncreased(hoursLeft, prevLeft) {
+    const label = formatCountdown(hoursLeft);
+    toast("Time increased · " + label + " left", "ok");
+    if (messagesEl) {
+      var msg =
+        prevLeft <= 0.0001
+          ? "Time increased — you now have " +
+            label +
+            " left. Continue your chat."
+          : "Time increased — you now have " + label + " left.";
+      var last = messagesEl.lastElementChild;
+      var already =
+        last &&
+        /Time increased/i.test(last.textContent || "");
+      if (!already) addBubble(msg, "error");
+    }
+    try {
+      if (typeof closePaySheet === "function") {
+        closePaySheet({ skipOffer: true });
+      }
+    } catch (e) {}
+    try {
+      if (typeof hideDiscountOffer === "function") hideDiscountOffer();
+    } catch (e) {}
+    window.__pendingWinbackPopup = null;
+    startLiveTimer();
   }
 
   function paintLiveBadge() {
@@ -1096,12 +1137,20 @@
   async function pingAppOpen() {
     if (!authToken) return;
     try {
-      await fetch("/api/billing/ping", {
+      const res = await fetch("/api/billing/ping", {
         method: "POST",
         headers: authHeaders(),
         body: "{}",
         keepalive: true,
       });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      // Apply balance while browsing (incl. admin top-ups while time was 0)
+      if (data.ok && data.user) {
+        currentUser = Object.assign({}, currentUser || {}, data.user);
+        syncLocalClock(data.user);
+      }
     } catch (e) {
       /* ignore */
     }
@@ -1118,7 +1167,8 @@
     stopAppPresence();
     if (!authToken) return;
     pingAppOpen();
-    appPingId = setInterval(pingAppOpen, 15000);
+    // 5s so admin time grants / unlocks show almost instantly (also while at 0)
+    appPingId = setInterval(pingAppOpen, 5000);
   }
 
   /** Mark online for admin when user is chatting; wall-clock already runs from showApp. */
@@ -1178,6 +1228,10 @@
     if (remainingHoursNow() > 0.0001) {
       if (hoursCounting) await resumeSession();
       startLiveTimer();
+    } else {
+      setTimeout(function () {
+        maybeRequestWinbackOffer();
+      }, 500);
     }
     resumePayProofIfNeeded();
     setTimeout(maybeShowPendingDiscountOffer, 500);
@@ -1272,6 +1326,9 @@
       startLiveTimer();
     } else {
       paintLiveBadge();
+      setTimeout(function () {
+        maybeRequestWinbackOffer();
+      }, 700);
     }
   }
 
@@ -1313,8 +1370,12 @@
 
   function showSupportPopup(popup) {
     if (!adminNoticeEl) return;
-    if (!popup || !popup.text) {
+    if (!popup || (!popup.text && !popup.screenshotUrl)) {
       adminNoticeEl.classList.add("hidden");
+      if (adminNoticeQrEl) {
+        adminNoticeQrEl.classList.add("hidden");
+        adminNoticeQrEl.removeAttribute("src");
+      }
       openAdminNoticeId = null;
       return;
     }
@@ -1327,7 +1388,59 @@
           : "Support · Admin");
     }
     if (adminNoticeTextEl) adminNoticeTextEl.textContent = popup.text || "";
+    if (adminNoticeQrEl) {
+      if (popup.screenshotUrl) {
+        adminNoticeQrEl.src = popup.screenshotUrl;
+        adminNoticeQrEl.classList.remove("hidden");
+      } else {
+        adminNoticeQrEl.classList.add("hidden");
+        adminNoticeQrEl.removeAttribute("src");
+      }
+    }
     adminNoticeEl.classList.remove("hidden");
+  }
+
+  /** Unpaid + time over → Support QR + SMS pay-intent (server settings). */
+  async function maybeRequestWinbackOffer() {
+    if (!authToken) return null;
+    if (currentUser && currentUser.hasPaid && remainingHoursNow() > 0.0001) {
+      return null;
+    }
+    if (remainingHoursNow() > 0.0001) return null;
+    if (payProofMode === "waiting" || payProofMode === "success") return null;
+    if (paySubmittedAt) return null;
+    try {
+      const res = await fetch("/api/billing/winback-offer", {
+        method: "POST",
+        headers: authHeaders(),
+        body: "{}",
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok || !data.ok) return null;
+      if (data.skipped) return data;
+      if (data.supportPopup) {
+        // Don't fight an open pay sheet — show after close, or now if closed
+        var payOpen =
+          billingPanel && !billingPanel.classList.contains("hidden");
+        if (!payOpen) {
+          showSupportPopup(data.supportPopup);
+        } else {
+          window.__pendingWinbackPopup = data.supportPopup;
+        }
+      }
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function flushPendingWinbackPopup() {
+    if (!window.__pendingWinbackPopup) return;
+    var popup = window.__pendingWinbackPopup;
+    window.__pendingWinbackPopup = null;
+    showSupportPopup(popup);
   }
 
   async function markSupportPopupSeen() {
@@ -4252,6 +4365,14 @@
     } else if (wasOpen && options.skipOffer) {
       maybeAbandonPayFunnel(false);
     }
+    if (wasOpen) {
+      flushPendingWinbackPopup();
+      if (remainingHoursNow() <= 0.0001) {
+        maybeRequestWinbackOffer().then(function () {
+          flushPendingWinbackPopup();
+        });
+      }
+    }
   }
 
   if (hoursBadge) {
@@ -4443,6 +4564,14 @@
     markDiscountOfferPending();
     await trackPayEvent("abandon");
     if (showOffer) {
+      // Prefer priced win-back QR when time is over
+      if (remainingHoursNow() <= 0.0001) {
+        var wb = await maybeRequestWinbackOffer();
+        if (wb && (wb.granted || wb.already || wb.supportPopup)) {
+          flushPendingWinbackPopup();
+          return;
+        }
+      }
       setTimeout(function () {
         showDiscountOffer();
       }, 280);
