@@ -390,11 +390,15 @@
   let timerSyncId = null;
   let hoursCounting = false;
   let appPingId = null;
+  let appPingCadenceId = null;
   let sessionSaveTimer = null;
   let restoringSession = false;
   let planEndedHandled = false;
   let warnedAt60 = false;
   let warnedAt30 = false;
+  let unlockWatchId = null;
+  let unlockNoticeShownAt = 0;
+  let unlockApplying = false;
 
   function currentUserId() {
     return (
@@ -964,6 +968,7 @@
     planEndedHandled = true;
     hoursCounting = false;
     stopLiveTimer();
+    startUnlockWatch();
 
     if (messagesEl) {
       var pauseMsg =
@@ -984,6 +989,84 @@
     setTimeout(function () {
       maybeRequestWinbackOffer();
     }, 600);
+  }
+
+  function hideUnlockNotice() {
+    var el = document.getElementById("unlock-notice");
+    if (el) el.classList.add("hidden");
+  }
+
+  function showUnlockNotice(hoursLeft) {
+    var el = document.getElementById("unlock-notice");
+    var textEl = document.getElementById("unlock-notice-text");
+    var titleEl = document.getElementById("unlock-notice-title");
+    if (!el) return;
+    var label = formatCountdown(hoursLeft);
+    var mins = Math.max(1, Math.ceil(Number(hoursLeft) * 60));
+    if (titleEl) titleEl.textContent = mins + " min unlocked";
+    if (textEl) {
+      textEl.textContent =
+        "Timer is live · " +
+        label +
+        " left. Continue this same chat — no refresh needed.";
+    }
+    try {
+      if (typeof hideDiscountOffer === "function") hideDiscountOffer();
+    } catch (e) {}
+    if (adminNoticeEl) adminNoticeEl.classList.add("hidden");
+    el.classList.remove("hidden");
+    unlockNoticeShownAt = Date.now();
+  }
+
+  function stopUnlockWatch() {
+    if (unlockWatchId) {
+      clearInterval(unlockWatchId);
+      unlockWatchId = null;
+    }
+  }
+
+  function needsUnlockWatch() {
+    if (!authToken) return false;
+    if (remainingHoursNow() <= 0.0001) return true;
+    if (planEndedHandled) return true;
+    if (getPayProofHold()) return true;
+    if (payProofMode === "waiting" || payProofMode === "rejected") return true;
+    return false;
+  }
+
+  function startUnlockWatch() {
+    if (unlockWatchId) return;
+    if (!authToken) return;
+    unlockWatchId = setInterval(function () {
+      pollForUnlock();
+    }, 2500);
+    // Immediate check so approval shows within ~0–2s, not only after first interval
+    pollForUnlock();
+  }
+
+  async function pollForUnlock() {
+    if (!authToken || unlockApplying) return;
+    if (!needsUnlockWatch()) {
+      // Keep a light check while logged in only if we still need it
+      return;
+    }
+    unlockApplying = true;
+    try {
+      await refreshMe({ skipSupportPopupClear: true });
+      if (
+        getPayProofHold() ||
+        payProofMode === "waiting" ||
+        payProofMode === "rejected"
+      ) {
+        try {
+          await loadMyPayments();
+        } catch (e2) {}
+      }
+    } catch (e) {
+      /* ignore */
+    } finally {
+      unlockApplying = false;
+    }
   }
 
   function syncLocalClock(user) {
@@ -1020,22 +1103,33 @@
     } else if (localHours > 0.0001 && !timerRunning) {
       startLiveTimer();
     }
+
+    if (needsUnlockWatch()) startUnlockWatch();
+    else stopUnlockWatch();
   }
 
   function notifyTimeIncreased(hoursLeft, prevLeft) {
+    const fromZero = Number(prevLeft) <= 0.0001;
     const label = formatCountdown(hoursLeft);
-    toast("Time increased · " + label + " left", "ok");
+    const mins = Math.max(1, Math.ceil(Number(hoursLeft) * 60));
+
+    if (fromZero) {
+      toast(mins + " min unlocked · " + label + " left", "ok");
+      showUnlockNotice(hoursLeft);
+    } else {
+      toast("Time increased · " + label + " left", "ok");
+    }
+
     if (messagesEl) {
-      var msg =
-        prevLeft <= 0.0001
-          ? "Time increased — you now have " +
-            label +
-            " left. Continue your chat."
-          : "Time increased — you now have " + label + " left.";
+      var msg = fromZero
+        ? "Minutes unlocked — you now have " +
+          label +
+          " left. Continue your chat."
+        : "Time increased — you now have " + label + " left.";
       var last = messagesEl.lastElementChild;
       var already =
         last &&
-        /Time increased/i.test(last.textContent || "");
+        /(Time increased|Minutes unlocked)/i.test(last.textContent || "");
       if (!already) addBubble(msg, "error");
     }
     try {
@@ -1047,7 +1141,11 @@
       if (typeof hideDiscountOffer === "function") hideDiscountOffer();
     } catch (e) {}
     window.__pendingWinbackPopup = null;
+    clearPayProofHold();
+    stopPayPoll();
+    planEndedHandled = false;
     startLiveTimer();
+    stopUnlockWatch();
   }
 
   function paintLiveBadge() {
@@ -1126,7 +1224,9 @@
         syncLocalClock(currentUser);
       }
       if (data.ok === false && /Time.?s up|Time over|Scene paused/i.test(data.error || "")) {
-        handlePlanEnded(data.error);
+        if (remainingHoursNow() <= 0.0001) {
+          handlePlanEnded(data.error);
+        }
       }
     } catch (e) {
       /* ignore — timer still runs from last known balance */
@@ -1142,11 +1242,12 @@
         headers: authHeaders(),
         body: "{}",
         keepalive: true,
+        cache: "no-store",
       });
       const data = await res.json().catch(function () {
         return {};
       });
-      // Apply balance while browsing (incl. admin top-ups while time was 0)
+      // Apply balance while browsing (incl. admin top-ups / pay approve while time was 0)
       if (data.ok && data.user) {
         currentUser = Object.assign({}, currentUser || {}, data.user);
         syncLocalClock(data.user);
@@ -1157,6 +1258,10 @@
   }
 
   function stopAppPresence() {
+    if (appPingCadenceId) {
+      clearInterval(appPingCadenceId);
+      appPingCadenceId = null;
+    }
     if (appPingId) {
       clearInterval(appPingId);
       appPingId = null;
@@ -1167,8 +1272,18 @@
     stopAppPresence();
     if (!authToken) return;
     pingAppOpen();
-    // 5s so admin time grants / unlocks show almost instantly (also while at 0)
-    appPingId = setInterval(pingAppOpen, 5000);
+    var ms = remainingHoursNow() <= 0.0001 || planEndedHandled ? 2500 : 5000;
+    appPingId = setInterval(pingAppOpen, ms);
+    appPingCadenceId = setInterval(function () {
+      if (!authToken) return;
+      var want =
+        remainingHoursNow() <= 0.0001 || planEndedHandled ? 2500 : 5000;
+      if (want === ms && appPingId) return;
+      ms = want;
+      if (appPingId) clearInterval(appPingId);
+      appPingId = setInterval(pingAppOpen, ms);
+    }, 8000);
+    startUnlockWatch();
   }
 
   /** Mark online for admin when user is chatting; wall-clock already runs from showApp. */
@@ -1205,6 +1320,8 @@
     // Presence only — access keeps counting on the server
     stopLiveTimer();
     stopAppPresence();
+    // Keep unlock watch so approve while briefly backgrounded still applies
+    if (needsUnlockWatch()) startUnlockWatch();
     try {
       fetch("/api/billing/pause", {
         method: "POST",
@@ -1223,8 +1340,9 @@
       setTimeout(maybeShowPendingDiscountOffer, 500);
       return;
     }
-    await refreshMe();
+    await refreshMe({ skipSupportPopupClear: true });
     startAppPresence();
+    startUnlockWatch();
     if (remainingHoursNow() > 0.0001) {
       if (hoursCounting) await resumeSession();
       startLiveTimer();
@@ -1326,6 +1444,7 @@
       startLiveTimer();
     } else {
       paintLiveBadge();
+      startUnlockWatch();
       setTimeout(function () {
         maybeRequestWinbackOffer();
       }, 700);
@@ -1336,6 +1455,8 @@
     hoursCounting = false;
     stopLiveTimer();
     stopAppPresence();
+    stopUnlockWatch();
+    hideUnlockNotice();
     authToken = "";
     currentUser = null;
     localHours = 0;
@@ -1347,9 +1468,13 @@
     setUserChip(null);
   }
 
-  async function refreshMe() {
+  async function refreshMe(opts) {
+    const options = opts || {};
     if (!authToken) return false;
-    const res = await fetch("/api/billing/me", { headers: authHeaders() });
+    const res = await fetch("/api/billing/me", {
+      headers: authHeaders(),
+      cache: "no-store",
+    });
     const data = await res.json();
     if (!res.ok) {
       logout();
@@ -1364,7 +1489,14 @@
         " · Left: " +
         formatCountdown(remainingHoursNow());
     }
-    showSupportPopup(data.supportPopup || null);
+    // Don't wipe unlock popup right after approval when Support has nothing new
+    var unlockFresh =
+      unlockNoticeShownAt && Date.now() - unlockNoticeShownAt < 8000;
+    if (data.supportPopup) {
+      showSupportPopup(data.supportPopup);
+    } else if (!options.skipSupportPopupClear && !unlockFresh) {
+      showSupportPopup(null);
+    }
     return true;
   }
 
@@ -4604,6 +4736,15 @@
     discountOfferNoBtn.addEventListener("click", function () {
       clearDiscountOfferPending();
       hideDiscountOffer();
+    });
+  }
+  var unlockNoticeOkBtn = document.getElementById("unlock-notice-ok");
+  if (unlockNoticeOkBtn) {
+    unlockNoticeOkBtn.addEventListener("click", function () {
+      hideUnlockNotice();
+      try {
+        if (input) input.focus();
+      } catch (e) {}
     });
   }
   if (discountOfferYesBtn) {

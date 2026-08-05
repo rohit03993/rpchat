@@ -1391,6 +1391,18 @@ body {
   color: #1f6b4a;
 }
 
+.unlock-notice {
+  border-color: rgba(8, 120, 94, 0.45);
+  z-index: 43;
+  background:
+    linear-gradient(165deg, rgba(8, 120, 94, 0.1), transparent 50%),
+    #fff;
+}
+
+.unlock-notice .admin-notice-kicker {
+  color: #08785e;
+}
+
 .admin-notice-kicker {
   margin: 0;
   font-size: 0.72rem;
