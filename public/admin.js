@@ -88,6 +88,7 @@
   const statMoney = document.getElementById("stat-money");
   const statPaid = document.getElementById("stat-paid");
   const statActive = document.getElementById("stat-active");
+  const statAppOpen = document.getElementById("stat-app-open");
   const statHoursSold = document.getElementById("stat-hours-sold");
   const statMsgs = document.getElementById("stat-msgs");
   const statReports = document.getElementById("stat-reports");
@@ -601,6 +602,15 @@
             }).length
       );
     }
+    if (statAppOpen) {
+      statAppOpen.textContent = String(
+        a.appOpen != null
+          ? a.appOpen
+          : list.filter(function (u) {
+              return u.appOpen;
+            }).length
+      );
+    }
     if (statHoursSold) {
       statHoursSold.textContent = String(
         a.hoursSold != null ? a.hoursSold : "—"
@@ -763,7 +773,8 @@
       const activeToday = userActivityAt(u) >= todayMs;
       const newToday = created >= todayMs;
       if (f === "online" && !u.sessionActive) return false;
-      if (f === "idle" && u.sessionActive) return false;
+      if (f === "app-open" && !u.appOpen) return false;
+      if (f === "idle" && u.appOpen) return false;
       if (f === "paid" && !u.hasPaid) return false;
       if (f === "unpaid" && u.hasPaid) return false;
       if (f === "has-time" && Number(u.hoursBalance || 0) <= 0.0001) return false;
@@ -773,6 +784,11 @@
       if (f === "repeat-today" && !(activeToday && !newToday)) return false;
       if (!q) return true;
       const insight = userVisitInsight(u);
+      const presenceLabel = u.sessionActive
+        ? "in chat online"
+        : u.appOpen
+          ? "app open browsing"
+          : "idle";
       const hay = [
         u.userId,
         u.pin,
@@ -783,7 +799,7 @@
         u.resistance,
         u.activeMood,
         u.hasPaid ? "paid" : "unpaid trial",
-        u.sessionActive ? "online" : "idle",
+        presenceLabel,
         insight.visitLabel,
         insight.newToday ? "new today" : "",
         insight.activeToday && !insight.newToday ? "repeat today" : "",
@@ -1201,8 +1217,8 @@
     const scrollParent = usersEl;
     const prevScroll = soft && scrollParent ? scrollParent.scrollTop : 0;
     const filtered = filterUsersList(list || []).slice().sort(function (a, b) {
-      const ao = a.sessionActive ? 1 : 0;
-      const bo = b.sessionActive ? 1 : 0;
+      const ao = a.sessionActive ? 2 : a.appOpen ? 1 : 0;
+      const bo = b.sessionActive ? 2 : b.appOpen ? 1 : 0;
       if (ao !== bo) return bo - ao;
       return Number(b.createdAt || 0) - Number(a.createdAt || 0);
     });
@@ -1263,11 +1279,21 @@
             ? String(u.sceneNote).slice(0, 67) + "…"
             : String(u.sceneNote)
           : "";
+        const presenceClass = u.sessionActive
+          ? "online"
+          : u.appOpen
+            ? "app-open"
+            : "";
+        const presenceLabel = u.sessionActive
+          ? "in chat"
+          : u.appOpen
+            ? "app open"
+            : "idle";
         const onlineBadge =
           "<span class='badge " +
-          (u.sessionActive ? "online" : "") +
+          presenceClass +
           " user-card-status'>" +
-          (u.sessionActive ? "online" : "idle") +
+          presenceLabel +
           "</span>";
         const signalChips = insight.chips
           .map(function (c) {
@@ -1313,6 +1339,7 @@
         return (
           "<article class='user-card" +
           (u.sessionActive ? " is-online" : "") +
+          (u.appOpen && !u.sessionActive ? " is-app-open" : "") +
           (Number(u.pendingPayments || 0) > 0 ? " has-pending" : "") +
           (insight.newToday ? " is-new-today" : "") +
           (insight.visitKey === "repeat" ? " is-repeat-today" : "") +
@@ -1323,6 +1350,8 @@
           Number(u.hoursBalance || 0) +
           "' data-online='" +
           (u.sessionActive ? "1" : "0") +
+          "' data-app-open='" +
+          (u.appOpen ? "1" : "0") +
           "' data-fetched-at='" +
           Date.now() +
           "'>" +

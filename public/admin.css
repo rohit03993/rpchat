@@ -526,6 +526,10 @@ button {
   border-color: rgba(8, 120, 94, 0.35);
 }
 
+.user-card.is-app-open {
+  border-color: rgba(180, 130, 20, 0.35);
+}
+
 .user-card.has-pending {
   border-color: rgba(138, 90, 0, 0.35);
 }
@@ -607,8 +611,18 @@ button {
   font-weight: 800;
 }
 
+.user-card-signals .badge.app-open {
+  background: rgba(230, 170, 60, 0.2);
+  color: #a86a14;
+  font-weight: 800;
+}
+
 .user-card.is-online .user-card-summary {
   background: rgba(8, 120, 94, 0.05);
+}
+
+.user-card.is-app-open .user-card-summary {
+  background: rgba(180, 130, 20, 0.06);
 }
 
 .uc-chip {
@@ -1217,6 +1231,11 @@ button.id-pill.id-link:hover {
 .badge.approved {
   background: rgba(30, 201, 160, 0.16);
   color: var(--ok);
+}
+
+.badge.app-open {
+  background: rgba(230, 170, 60, 0.16);
+  color: #a86a14;
 }
 
 .badge.pending {

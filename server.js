@@ -590,6 +590,13 @@ app.post("/api/billing/resume", requireUser, (req, res) => {
   });
 });
 
+/** App open (browsing) — not chatting; works at 0 hours for discount outreach */
+app.post("/api/billing/ping", requireUser, (req, res) => {
+  const result = billing.pingAppOpen(req.userId);
+  if (!result.ok) return res.status(404).json(result);
+  res.json(result);
+});
+
 app.post("/api/billing/pause", requireUser, (req, res) => {
   const user = billing.pauseSession(req.userId);
   res.json({ user });

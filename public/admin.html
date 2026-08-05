@@ -82,7 +82,11 @@
               </button>
               <button type="button" class="stat stat-hot" data-stat-action="users" data-user-filter="online" title="Users chatting right now (~90s)">
                 <b id="stat-active">0</b>
-                <span>In session</span>
+                <span>In chat</span>
+              </button>
+              <button type="button" class="stat" data-stat-action="users" data-user-filter="app-open" title="Logged-in users with the app open (browsing or chatting)">
+                <b id="stat-app-open">0</b>
+                <span>App open</span>
               </button>
               <button type="button" class="stat" data-stat-action="users" data-user-filter="today" title="New signups today (IST)">
                 <b id="stat-today">0</b>
@@ -160,7 +164,8 @@
               />
               <select id="user-filter" title="Filter users">
                 <option value="all" selected>All users</option>
-                <option value="online">Online</option>
+                <option value="online">In chat</option>
+                <option value="app-open">App open</option>
                 <option value="idle">Idle</option>
                 <option value="paid">Paid</option>
                 <option value="unpaid">Unpaid</option>

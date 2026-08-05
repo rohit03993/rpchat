@@ -388,6 +388,7 @@
   let timerTickId = null;
   let timerSyncId = null;
   let hoursCounting = false;
+  let appPingId = null;
   let sessionSaveTimer = null;
   let restoringSession = false;
   let planEndedHandled = false;
@@ -1091,6 +1092,35 @@
     }
   }
 
+  /** Tell admin this logged-in user has the app open (works at 0 hours). */
+  async function pingAppOpen() {
+    if (!authToken) return;
+    try {
+      await fetch("/api/billing/ping", {
+        method: "POST",
+        headers: authHeaders(),
+        body: "{}",
+        keepalive: true,
+      });
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function stopAppPresence() {
+    if (appPingId) {
+      clearInterval(appPingId);
+      appPingId = null;
+    }
+  }
+
+  function startAppPresence() {
+    stopAppPresence();
+    if (!authToken) return;
+    pingAppOpen();
+    appPingId = setInterval(pingAppOpen, 15000);
+  }
+
   /** Mark online for admin when user is chatting; wall-clock already runs from showApp. */
   async function ensureHoursCounting() {
     const already = hoursCounting;
@@ -1124,6 +1154,7 @@
     flushPayAbandonOnLeave();
     // Presence only — access keeps counting on the server
     stopLiveTimer();
+    stopAppPresence();
     try {
       fetch("/api/billing/pause", {
         method: "POST",
@@ -1143,6 +1174,7 @@
       return;
     }
     await refreshMe();
+    startAppPresence();
     if (remainingHoursNow() > 0.0001) {
       if (hoursCounting) await resumeSession();
       startLiveTimer();
@@ -1213,6 +1245,7 @@
 
   function showAuth() {
     stopLiveTimer();
+    stopAppPresence();
     if (authGate) authGate.classList.remove("hidden");
     if (appShell) {
       appShell.classList.add("hidden");
@@ -1230,9 +1263,10 @@
     setPublicSeoMode(false);
     hoursCounting = false;
     stopLiveTimer();
-    // Presence offline until they chat — wall-clock still runs on the badge
+    // In-chat offline until they message — still mark app open for discount outreach
     await pauseBillingQuiet();
     await refreshMe();
+    startAppPresence();
     setUserChip(currentUser);
     if (remainingHoursNow() > 0.0001) {
       startLiveTimer();
@@ -1244,6 +1278,7 @@
   function logout() {
     hoursCounting = false;
     stopLiveTimer();
+    stopAppPresence();
     authToken = "";
     currentUser = null;
     localHours = 0;
@@ -4231,6 +4266,7 @@
   if (payBackdrop) payBackdrop.addEventListener("click", closePaySheet);
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async function () {
+      stopAppPresence();
       try {
         await fetch("/api/billing/pause", {
           method: "POST",
