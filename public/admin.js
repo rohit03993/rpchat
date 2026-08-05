@@ -124,6 +124,19 @@
   let savedWinbackPackageId = "";
   let winbackPackCache = [];
   let winbackPackPrevId = "";
+  let winbackPricesByPack = {};
+
+  function offerPriceForPack(packId, pack) {
+    const id = String(packId || "");
+    if (id && winbackPricesByPack[id] != null) {
+      const n = Math.round(Number(winbackPricesByPack[id]));
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    if (pack && pack.priceInr != null) {
+      return Math.round(Number(pack.priceInr));
+    }
+    return null;
+  }
   const setCacheMeta = document.getElementById("set-cache-meta");
   const setQrPreview = document.getElementById("set-qr-preview");
   const setQrFile = document.getElementById("set-qr-file");
@@ -370,10 +383,15 @@
     setWinbackPack.innerHTML = list
       .map(function (p) {
         const id = String(p.id || "");
-        const label =
-          "Unlock: " +
-          (p.label || id) +
-          (p.priceInr != null ? " (list ₹" + p.priceInr + ")" : "");
+        const listP = p.priceInr != null ? Math.round(Number(p.priceInr)) : null;
+        const offer = offerPriceForPack(id, p);
+        let label = "Unlock: " + (p.label || id);
+        if (listP != null) label += " (list ₹" + listP;
+        if (offer != null && offer !== listP) {
+          label += " · offer ₹" + offer;
+        }
+        if (listP != null) label += ")";
+        else if (offer != null) label += " (offer ₹" + offer + ")";
         return (
           '<option value="' +
           id.replace(/"/g, "&quot;") +
@@ -423,7 +441,7 @@
         " → unlock " +
         (pack.label || pack.id) +
         (listP ? " (normal ₹" + listP + ")" : "") +
-        ". Tap Save win-back to keep this.";
+        ". Tap Save win-back — this pack keeps its own offer ₹.";
     } else {
       setWinbackSummary.textContent =
         "Set offer price (what they pay). Pack list ₹ is only the normal price — not the offer.";
@@ -456,12 +474,19 @@
       }
       const s = data.settings || {};
       if (setWinbackEnabled) setWinbackEnabled.checked = !!s.winbackEnabled;
+      if (s.winbackPricesByPack) {
+        winbackPricesByPack = Object.assign({}, s.winbackPricesByPack);
+      }
       if (setWinbackPrice && s.winbackPriceInr != null) {
         setWinbackPrice.value = String(s.winbackPriceInr);
       }
       savedWinbackPackageId = s.winbackPackageId || savedWinbackPackageId;
       if (s.packages) {
         fillWinbackPackSelect(s.packages, s.winbackPackageId || "");
+      }
+      // Keep the price we just saved for this pack (don't lose it on rebuild)
+      if (setWinbackPrice && s.winbackPriceInr != null) {
+        setWinbackPrice.value = String(s.winbackPriceInr);
       }
       paintWinbackSummary();
       const pay = s.winbackPriceInr != null ? s.winbackPriceInr : "";
@@ -619,6 +644,17 @@
       if (setOneIdDevice) setOneIdDevice.checked = !!s.oneIdPerDevice;
       if (setWinbackEnabled) setWinbackEnabled.checked = !!s.winbackEnabled;
       savedWinbackPackageId = s.winbackPackageId || "";
+      winbackPricesByPack = Object.assign({}, s.winbackPricesByPack || {});
+      // Seed active pack into map if missing
+      if (
+        s.winbackPackageId &&
+        s.winbackPriceInr != null &&
+        winbackPricesByPack[s.winbackPackageId] == null
+      ) {
+        winbackPricesByPack[s.winbackPackageId] = Math.round(
+          Number(s.winbackPriceInr)
+        );
+      }
       paintCacheMeta(s);
       if (setQrPreview) {
         setQrPreview.src = s.qrImageUrl || "/upi-qr.svg";
@@ -636,10 +672,18 @@
       pendingWinbackQrBase64 = null;
       renderPackageEditor(s.packages || []);
       fillWinbackPackSelect(s.packages || [], s.winbackPackageId || "");
-      // Restore offer price AFTER pack list rebuild (must not get overwritten)
+      // Restore this pack's offer price AFTER pack list rebuild
       if (setWinbackPrice) {
+        const pack = (s.packages || []).filter(function (p) {
+          return String(p.id) === String(s.winbackPackageId || "");
+        })[0];
+        const offer = offerPriceForPack(s.winbackPackageId, pack);
         setWinbackPrice.value =
-          s.winbackPriceInr != null ? String(s.winbackPriceInr) : "50";
+          offer != null
+            ? String(offer)
+            : s.winbackPriceInr != null
+              ? String(s.winbackPriceInr)
+              : "50";
       }
       if (setWinbackSaveMsg) setWinbackSaveMsg.textContent = "";
       paintWinbackSummary();
@@ -3075,9 +3119,10 @@
       const pack = winbackPackCache.filter(function (p) {
         return String(p.id) === String(nextId);
       })[0];
-      // Only when pack actually changes — don't wipe a typed discount (e.g. 120)
-      if (packChanged && pack && setWinbackPrice && pack.priceInr != null) {
-        setWinbackPrice.value = String(Math.round(Number(pack.priceInr)));
+      // Load this pack's saved offer ₹ (or list price if never set)
+      if (packChanged && setWinbackPrice) {
+        const offer = offerPriceForPack(nextId, pack);
+        if (offer != null) setWinbackPrice.value = String(offer);
       }
       paintWinbackSummary();
     });
@@ -3120,6 +3165,13 @@
         if (setSaveMsg) setSaveMsg.textContent = "Saved.";
         toast("Pay setup & trial saved", "ok");
         if (data.settings) {
+          if (data.settings.winbackPricesByPack) {
+            winbackPricesByPack = Object.assign(
+              {},
+              data.settings.winbackPricesByPack
+            );
+          }
+          savedWinbackPackageId = data.settings.winbackPackageId || "";
           renderPackageEditor(data.settings.packages || []);
           fillWinbackPackSelect(
             data.settings.packages || [],
@@ -3137,7 +3189,6 @@
           if (setWinbackPrice && data.settings.winbackPriceInr != null) {
             setWinbackPrice.value = String(data.settings.winbackPriceInr);
           }
-          savedWinbackPackageId = data.settings.winbackPackageId || "";
           paintWinbackSummary();
           paintCacheMeta(data.settings);
         }
