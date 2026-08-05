@@ -4621,7 +4621,21 @@
           await openSupportSheet({ fromDiscount: true });
           return;
         }
-        toast("Opened Support — add more if you want", "ok");
+        if (data.supportPopup) {
+          showSupportPopup(data.supportPopup);
+        }
+        if (data.winback && data.winback.granted) {
+          toast(
+            "Special offer sent · Pay ₹" +
+              (data.winback.offer && data.winback.offer.priceInr
+                ? data.winback.offer.priceInr
+                : "") +
+              " in Support",
+            "ok"
+          );
+        } else {
+          toast("Opened Support — add more if you want", "ok");
+        }
         await openSupportSheet({ fromDiscount: true });
       } catch (e) {
         hideDiscountOffer();
