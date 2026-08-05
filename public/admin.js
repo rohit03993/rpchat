@@ -87,7 +87,13 @@
   const statPayLeads = document.getElementById("stat-pay-leads");
   const statHours = document.getElementById("stat-hours");
   const statMoney = document.getElementById("stat-money");
+  const statMoneyToday = document.getElementById("stat-money-today");
+  const statMoneyWeek = document.getElementById("stat-money-week");
   const statPaid = document.getElementById("stat-paid");
+  const statPaidShare = document.getElementById("stat-paid-share");
+  const statTrialOnly = document.getElementById("stat-trial-only");
+  const statConvertToday = document.getElementById("stat-convert-today");
+  const statFunnelTodaySub = document.getElementById("stat-funnel-today-sub");
   const statActive = document.getElementById("stat-active");
   const statAppOpen = document.getElementById("stat-app-open");
   const statTrialLeads = document.getElementById("stat-trial-leads");
@@ -97,6 +103,8 @@
   const statToday = document.getElementById("stat-today");
   const statUniqueToday = document.getElementById("stat-unique-today");
   const statRepeatToday = document.getElementById("stat-repeat-today");
+  let analyticsSeriesCache = [];
+  let analyticsTrendMetric = "signups";
   const userSearch = document.getElementById("user-search");
   const chatDrawer = document.getElementById("chat-drawer");
   const chatDrawerTitle = document.getElementById("chat-drawer-title");
@@ -739,6 +747,145 @@
     }
   }
 
+  function inr(n) {
+    return "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+  }
+
+  function pctWidth(part, total) {
+    const t = Number(total) || 0;
+    const p = Number(part) || 0;
+    if (t <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round((p / t) * 1000) / 10));
+  }
+
+  function renderTrendChart(series, metric) {
+    const el = document.getElementById("analytics-trend-chart");
+    const foot = document.getElementById("analytics-trend-foot");
+    if (!el) return;
+    const days = Array.isArray(series) ? series : [];
+    const key =
+      metric === "money" ? "moneyInr" : metric === "actives" ? "actives" : "signups";
+    const max = Math.max(
+      1,
+      ...days.map(function (d) {
+        return Number(d[key]) || 0;
+      })
+    );
+    el.innerHTML = days
+      .map(function (d) {
+        const v = Number(d[key]) || 0;
+        const h = Math.max(4, Math.round((v / max) * 100));
+        const label =
+          metric === "money" ? "₹" + Math.round(v).toLocaleString("en-IN") : String(v);
+        return (
+          '<div class="trend-col' +
+          (d.isToday ? " is-today" : "") +
+          '" title="' +
+          (d.label || "") +
+          ": " +
+          label +
+          '">' +
+          '<div class="trend-bar-wrap"><span class="trend-bar" style="height:' +
+          h +
+          '%"></span></div>' +
+          '<span class="trend-val">' +
+          label +
+          "</span>" +
+          '<span class="trend-day">' +
+          (d.label || "") +
+          "</span>" +
+          "</div>"
+        );
+      })
+      .join("");
+    if (foot) {
+      foot.textContent =
+        metric === "money"
+          ? "Approved ₹ by IST day"
+          : metric === "actives"
+            ? "Users active by IST day"
+            : "New signups by IST day";
+    }
+  }
+
+  function renderAnalyticsVisuals(a) {
+    const total = Number(a.usersTotal) || 0;
+    const paid = Number(a.paidUsers) || 0;
+    const trial = Number(a.trialOnly != null ? a.trialOnly : Math.max(0, total - paid));
+    const withTime = Number(a.withTimeLeft) || 0;
+    const inChat = Number(a.sessionActive) || 0;
+    const appOpen = Number(a.appOpen) || 0;
+
+    if (statMoneyToday) {
+      statMoneyToday.textContent = inr(a.moneyToday != null ? a.moneyToday : 0);
+    }
+    if (statMoneyWeek) {
+      statMoneyWeek.textContent =
+        inr(a.moneyWeek != null ? a.moneyWeek : 0) + " this week";
+    }
+    if (statPaidShare) {
+      statPaidShare.textContent =
+        (a.paidSharePct != null ? a.paidSharePct : pctWidth(paid, total)) + "%";
+    }
+    if (statTrialOnly) statTrialOnly.textContent = String(trial);
+    if (statConvertToday) {
+      const opens = Number(a.payOpensToday) || 0;
+      if (opens <= 0) {
+        statConvertToday.textContent = "—";
+      } else {
+        statConvertToday.textContent =
+          (a.convertTodayPct != null ? a.convertTodayPct : 0) + "%";
+      }
+    }
+    if (statFunnelTodaySub) {
+      const opens = Number(a.payOpensToday) || 0;
+      const wins = Number(a.paySuccessToday) || 0;
+      statFunnelTodaySub.textContent =
+        opens <= 0
+          ? "No checkout opens yet"
+          : opens + " opens · " + wins + " paid";
+    }
+
+    const mixPaidLabel = document.getElementById("mix-paid-label");
+    const mixTimeLabel = document.getElementById("mix-time-label");
+    const mixLiveLabel = document.getElementById("mix-live-label");
+    const mixPaidFill = document.getElementById("mix-paid-fill");
+    const mixTimeFill = document.getElementById("mix-time-fill");
+    const mixChatFill = document.getElementById("mix-chat-fill");
+    const mixAppFill = document.getElementById("mix-app-fill");
+    if (mixPaidLabel) mixPaidLabel.textContent = paid + " / " + total;
+    if (mixTimeLabel) mixTimeLabel.textContent = withTime + " / " + total;
+    if (mixLiveLabel) {
+      mixLiveLabel.textContent = inChat + " chat · " + appOpen + " app";
+    }
+    if (mixPaidFill) mixPaidFill.style.width = pctWidth(paid, total) + "%";
+    if (mixTimeFill) mixTimeFill.style.width = pctWidth(withTime, total) + "%";
+    if (mixChatFill) mixChatFill.style.width = pctWidth(inChat, total) + "%";
+    if (mixAppFill) {
+      const appOnly = Math.max(0, appOpen - inChat);
+      mixAppFill.style.width = pctWidth(appOnly, total) + "%";
+    }
+
+    const leads = Number(a.payLeadsOpen) || 0;
+    const abandon = Number(a.payAbandonedOpen) || 0;
+    const discount = Number(a.discountAsksOpen) || 0;
+    const trialLeads = Number(a.trialLeads) || 0;
+    const funnelMax = Math.max(1, leads, abandon, discount, trialLeads);
+    const setFunnel = function (id, barId, n) {
+      const el = document.getElementById(id);
+      const bar = document.getElementById(barId);
+      if (el) el.textContent = String(n);
+      if (bar) bar.style.width = pctWidth(n, funnelMax) + "%";
+    };
+    setFunnel("funnel-leads", "funnel-bar-leads", leads);
+    setFunnel("funnel-abandon", "funnel-bar-abandon", abandon);
+    setFunnel("funnel-discount", "funnel-bar-discount", discount);
+    setFunnel("funnel-trial", "funnel-bar-trial", trialLeads);
+
+    analyticsSeriesCache = Array.isArray(a.seriesDays) ? a.seriesDays : [];
+    renderTrendChart(analyticsSeriesCache, analyticsTrendMetric);
+  }
+
   function updateStats(users, allPayments, analytics) {
     const a = analytics || {};
     const list = users || [];
@@ -784,8 +931,7 @@
               .reduce(function (sum, p) {
                 return sum + Number(p.amountInr || 0);
               }, 0);
-      statMoney.textContent =
-        "₹" + Math.round(collected).toLocaleString("en-IN");
+      statMoney.textContent = inr(collected);
     }
     if (statPaid) {
       statPaid.textContent = String(
@@ -815,16 +961,20 @@
       );
     }
     if (statTrialLeads) {
-      const todayMs = startOfTodayIstMs();
-      statTrialLeads.textContent = String(
-        list.filter(function (u) {
-          return (
-            !u.hasPaid &&
-            Number(u.hoursBalance || 0) <= 0.0001 &&
-            userActivityAt(u) >= todayMs
-          );
-        }).length
-      );
+      if (a.trialLeads != null) {
+        statTrialLeads.textContent = String(a.trialLeads);
+      } else {
+        const todayMs = startOfTodayIstMs();
+        statTrialLeads.textContent = String(
+          list.filter(function (u) {
+            return (
+              !u.hasPaid &&
+              Number(u.hoursBalance || 0) <= 0.0001 &&
+              userActivityAt(u) >= todayMs
+            );
+          }).length
+        );
+      }
     }
     if (statHoursSold) {
       statHoursSold.textContent = String(
@@ -862,6 +1012,7 @@
         a.usersRepeatToday != null ? a.usersRepeatToday : "—"
       );
     }
+    renderAnalyticsVisuals(a);
   }
 
   async function loadAnalytics() {
@@ -1033,19 +1184,21 @@
   }
 
   function syncStatActive(action, userFilterValue, payStatus) {
-    const hosts = document.querySelectorAll(".stats");
+    const hosts = document.querySelectorAll(".stats-wrap");
     hosts.forEach(function (host) {
-      host.querySelectorAll(".stat").forEach(function (el) {
-        const a = el.getAttribute("data-stat-action") || "";
-        const uf = el.getAttribute("data-user-filter") || "";
-        const ps = el.getAttribute("data-pay-status") || "";
-        let on = false;
-        if (action === "users" && a === "users" && uf === userFilterValue) on = true;
-        if (action === "payments" && a === "payments" && ps === payStatus) on = true;
-        if (action === "reports" && a === "reports") on = true;
-        if (action === "support" && a === "support") on = true;
-        el.classList.toggle("is-active", on);
-      });
+      host
+        .querySelectorAll(".stat, .analytics-kpi, .funnel-step")
+        .forEach(function (el) {
+          const a = el.getAttribute("data-stat-action") || "";
+          const uf = el.getAttribute("data-user-filter") || "";
+          const ps = el.getAttribute("data-pay-status") || "";
+          let on = false;
+          if (action === "users" && a === "users" && uf === userFilterValue) on = true;
+          if (action === "payments" && a === "payments" && ps === payStatus) on = true;
+          if (action === "reports" && a === "reports") on = true;
+          if (action === "support" && a === "support") on = true;
+          el.classList.toggle("is-active", on);
+        });
     });
   }
 
@@ -2376,7 +2529,7 @@
   if (adminStatsWrap) {
     adminStatsWrap.addEventListener("click", function (e) {
       const btn = e.target.closest
-        ? e.target.closest(".stat[data-stat-action]")
+        ? e.target.closest("[data-stat-action]")
         : null;
       if (!btn || !adminStatsWrap.contains(btn)) return;
       applyStatClick(btn);
@@ -2391,7 +2544,26 @@
       if (open) statsMore.removeAttribute("hidden");
       else statsMore.setAttribute("hidden", "");
       statsMoreBtn.setAttribute("aria-expanded", open ? "true" : "false");
-      statsMoreBtn.textContent = open ? "Hide overview ▴" : "Overview stats ▾";
+      statsMoreBtn.textContent = open ? "Hide analytics ▴" : "Show analytics ▾";
+    });
+  }
+  const trendToggle = document.querySelector(".trend-toggle");
+  if (trendToggle) {
+    trendToggle.addEventListener("click", function (e) {
+      const tab = e.target.closest ? e.target.closest(".trend-tab") : null;
+      if (!tab || !trendToggle.contains(tab)) return;
+      const metric = tab.getAttribute("data-trend") || "signups";
+      analyticsTrendMetric = metric;
+      Array.prototype.forEach.call(
+        trendToggle.querySelectorAll(".trend-tab"),
+        function (btn) {
+          btn.classList.toggle(
+            "is-active",
+            btn.getAttribute("data-trend") === metric
+          );
+        }
+      );
+      renderTrendChart(analyticsSeriesCache, analyticsTrendMetric);
     });
   }
   if (usersPageSizeEl) {

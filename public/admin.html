@@ -96,47 +96,134 @@
                 <b id="stat-today">0</b>
                 <span>New today</span>
               </button>
-              <button type="button" class="stat money" data-stat-action="payments" data-pay-status="approved" title="Approved payments total">
+              <button type="button" class="stat money" data-stat-action="payments" data-pay-status="approved" title="All-time approved payments">
                 <b id="stat-money">₹0</b>
                 <span>Money in</span>
               </button>
             </div>
-            <button type="button" id="stats-more-btn" class="stats-more-btn" aria-expanded="false">
-              Overview stats ▾
+            <button type="button" id="stats-more-btn" class="stats-more-btn" aria-expanded="true">
+              Hide analytics ▴
             </button>
-            <div class="stats stats-more hidden" id="admin-stats" hidden>
-              <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="All accounts">
-                <b id="stat-users">0</b>
-                <span>Total users</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="users" data-user-filter="unique-today" title="Anyone who opened the app today">
-                <b id="stat-unique-today">0</b>
-                <span>Active today</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="users" data-user-filter="paid" title="Ever paid">
-                <b id="stat-paid">0</b>
-                <span>Paid users</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="users" data-user-filter="repeat-today" title="Old users active today">
-                <b id="stat-repeat-today">0</b>
-                <span>Returning</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="payments" data-pay-status="approved" title="Hours from approved packs">
-                <b id="stat-hours-sold">0</b>
-                <span>Hours sold</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="users" data-user-filter="has-time" title="Sum of time still left on all accounts">
-                <b id="stat-hours">0</b>
-                <span>Time left (sum)</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="Stored chat messages">
-                <b id="stat-msgs">0</b>
-                <span>Chat msgs</span>
-              </button>
-              <button type="button" class="stat" data-stat-action="reports" title="Open AI reports">
-                <b id="stat-reports">0</b>
-                <span>AI reports</span>
-              </button>
+            <div class="analytics-panel" id="admin-stats">
+              <div class="analytics-hero">
+                <button type="button" class="analytics-kpi money" data-stat-action="payments" data-pay-status="approved" title="Approved today (IST)">
+                  <span class="analytics-kpi-label">Today ₹</span>
+                  <b id="stat-money-today">₹0</b>
+                  <span class="analytics-kpi-sub" id="stat-money-week">₹0 this week</span>
+                </button>
+                <button type="button" class="analytics-kpi" data-stat-action="users" data-user-filter="unique-today" title="Anyone active today">
+                  <span class="analytics-kpi-label">Active today</span>
+                  <b id="stat-unique-today">0</b>
+                  <span class="analytics-kpi-sub"><span id="stat-repeat-today">0</span> returning</span>
+                </button>
+                <button type="button" class="analytics-kpi" data-stat-action="users" data-user-filter="paid" title="Paid share of all users">
+                  <span class="analytics-kpi-label">Paid share</span>
+                  <b id="stat-paid-share">0%</b>
+                  <span class="analytics-kpi-sub"><span id="stat-paid">0</span> paid · <span id="stat-trial-only">0</span> trial</span>
+                </button>
+                <button type="button" class="analytics-kpi" data-stat-action="payments" data-pay-status="approved" title="Checkout opens → success today">
+                  <span class="analytics-kpi-label">Checkout → pay</span>
+                  <b id="stat-convert-today">—</b>
+                  <span class="analytics-kpi-sub" id="stat-funnel-today-sub">No opens yet</span>
+                </button>
+              </div>
+
+              <div class="analytics-grid">
+                <div class="analytics-card">
+                  <div class="analytics-card-head">
+                    <p class="analytics-card-title">Last 7 days</p>
+                    <div class="trend-toggle" role="tablist" aria-label="Chart metric">
+                      <button type="button" class="trend-tab is-active" data-trend="signups">Signups</button>
+                      <button type="button" class="trend-tab" data-trend="money">₹ money</button>
+                      <button type="button" class="trend-tab" data-trend="actives">Active</button>
+                    </div>
+                  </div>
+                  <div class="trend-chart" id="analytics-trend-chart" aria-live="polite"></div>
+                  <p class="analytics-card-foot" id="analytics-trend-foot">Signups by IST day</p>
+                </div>
+
+                <div class="analytics-card">
+                  <p class="analytics-card-title">Audience mix</p>
+                  <div class="mix-row">
+                    <div class="mix-meta">
+                      <span>Paid vs trial</span>
+                      <strong id="mix-paid-label">0 / 0</strong>
+                    </div>
+                    <div class="mix-track" title="Paid share">
+                      <span class="mix-fill mix-fill-paid" id="mix-paid-fill" style="width:0%"></span>
+                    </div>
+                  </div>
+                  <div class="mix-row">
+                    <div class="mix-meta">
+                      <span>Has time left</span>
+                      <strong id="mix-time-label">0 / 0</strong>
+                    </div>
+                    <div class="mix-track" title="Users with time remaining">
+                      <span class="mix-fill mix-fill-time" id="mix-time-fill" style="width:0%"></span>
+                    </div>
+                  </div>
+                  <div class="mix-row">
+                    <div class="mix-meta">
+                      <span>Live now</span>
+                      <strong id="mix-live-label">0 chat · 0 app</strong>
+                    </div>
+                    <div class="mix-track mix-track-dual">
+                      <span class="mix-fill mix-fill-chat" id="mix-chat-fill" style="width:0%"></span>
+                      <span class="mix-fill mix-fill-app" id="mix-app-fill" style="width:0%"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="analytics-card analytics-card-funnel">
+                  <p class="analytics-card-title">Pay leads (open)</p>
+                  <div class="funnel" id="analytics-funnel">
+                    <button type="button" class="funnel-step" data-stat-action="support" data-support-filter="pay-leads">
+                      <span class="funnel-bar" id="funnel-bar-leads"></span>
+                      <span class="funnel-label">Open leads</span>
+                      <b id="funnel-leads">0</b>
+                    </button>
+                    <button type="button" class="funnel-step" data-stat-action="support" data-support-filter="pay-leads">
+                      <span class="funnel-bar" id="funnel-bar-abandon"></span>
+                      <span class="funnel-label">Abandoned</span>
+                      <b id="funnel-abandon">0</b>
+                    </button>
+                    <button type="button" class="funnel-step" data-stat-action="support" data-support-filter="pay-leads">
+                      <span class="funnel-bar" id="funnel-bar-discount"></span>
+                      <span class="funnel-label">Discount asks</span>
+                      <b id="funnel-discount">0</b>
+                    </button>
+                    <button type="button" class="funnel-step" data-stat-action="users" data-user-filter="trial-leads">
+                      <span class="funnel-bar" id="funnel-bar-trial"></span>
+                      <span class="funnel-label">Trial leads</span>
+                      <b id="funnel-trial">0</b>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p class="stats-heading stats-heading-sub">Quick filters</p>
+              <div class="stats stats-more" id="admin-stats-filters">
+                <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="All accounts">
+                  <b id="stat-users">0</b>
+                  <span>Total users</span>
+                </button>
+                <button type="button" class="stat" data-stat-action="payments" data-pay-status="approved" title="Hours from approved packs">
+                  <b id="stat-hours-sold">0</b>
+                  <span>Hours sold</span>
+                </button>
+                <button type="button" class="stat" data-stat-action="users" data-user-filter="has-time" title="Sum of time still left on all accounts">
+                  <b id="stat-hours">0</b>
+                  <span>Time left (sum)</span>
+                </button>
+                <button type="button" class="stat" data-stat-action="users" data-user-filter="all" title="Stored chat messages">
+                  <b id="stat-msgs">0</b>
+                  <span>Chat msgs</span>
+                </button>
+                <button type="button" class="stat" data-stat-action="reports" title="Open AI reports">
+                  <b id="stat-reports">0</b>
+                  <span>AI reports</span>
+                </button>
+              </div>
             </div>
           </div>
 
