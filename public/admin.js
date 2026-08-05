@@ -39,6 +39,7 @@
   const supportAdminCompose = document.getElementById("support-admin-compose");
   const supportAdminInput = document.getElementById("support-admin-input");
   const supportAdminSend = document.getElementById("support-admin-send");
+  const supportAdminOfferBtn = document.getElementById("support-admin-offer-btn");
   const supportAdminFile = document.getElementById("support-admin-file");
   const supportAdminUploadText = document.getElementById("support-admin-upload-text");
   const supportAdminUploadLabel = document.getElementById("support-admin-upload-label");
@@ -2789,6 +2790,71 @@
   }
   if (supportAdminSend) {
     supportAdminSend.addEventListener("click", sendAdminSupportReply);
+  }
+  if (supportAdminOfferBtn) {
+    supportAdminOfferBtn.addEventListener("click", async function () {
+      if (!openSupportUserId) {
+        toast("Pick a support thread first", "err");
+        return;
+      }
+      supportAdminOfferBtn.disabled = true;
+      try {
+        const threadMeta = (supportThreadsCache || []).find(function (t) {
+          return String(t.userId) === String(openSupportUserId);
+        });
+        const packId =
+          (threadMeta &&
+            threadMeta.payFunnel &&
+            (threadMeta.payFunnel.leadPackageId ||
+              threadMeta.payFunnel.packageId)) ||
+          "";
+        const res = await fetch(
+          "/api/admin/support/" +
+            encodeURIComponent(openSupportUserId) +
+            "/winback-offer",
+          {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ packageId: packId || undefined }),
+          }
+        );
+        const data = await res.json().catch(function () {
+          return {};
+        });
+        if (!res.ok) {
+          if (handleAuthFail(res)) return;
+          toast(
+            (data.winback && data.winback.reason) ||
+              data.error ||
+              data.reason ||
+              "Offer send failed",
+            "err"
+          );
+          return;
+        }
+        if (data.winback && data.winback.skipped) {
+          toast("Offer skipped: " + (data.winback.reason || "unknown"), "err");
+        } else {
+          const pay =
+            data.winback &&
+            data.winback.offer &&
+            data.winback.offer.priceInr != null
+              ? data.winback.offer.priceInr
+              : "";
+          toast("QR offer sent" + (pay !== "" ? " · ₹" + pay : ""), "ok");
+        }
+        if (data.thread) {
+          renderSupportAdminMessages(data.thread);
+        } else {
+          openSupportThread(openSupportUserId, true);
+        }
+        loadSupportThreads(true);
+      } catch (e) {
+        toast("Network error", "err");
+      } finally {
+        supportAdminOfferBtn.disabled = false;
+      }
+    });
   }
   if (supportAdminFile) {
     supportAdminFile.addEventListener("change", function () {
