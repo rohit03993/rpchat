@@ -2488,7 +2488,10 @@
     }
     closeSidebar();
     hideDiscountOffer();
-    await markSupportPopupSeen();
+    // Keep unread admin offer visible when arriving from discount-ask
+    if (!options.fromDiscount) {
+      await markSupportPopupSeen();
+    }
     if (supportUserIdEl) supportUserIdEl.textContent = displayUserId(currentUser) || "—";
     var tipEl = document.getElementById("support-tip");
     if (tipEl) {
@@ -4621,22 +4624,30 @@
           await openSupportSheet({ fromDiscount: true });
           return;
         }
-        if (data.supportPopup) {
-          showSupportPopup(data.supportPopup);
-        }
         if (data.winback && data.winback.granted) {
           toast(
             "Special offer sent · Pay ₹" +
               (data.winback.offer && data.winback.offer.priceInr
                 ? data.winback.offer.priceInr
                 : "") +
-              " in Support",
+              " — check Support for QR",
             "ok"
           );
+        } else if (data.winback && data.winback.error) {
+          toast("Support opened · offer: " + data.winback.error, "err");
         } else {
-          toast("Opened Support — add more if you want", "ok");
+          toast("Opened Support — check for offer / QR", "ok");
         }
         await openSupportSheet({ fromDiscount: true });
+        try {
+          await loadSupportThread();
+        } catch (e2) {}
+        // Show QR popup after Support opens (do not mark seen yet)
+        if (data.supportPopup) {
+          showSupportPopup(data.supportPopup);
+        } else if (data.winback && data.winback.supportPopup) {
+          showSupportPopup(data.winback.supportPopup);
+        }
       } catch (e) {
         hideDiscountOffer();
         toast("Network error — open Support", "err");

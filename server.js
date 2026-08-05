@@ -854,19 +854,38 @@ app.post("/api/admin/support/:userId/reply", requireAdmin, (req, res) => {
   }
 });
 
-/** Manual / resend win-back QR offer (pack from body or active win-back settings) */
+/** Manual / resend win-back QR offer for Support thread */
 app.post("/api/admin/support/:userId/winback-offer", requireAdmin, (req, res) => {
   try {
     const uid = String(req.params.userId || "").trim();
     const packId = req.body?.packageId
       ? String(req.body.packageId).trim()
       : "";
-    const result = billing.grantWinbackOffer(uid, {
-      packageId: packId || undefined,
-      force: true,
-      allowWithTime: true,
-      source: "admin_resend",
-    });
+    // Prefer bulletproof discount-ask sender (always posts QR message)
+    let funnel = null;
+    try {
+      const leads = billing.listPayLeads() || [];
+      funnel = leads.find(function (l) {
+        return l && String(l.userId) === uid;
+      }) || null;
+    } catch (_) {}
+    if (packId) {
+      funnel = Object.assign({}, funnel || {}, {
+        packageId: packId,
+        leadPackageId: packId,
+      });
+    }
+    let result;
+    if (typeof billing.sendDiscountAskOffer === "function") {
+      result = billing.sendDiscountAskOffer(uid, funnel);
+    } else {
+      result = billing.grantWinbackOffer(uid, {
+        packageId: packId || undefined,
+        force: true,
+        allowWithTime: true,
+        source: "admin_resend",
+      });
+    }
     if (!result.ok) return res.status(400).json(result);
     const thread = billing.getSupportThread(uid);
     res.json({
