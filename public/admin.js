@@ -113,6 +113,8 @@
   const setWinbackPack = document.getElementById("set-winback-pack");
   const setWinbackPrice = document.getElementById("set-winback-price");
   const setWinbackSummary = document.getElementById("set-winback-summary");
+  const setWinbackSaveBtn = document.getElementById("set-winback-save-btn");
+  const setWinbackSaveMsg = document.getElementById("set-winback-save-msg");
   const setWinbackQrPreview = document.getElementById("set-winback-qr-preview");
   const setWinbackQrFile = document.getElementById("set-winback-qr-file");
   const setWinbackQrUploadBtn = document.getElementById("set-winback-qr-upload-btn");
@@ -121,6 +123,7 @@
   const setBustCacheBtn = document.getElementById("set-bust-cache-btn");
   let savedWinbackPackageId = "";
   let winbackPackCache = [];
+  let winbackPackPrevId = "";
   const setCacheMeta = document.getElementById("set-cache-meta");
   const setQrPreview = document.getElementById("set-qr-preview");
   const setQrFile = document.getElementById("set-qr-file");
@@ -392,6 +395,7 @@
       setWinbackPack.value = String(list[0].id);
       savedWinbackPackageId = String(list[0].id);
     }
+    winbackPackPrevId = setWinbackPack.value || "";
     paintWinbackSummary();
   }
 
@@ -407,7 +411,7 @@
         : null;
     if (!pack) {
       setWinbackSummary.textContent =
-        "Choose a pack they unlock, and the ₹ they pay (offer price). Then Save UPI & prices.";
+        "Choose a pack they unlock, and the ₹ they pay (offer price). Then tap Save win-back.";
       return;
     }
     const listP =
@@ -419,10 +423,57 @@
         " → unlock " +
         (pack.label || pack.id) +
         (listP ? " (normal ₹" + listP + ")" : "") +
-        ". Remember: tap Save UPI & prices.";
+        ". Tap Save win-back to keep this.";
     } else {
       setWinbackSummary.textContent =
         "Set offer price (what they pay). Pack list ₹ is only the normal price — not the offer.";
+    }
+  }
+
+  async function saveWinbackSettingsOnly() {
+    if (setWinbackSaveMsg) setWinbackSaveMsg.textContent = "Saving…";
+    if (setWinbackSaveBtn) setWinbackSaveBtn.disabled = true;
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          winbackEnabled: setWinbackEnabled ? !!setWinbackEnabled.checked : false,
+          winbackPackageId: setWinbackPack ? setWinbackPack.value : "day",
+          winbackPriceInr: setWinbackPrice ? setWinbackPrice.value : 50,
+        }),
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return;
+        if (setWinbackSaveMsg) {
+          setWinbackSaveMsg.textContent = data.error || "Save failed";
+        }
+        toast(data.error || "Win-back save failed", "err");
+        return;
+      }
+      const s = data.settings || {};
+      if (setWinbackEnabled) setWinbackEnabled.checked = !!s.winbackEnabled;
+      if (setWinbackPrice && s.winbackPriceInr != null) {
+        setWinbackPrice.value = String(s.winbackPriceInr);
+      }
+      savedWinbackPackageId = s.winbackPackageId || savedWinbackPackageId;
+      if (s.packages) {
+        fillWinbackPackSelect(s.packages, s.winbackPackageId || "");
+      }
+      paintWinbackSummary();
+      const pay = s.winbackPriceInr != null ? s.winbackPriceInr : "";
+      if (setWinbackSaveMsg) {
+        setWinbackSaveMsg.textContent = "Saved · pay ₹" + pay;
+      }
+      toast("Win-back saved · pay ₹" + pay, "ok");
+    } catch (e) {
+      if (setWinbackSaveMsg) setWinbackSaveMsg.textContent = "Network error";
+      toast("Network error", "err");
+    } finally {
+      if (setWinbackSaveBtn) setWinbackSaveBtn.disabled = false;
     }
   }
 
@@ -567,10 +618,6 @@
       }
       if (setOneIdDevice) setOneIdDevice.checked = !!s.oneIdPerDevice;
       if (setWinbackEnabled) setWinbackEnabled.checked = !!s.winbackEnabled;
-      if (setWinbackPrice) {
-        setWinbackPrice.value =
-          s.winbackPriceInr != null ? String(s.winbackPriceInr) : "50";
-      }
       savedWinbackPackageId = s.winbackPackageId || "";
       paintCacheMeta(s);
       if (setQrPreview) {
@@ -589,6 +636,13 @@
       pendingWinbackQrBase64 = null;
       renderPackageEditor(s.packages || []);
       fillWinbackPackSelect(s.packages || [], s.winbackPackageId || "");
+      // Restore offer price AFTER pack list rebuild (must not get overwritten)
+      if (setWinbackPrice) {
+        setWinbackPrice.value =
+          s.winbackPriceInr != null ? String(s.winbackPriceInr) : "50";
+      }
+      if (setWinbackSaveMsg) setWinbackSaveMsg.textContent = "";
+      paintWinbackSummary();
     } catch (e) {
       toast("Network error loading settings", "err");
     }
@@ -3014,12 +3068,15 @@
   }
   if (setWinbackPack) {
     setWinbackPack.addEventListener("change", function () {
-      savedWinbackPackageId = setWinbackPack.value || "";
+      const nextId = setWinbackPack.value || "";
+      const packChanged = nextId !== winbackPackPrevId;
+      savedWinbackPackageId = nextId;
+      winbackPackPrevId = nextId;
       const pack = winbackPackCache.filter(function (p) {
-        return String(p.id) === String(setWinbackPack.value);
+        return String(p.id) === String(nextId);
       })[0];
-      // Live: offer price follows the pack you pick (you can still edit lower for a discount)
-      if (pack && setWinbackPrice && pack.priceInr != null) {
+      // Only when pack actually changes — don't wipe a typed discount (e.g. 120)
+      if (packChanged && pack && setWinbackPrice && pack.priceInr != null) {
         setWinbackPrice.value = String(Math.round(Number(pack.priceInr)));
       }
       paintWinbackSummary();
@@ -3027,6 +3084,11 @@
   }
   if (setWinbackPrice) {
     setWinbackPrice.addEventListener("input", paintWinbackSummary);
+  }
+  if (setWinbackSaveBtn) {
+    setWinbackSaveBtn.addEventListener("click", function () {
+      saveWinbackSettingsOnly();
+    });
   }
   if (setSaveBtn) {
     setSaveBtn.addEventListener("click", async function () {
