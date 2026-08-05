@@ -112,12 +112,15 @@
   const setWinbackEnabled = document.getElementById("set-winback-enabled");
   const setWinbackPack = document.getElementById("set-winback-pack");
   const setWinbackPrice = document.getElementById("set-winback-price");
+  const setWinbackSummary = document.getElementById("set-winback-summary");
   const setWinbackQrPreview = document.getElementById("set-winback-qr-preview");
   const setWinbackQrFile = document.getElementById("set-winback-qr-file");
   const setWinbackQrUploadBtn = document.getElementById("set-winback-qr-upload-btn");
   const setWinbackQrClearBtn = document.getElementById("set-winback-qr-clear-btn");
   const setWinbackQrMsg = document.getElementById("set-winback-qr-msg");
   const setBustCacheBtn = document.getElementById("set-bust-cache-btn");
+  let savedWinbackPackageId = "";
+  let winbackPackCache = [];
   const setCacheMeta = document.getElementById("set-cache-meta");
   const setQrPreview = document.getElementById("set-qr-preview");
   const setQrFile = document.getElementById("set-qr-file");
@@ -354,16 +357,20 @@
   function fillWinbackPackSelect(packages, selectedId) {
     if (!setWinbackPack) return;
     const list = packages && packages.length ? packages : [];
+    winbackPackCache = list;
     const cur =
-      selectedId != null && selectedId !== ""
-        ? String(selectedId)
-        : setWinbackPack.value || "";
+      (selectedId != null && String(selectedId).trim()
+        ? String(selectedId).trim()
+        : "") ||
+      savedWinbackPackageId ||
+      (setWinbackPack.value || "");
     setWinbackPack.innerHTML = list
       .map(function (p) {
         const id = String(p.id || "");
         const label =
+          "Unlock: " +
           (p.label || id) +
-          (p.priceInr != null ? " · ₹" + p.priceInr : "");
+          (p.priceInr != null ? " (list ₹" + p.priceInr + ")" : "");
         return (
           '<option value="' +
           id.replace(/"/g, "&quot;") +
@@ -373,12 +380,49 @@
         );
       })
       .join("");
-    if (cur && list.some(function (p) {
-      return String(p.id) === cur;
-    })) {
+    if (
+      cur &&
+      list.some(function (p) {
+        return String(p.id) === cur;
+      })
+    ) {
       setWinbackPack.value = cur;
+      savedWinbackPackageId = cur;
     } else if (list[0]) {
       setWinbackPack.value = String(list[0].id);
+      savedWinbackPackageId = String(list[0].id);
+    }
+    paintWinbackSummary();
+  }
+
+  function paintWinbackSummary() {
+    if (!setWinbackSummary) return;
+    const id = setWinbackPack ? setWinbackPack.value : "";
+    const pack = winbackPackCache.filter(function (p) {
+      return String(p.id) === String(id);
+    })[0];
+    const pay =
+      setWinbackPrice && setWinbackPrice.value !== ""
+        ? Math.round(Number(setWinbackPrice.value))
+        : null;
+    if (!pack) {
+      setWinbackSummary.textContent =
+        "Choose a pack they unlock, and the ₹ they pay (offer price). Then Save UPI & prices.";
+      return;
+    }
+    const listP =
+      pack.priceInr != null ? Math.round(Number(pack.priceInr)) : null;
+    if (pay && Number.isFinite(pay) && pay > 0) {
+      setWinbackSummary.textContent =
+        "Offer: pay ₹" +
+        pay +
+        " → unlock " +
+        (pack.label || pack.id) +
+        (listP ? " (normal ₹" + listP + ")" : "") +
+        ". Remember: tap Save UPI & prices.";
+    } else {
+      setWinbackSummary.textContent =
+        "Set offer price (what they pay). Pack list ₹ is only the normal price — not the offer.";
     }
   }
 
@@ -527,6 +571,7 @@
         setWinbackPrice.value =
           s.winbackPriceInr != null ? String(s.winbackPriceInr) : "50";
       }
+      savedWinbackPackageId = s.winbackPackageId || "";
       paintCacheMeta(s);
       if (setQrPreview) {
         setQrPreview.src = s.qrImageUrl || "/upi-qr.svg";
@@ -2967,6 +3012,15 @@
       renderPackageEditor(packs);
     });
   }
+  if (setWinbackPack) {
+    setWinbackPack.addEventListener("change", function () {
+      savedWinbackPackageId = setWinbackPack.value || "";
+      paintWinbackSummary();
+    });
+  }
+  if (setWinbackPrice) {
+    setWinbackPrice.addEventListener("input", paintWinbackSummary);
+  }
   if (setSaveBtn) {
     setSaveBtn.addEventListener("click", async function () {
       if (setSaveMsg) setSaveMsg.textContent = "Saving…";
@@ -3014,6 +3068,8 @@
           if (setWinbackPrice && data.settings.winbackPriceInr != null) {
             setWinbackPrice.value = String(data.settings.winbackPriceInr);
           }
+          savedWinbackPackageId = data.settings.winbackPackageId || "";
+          paintWinbackSummary();
           paintCacheMeta(data.settings);
         }
       } catch (e) {
