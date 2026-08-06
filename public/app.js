@@ -1890,7 +1890,15 @@
             openPaySheet();
           } catch (e2) {}
         } else {
-          setStoryImportStatus(data.error || "Import failed", "err");
+          var errMsg = data.error || "Import failed";
+          setStoryImportStatus(errMsg, "err");
+          if (
+            data.code === "SITE_BLOCKED" ||
+            /blocked|403|Paste text/i.test(errMsg)
+          ) {
+            setStoryImportTab("text");
+            toast("Site blocked URL — paste story text instead", "err");
+          }
         }
         return;
       }

@@ -884,7 +884,7 @@ app.post("/api/story-import", requireUser, requirePaid, async (req, res) => {
     if (!pack || !pack.ok) {
       return res.status(400).json({
         error: (pack && pack.error) || "Import failed",
-        code: "IMPORT_FAILED",
+        code: (pack && pack.code) || "IMPORT_FAILED",
       });
     }
 
