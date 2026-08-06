@@ -1071,6 +1071,11 @@ button {
   color: var(--muted);
 }
 
+.uc-chip.story {
+  background: rgba(40, 120, 180, 0.14);
+  color: #1a5a8a;
+}
+
 .user-card-insights {
   display: flex;
   flex-direction: column;

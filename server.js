@@ -356,7 +356,8 @@ async function callVenice(model, messages, options = {}) {
 }
 
 function prepareMessages(messages) {
-  return messages.slice(-30).map((msg) => {
+  // Keep a wide window so long sessions still remember the opening scene
+  return messages.slice(-56).map((msg) => {
     if (msg.role === "user") {
       return { role: "user", content: prepareUserContent(msg.content) };
     }
@@ -488,6 +489,12 @@ function liveBillingFields(userId) {
     timeLabel: u?.timeLabel,
     minutesLeft: u?.minutesLeft,
     secondsLeft: u?.secondsLeft,
+    user: u || null,
+    storyModeFreeUsed: u?.storyModeFreeUsed,
+    storyModeFreeLeft: u?.storyModeFreeLeft,
+    storyModeFreeLimit: u?.storyModeFreeLimit,
+    storyModeTotalUses: u?.storyModeTotalUses,
+    canUseStoryMode: u?.canUseStoryMode,
   };
 }
 
@@ -1305,10 +1312,25 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
     const slug = String(characterSlug || "").trim();
     const source = String(chatSource || "").trim();
     const startedAt = Date.now();
-    // Story mode = paid only (server enforces; ignore client flag if unpaid)
-    const storyMode =
-      !!storyModeRaw &&
-      !!(req.billingUser && req.billingUser.hasPaid);
+    // Story mode: paid = unlimited; unpaid = 2 free replies then paywall
+    let storyMode = !!storyModeRaw;
+    let storyPaywall = false;
+    let storyQuota = null;
+    if (storyMode && (source === "maa" || chatMode === "maa")) {
+      const gate = billing.consumeStoryModeUse(req.userId);
+      if (!gate.ok) {
+        return res.status(401).json({ error: gate.error || "Login required" });
+      }
+      if (gate.user) req.billingUser = gate.user;
+      storyQuota = gate.quota || null;
+      if (!gate.allowed) {
+        storyMode = false;
+        storyPaywall = true;
+      }
+    } else if (storyMode) {
+      // Non-maa paths ignore Story mode
+      storyMode = false;
+    }
 
     // ===== Maa Agent: Brain (situation) → Voice (bubbles) =====
     // Website /chat/agent/... is not a public API; we recreate the feel here.
@@ -1316,7 +1338,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       const hist = prepareMessages(messages);
       const lastUser =
         [...messages].reverse().find((m) => m.role === "user")?.content || "";
-      const transcript = recentTranscript(messages, 8);
+      const transcript = recentTranscript(messages, 16);
       const setupText = String(rpSetup || "").trim();
       const charOverrides = {
         characterName: String(characterName || "").trim(),
@@ -1354,7 +1376,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
             `MUST_ANSWER must react to the latest user line FIRST — never ignore hug/kiss/dirty ask for kitchen/padhai/weather.\n` +
             `If user answered your previous question, MUST_ANSWER = react to that answer — NEVER re-ask "dimaag/soch/kaisa laga".\n` +
             (storyMode
-              ? `STORY MODE ON (paid): set LENGTH=long and ACTIONS=light|full. Write continuing long scene beats — soft→flirty story or dirty story matching USER_HEAT. Not short WhatsApp.\n\n`
+              ? `STORY MODE ON: set LENGTH=long and ACTIONS=light|full. Write continuing long scene beats — soft→flirty story or dirty story matching USER_HEAT. Not short WhatsApp. Keep OPENING SCENE facts from memory card.\n\n`
               : `Default LENGTH=short. Soft → ACTIONS=none. Flirty/dirty/rough → ACTIONS=light (feature + mann *bubbles*). Full only for long/story/guest.\n\n`) +
             `Write the SCENE CARD now.`,
         },
@@ -1441,7 +1463,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
           : "");
 
-      const voiceHist = hist.slice(-12).map((m) => ({
+      const voiceHist = hist.slice(-24).map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -1844,6 +1866,8 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         steps,
         mode: "maa-agent",
         storyMode: !!storyMode,
+        storyPaywall: !!storyPaywall,
+        storyQuota: storyQuota,
         ...liveBillingFields(req.userId),
       });
     }

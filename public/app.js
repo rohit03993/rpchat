@@ -535,9 +535,8 @@
     if (chatModeEl && form.chatMode) chatModeEl.value = form.chatMode;
     if (botRoleEl && form.botRoleCustom != null) botRoleEl.value = form.botRoleCustom;
     if (userRoleEl && form.userRoleCustom != null) userRoleEl.value = form.userRoleCustom;
-    if (form.storyMode != null && canUseStoryMode()) {
-      storyModeOn = !!form.storyMode;
-    }
+    // Story mode always starts closed (user can turn on after load)
+    storyModeOn = false;
     syncCustomRoleFields();
     syncPanels();
     syncTitle();
@@ -555,7 +554,7 @@
       chatSource: chatSourceEl ? chatSourceEl.value : "maa",
       form: collectFormState(),
       selectedCharacter: selectedCharacter,
-      history: history.slice(-40),
+      history: history.slice(-80),
     };
   }
 
@@ -1365,7 +1364,39 @@
   }
 
   function canUseStoryMode() {
-    return !!(currentUser && currentUser.hasPaid);
+    if (!currentUser) return false;
+    if (typeof currentUser.canUseStoryMode === "boolean") {
+      return !!currentUser.canUseStoryMode;
+    }
+    // freeLeft null = paid unlimited; number = free quota left
+    if (currentUser.storyModeFreeLeft === null) return true;
+    var left = Number(currentUser.storyModeFreeLeft);
+    if (!Number.isFinite(left)) {
+      left = Math.max(
+        0,
+        (Number(currentUser.storyModeFreeLimit) || 2) -
+          (Number(currentUser.storyModeFreeUsed) || 0)
+      );
+    }
+    return left > 0;
+  }
+
+  function isStoryUnlimited() {
+    return !!(currentUser && currentUser.storyModeFreeLeft === null);
+  }
+
+  function storyFreeLeft() {
+    if (!currentUser) return 0;
+    if (currentUser.storyModeFreeLeft === null) return null;
+    var left = Number(currentUser.storyModeFreeLeft);
+    if (!Number.isFinite(left)) {
+      left = Math.max(
+        0,
+        (Number(currentUser.storyModeFreeLimit) || 2) -
+          (Number(currentUser.storyModeFreeUsed) || 0)
+      );
+    }
+    return Math.max(0, left);
   }
 
   function storyModeStorageKey() {
@@ -1383,37 +1414,52 @@
     }
   }
 
-  function saveStoryModePref(on) {
+  function saveStoryModePref() {
     try {
       var key = storyModeStorageKey();
       if (!key) return;
-      if (on) localStorage.setItem(key, "1");
-      else localStorage.removeItem(key);
+      // Always default closed on next load — do not persist ON
+      localStorage.removeItem(key);
     } catch (e) {}
   }
 
   function paintStoryModeUi() {
     if (!canUseStoryMode() && storyModeOn) {
       storyModeOn = false;
-      saveStoryModePref(false);
     }
+    var freeLeft = storyFreeLeft();
     if (storyModeBtn) {
       storyModeBtn.classList.toggle("is-on", !!storyModeOn);
       storyModeBtn.classList.toggle("is-locked", !canUseStoryMode());
       storyModeBtn.setAttribute("aria-pressed", storyModeOn ? "true" : "false");
       storyModeBtn.title = canUseStoryMode()
         ? storyModeOn
-          ? "Story mode on · longer scene replies"
-          : "Story mode off · tap to enable (paid)"
-        : "Paid feature · buy hours to unlock Story mode";
+          ? isStoryUnlimited()
+            ? "Story mode on · longer scene replies"
+            : "Story mode on · " + freeLeft + " free left"
+          : isStoryUnlimited()
+            ? "Story mode off · tap for long scenes"
+            : "Story mode off · " +
+              freeLeft +
+              " free try" +
+              (freeLeft === 1 ? "" : "s")
+        : "Free Story tries used — tap Pay for unlimited";
     }
     if (storyModeHint) {
       if (!canUseStoryMode()) {
-        storyModeHint.textContent = "Paid only · unlock with Pay";
+        storyModeHint.textContent = "Free tries used · Pay for unlimited";
       } else if (storyModeOn) {
-        storyModeHint.textContent = "On · long flirty/dirty scenes";
-      } else {
+        storyModeHint.textContent = isStoryUnlimited()
+          ? "On · long flirty/dirty scenes"
+          : "On · " + freeLeft + " free left";
+      } else if (isStoryUnlimited()) {
         storyModeHint.textContent = "Off · short chat";
+      } else {
+        storyModeHint.textContent =
+          "Off · " +
+          freeLeft +
+          " free Story " +
+          (freeLeft === 1 ? "try" : "tries");
       }
     }
   }
@@ -1424,7 +1470,7 @@
       storyModeOn = false;
       paintStoryModeUi();
       if (!options.silent) {
-        toast("Story mode is for paid users — tap Pay", "err");
+        toast("Free Story tries used — tap Pay for more", "err");
         try {
           openPaySheet();
         } catch (e) {}
@@ -1432,7 +1478,7 @@
       return false;
     }
     storyModeOn = !!on;
-    saveStoryModePref(storyModeOn);
+    saveStoryModePref();
     paintStoryModeUi();
     try {
       scheduleSaveChatSession();
@@ -1440,7 +1486,9 @@
     if (!options.silent) {
       toast(
         storyModeOn
-          ? "Story mode on · longer scene replies"
+          ? isStoryUnlimited()
+            ? "Story mode on · longer scene replies"
+            : "Story mode on · " + storyFreeLeft() + " free left"
           : "Story mode off · short chat",
         "ok"
       );
@@ -1533,11 +1581,8 @@
     await refreshMe();
     startAppPresence();
     setUserChip(currentUser);
-    if (canUseStoryMode() && loadStoryModePref()) {
-      storyModeOn = true;
-    } else if (!canUseStoryMode()) {
-      storyModeOn = false;
-    }
+    storyModeOn = false;
+    saveStoryModePref();
     paintStoryModeUi();
     if (remainingHoursNow() > 0.0001) {
       startLiveTimer();
@@ -4373,6 +4418,42 @@
       }
 
       if (typeof data.hoursBalance === "number") applyTimeFromResponse(data);
+      if (data.user) {
+        currentUser = Object.assign({}, currentUser || {}, data.user);
+        paintStoryModeUi();
+      } else if (
+        data.storyModeFreeUsed != null ||
+        data.storyModeFreeLeft != null
+      ) {
+        currentUser = Object.assign({}, currentUser || {}, {
+          storyModeFreeUsed: data.storyModeFreeUsed,
+          storyModeFreeLeft: data.storyModeFreeLeft,
+          storyModeFreeLimit: data.storyModeFreeLimit,
+          storyModeTotalUses: data.storyModeTotalUses,
+          canUseStoryMode: data.canUseStoryMode,
+        });
+        paintStoryModeUi();
+      }
+      if (data.storyPaywall) {
+        storyModeOn = false;
+        paintStoryModeUi();
+        toast("Free Story tries used — tap Pay for unlimited", "err");
+        try {
+          openPaySheet();
+        } catch (e) {}
+      } else if (
+        storyModeOn &&
+        data.storyMode === false &&
+        !isStoryUnlimited()
+      ) {
+        // Quota consumed this turn; refresh hint counts
+        paintStoryModeUi();
+        if (!canUseStoryMode()) {
+          storyModeOn = false;
+          paintStoryModeUi();
+          toast("That was your last free Story reply — Pay for more", "err");
+        }
+      }
 
       const workedMs = data.workedMs != null ? data.workedMs : Date.now() - t0;
       if (isMaaMode() || data.mode === "maa-agent") {

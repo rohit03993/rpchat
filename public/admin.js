@@ -1246,6 +1246,9 @@
         u.resistance,
         u.activeMood,
         u.hasPaid ? "paid" : "unpaid trial",
+        Number(u.storyModeTotalUses || 0) > 0
+          ? "story " + u.storyModeTotalUses
+          : "",
         presenceLabel,
         insight.visitLabel,
         insight.newToday ? "new today" : "",
@@ -1765,7 +1768,23 @@
             : insight.paid
               ? { key: "paid", text: "Paid" }
               : { key: "trial", text: "Trial" },
-        ]
+        ];
+        if (Number(u.storyModeTotalUses || 0) > 0) {
+          detailChips.push({
+            key: "story",
+            text:
+              "Story ×" +
+              Number(u.storyModeTotalUses || 0) +
+              (u.hasPaid
+                ? ""
+                : " (" +
+                  Number(u.storyModeFreeUsed || 0) +
+                  "/" +
+                  Number(u.storyModeFreeLimit || 2) +
+                  " free)"),
+          });
+        }
+        const detailChipsHtml = detailChips
           .map(function (c) {
             return (
               "<span class='uc-chip " +
@@ -1830,7 +1849,7 @@
           "<div class='user-card-detail'>" +
           "<div class='user-card-insights'>" +
           "<div class='user-card-insight-chips'>" +
-          detailChips +
+          detailChipsHtml +
           "</div>" +
           "<p class='user-card-insight-blurb'>" +
           escapeHtml(insight.blurb) +
@@ -1866,6 +1885,29 @@
           "</div>" +
           "<div><span class='uc-label'>Joined</span> " +
           new Date(u.createdAt).toLocaleString() +
+          "</div>" +
+          "<div><span class='uc-label'>Story</span> " +
+          (Number(u.storyModeTotalUses || 0) > 0
+            ? "<b>" +
+              Number(u.storyModeTotalUses || 0) +
+              "</b> uses" +
+              (u.hasPaid
+                ? " · paid unlimited"
+                : " · free " +
+                  Number(u.storyModeFreeUsed || 0) +
+                  "/" +
+                  Number(u.storyModeFreeLimit || 2)) +
+              (u.storyModeLastAt
+                ? " · last " +
+                  escapeHtml(formatRelativeShort(u.storyModeLastAt))
+                : "")
+            : u.hasPaid
+              ? "Paid · not used yet"
+              : "Free " +
+                Number(u.storyModeFreeUsed || 0) +
+                "/" +
+                Number(u.storyModeFreeLimit || 2) +
+                " unused") +
           "</div>" +
           "<div><span class='uc-label'>Scene</span> " +
           escapeHtml(scene) +
