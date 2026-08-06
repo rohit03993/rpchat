@@ -978,6 +978,14 @@ button {
   min-height: 36px;
 }
 
+.user-card-facts {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .user-card-toggle:focus-visible {
   outline: 2px solid rgba(8, 120, 94, 0.45);
   outline-offset: 1px;
@@ -2710,5 +2718,19 @@ code {
 
   .support-thread-head-left {
     display: block;
+  }
+
+  .user-card-toggle {
+    grid-template-columns: minmax(5.2rem, auto) minmax(9rem, 1fr) minmax(0, 1.2fr) auto;
+  }
+
+  .user-card-facts {
+    display: flex;
+  }
+
+  .user-card-facts .uc-chip {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    white-space: nowrap;
   }
 }

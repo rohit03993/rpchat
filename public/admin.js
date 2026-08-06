@@ -1784,6 +1784,39 @@
                   " free)"),
           });
         }
+        const tileFactChips = [
+          insight.pending
+            ? { key: "pay-wait", text: "Pay wait" }
+            : insight.paid
+              ? { key: "paid", text: "Paid" }
+              : { key: "trial", text: "Trial" },
+        ];
+        if (Number(u.storyModeTotalUses || 0) > 0) {
+          tileFactChips.push({
+            key: "story",
+            text:
+              "Story ×" +
+              Number(u.storyModeTotalUses || 0) +
+              (u.hasPaid
+                ? ""
+                : " (" +
+                  Number(u.storyModeFreeUsed || 0) +
+                  "/" +
+                  Number(u.storyModeFreeLimit || 2) +
+                  " free)"),
+          });
+        }
+        const tileFactsHtml = tileFactChips
+          .map(function (c) {
+            return (
+              "<span class='uc-chip " +
+              escapeHtml(c.key) +
+              "'>" +
+              escapeHtml(c.text) +
+              "</span>"
+            );
+          })
+          .join("");
         const detailChipsHtml = detailChips
           .map(function (c) {
             return (
@@ -1838,6 +1871,9 @@
           " details'>" +
           "<span class='user-card-clock'>" +
           clock +
+          "</span>" +
+          "<span class='user-card-facts' aria-hidden='false'>" +
+          tileFactsHtml +
           "</span>" +
           "<span class='user-card-signals'>" +
           signalChips +

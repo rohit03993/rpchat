@@ -2704,6 +2704,7 @@ body {
 }
 
 .header-btn-help {
+  position: relative;
   background: linear-gradient(180deg, #e04555 0%, #b83240 100%);
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(184, 50, 64, 0.35);
@@ -2711,6 +2712,27 @@ body {
 
 .header-btn-help:hover {
   filter: brightness(1.06);
+}
+
+.help-pending-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ffe566;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(184, 50, 64, 0.45);
+  pointer-events: none;
+}
+
+.help-pending-dot.hidden {
+  display: none;
+}
+
+.header-btn-help.has-pending {
+  box-shadow: 0 2px 8px rgba(184, 50, 64, 0.35), 0 0 0 2px rgba(255, 229, 102, 0.55);
 }
 
 .header-btn-pay {

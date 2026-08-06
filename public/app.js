@@ -1124,6 +1124,10 @@
     if (fromZero) {
       toast(mins + " min unlocked · " + label + " left", "ok");
       showUnlockNotice(hoursLeft);
+      currentUser = Object.assign({}, currentUser || {}, {
+        pendingPayOffer: false,
+      });
+      paintHelpPending();
     } else {
       toast("Time increased · " + label + " left", "ok");
     }
@@ -1518,6 +1522,7 @@
     if (data.user) {
       currentUser = Object.assign({}, currentUser || {}, data.user);
       syncLocalClock(currentUser);
+      paintHelpPending();
       return;
     }
     if (typeof data.hoursBalance === "number") {
@@ -1530,8 +1535,15 @@
         timeLabel: data.timeLabel,
         minutesLeft: data.minutesLeft,
         secondsLeft: data.secondsLeft,
+        pendingPayOffer:
+          data.pendingPayOffer != null
+            ? data.pendingPayOffer
+            : data.hasPaid
+              ? false
+              : currentUser && currentUser.pendingPayOffer,
       });
       syncLocalClock(currentUser);
+      paintHelpPending();
     }
   }
 
@@ -1584,6 +1596,7 @@
     storyModeOn = false;
     saveStoryModePref();
     paintStoryModeUi();
+    paintHelpPending();
     if (remainingHoursNow() > 0.0001) {
       startLiveTimer();
     } else {
@@ -1642,7 +1655,24 @@
       showSupportPopup(null);
     }
     paintStoryModeUi();
+    paintHelpPending();
     return true;
+  }
+
+  function paintHelpPending() {
+    var btn = document.getElementById("header-support-btn");
+    var dot = document.getElementById("help-pending-dot");
+    var pending = !!(currentUser && currentUser.pendingPayOffer);
+    if (btn) {
+      btn.classList.toggle("has-pending", pending);
+      btn.title = pending
+        ? "Pay offer waiting in Support"
+        : "Message Support";
+    }
+    if (dot) {
+      if (pending) dot.classList.remove("hidden");
+      else dot.classList.add("hidden");
+    }
   }
 
   function showSupportPopup(popup) {
@@ -1697,6 +1727,15 @@
       });
       if (!res.ok || !data.ok) return null;
       if (data.skipped) return data;
+      if (data.user) {
+        currentUser = Object.assign({}, currentUser || {}, data.user);
+        paintHelpPending();
+      } else if (data.granted || data.offer) {
+        currentUser = Object.assign({}, currentUser || {}, {
+          pendingPayOffer: true,
+        });
+        paintHelpPending();
+      }
       if (data.supportPopup) {
         // Don't fight an open pay sheet — show after close, or now if closed
         var payOpen =
@@ -4957,12 +4996,20 @@
           return;
         }
         if (data.winback && data.winback.granted) {
+          if (data.winback.user) {
+            currentUser = Object.assign({}, currentUser || {}, data.winback.user);
+          } else {
+            currentUser = Object.assign({}, currentUser || {}, {
+              pendingPayOffer: true,
+            });
+          }
+          paintHelpPending();
           toast(
-            "Special offer sent · Pay ₹" +
+            "Pay ₹" +
               (data.winback.offer && data.winback.offer.priceInr
                 ? data.winback.offer.priceInr
                 : "") +
-              " — check Support for QR",
+              " — QR in Help / Support",
             "ok"
           );
         } else if (data.winback && data.winback.error) {
