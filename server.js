@@ -703,6 +703,74 @@ app.get("/api/admin/analytics", requireAdmin, (_req, res) => {
   res.json({ analytics: billing.getAnalytics() });
 });
 
+/** Venice API remaining credits (works with Inference key via rate_limits) */
+let veniceCreditsCache = { at: 0, data: null };
+app.get("/api/admin/venice-credits", requireAdmin, async (_req, res) => {
+  try {
+    if (!VENICE_API_KEY) {
+      return res.status(500).json({
+        ok: false,
+        error: "VENICE_API_KEY missing in .env",
+      });
+    }
+    const now = Date.now();
+    const forceFresh = String(_req.query.fresh || "") === "1";
+    if (
+      !forceFresh &&
+      veniceCreditsCache.data &&
+      now - veniceCreditsCache.at < 60000
+    ) {
+      return res.json({ ok: true, cached: true, ...veniceCreditsCache.data });
+    }
+    const response = await fetch(`${VENICE_BASE_URL}/api_keys/rate_limits`, {
+      headers: { Authorization: `Bearer ${VENICE_API_KEY}` },
+    });
+    const raw = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return res.status(response.status === 401 ? 502 : 502).json({
+        ok: false,
+        error:
+          (raw && (raw.error || raw.message)) ||
+          "Venice credits fetch failed (" + response.status + ")",
+      });
+    }
+    const data = raw && raw.data ? raw.data : raw;
+    const balances = (data && data.balances) || {};
+    const usd =
+      balances.USD != null
+        ? Number(balances.USD)
+        : balances.usd != null
+          ? Number(balances.usd)
+          : null;
+    const diem =
+      balances.DIEM != null
+        ? Number(balances.DIEM)
+        : balances.diem != null
+          ? Number(balances.diem)
+          : null;
+    const payload = {
+      accessPermitted: !!(data && data.accessPermitted),
+      tier:
+        data && data.apiTier && data.apiTier.id
+          ? String(data.apiTier.id)
+          : null,
+      isCharged: !!(data && data.apiTier && data.apiTier.isCharged),
+      usd: Number.isFinite(usd) ? usd : null,
+      diem: Number.isFinite(diem) ? diem : null,
+      nextEpochBegins: (data && data.nextEpochBegins) || null,
+      keyExpiration: (data && data.keyExpiration) || null,
+      fetchedAt: now,
+    };
+    veniceCreditsCache = { at: now, data: payload };
+    res.json({ ok: true, cached: false, ...payload });
+  } catch (e) {
+    res.status(502).json({
+      ok: false,
+      error: (e && e.message) || "Venice credits unavailable",
+    });
+  }
+});
+
 app.get("/api/admin/users/:id/chat", requireAdmin, (req, res) => {
   const result = billing.getChatSessionAdmin(req.params.id);
   res.json({

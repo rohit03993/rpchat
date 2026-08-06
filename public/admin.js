@@ -1030,6 +1030,82 @@
       return null;
     }
   }
+
+  function renderVeniceCredits(data) {
+    const box = document.getElementById("venice-credits");
+    const usdEl = document.getElementById("venice-credits-usd");
+    const subEl = document.getElementById("venice-credits-sub");
+    if (!box || !usdEl) return;
+    if (!data || !data.ok) {
+      box.classList.remove("is-ok", "is-low");
+      usdEl.textContent = "—";
+      if (subEl) {
+        subEl.textContent = (data && data.error) || "Could not load Venice credits";
+      }
+      return;
+    }
+    const usd = data.usd != null ? Number(data.usd) : null;
+    const diem = data.diem != null ? Number(data.diem) : null;
+    if (usd != null && Number.isFinite(usd)) {
+      usdEl.textContent =
+        "$" +
+        usd.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+    } else {
+      usdEl.textContent = "—";
+    }
+    box.classList.toggle("is-low", usd != null && usd < 2);
+    box.classList.toggle("is-ok", usd != null && usd >= 2);
+    const parts = [];
+    if (diem != null && Number.isFinite(diem) && diem > 0) {
+      parts.push(
+        "DIEM " +
+          diem.toLocaleString("en-US", {
+            maximumFractionDigits: 2,
+          })
+      );
+    }
+    if (data.tier) parts.push(String(data.tier));
+    if (data.accessPermitted === false) parts.push("blocked");
+    else if (data.accessPermitted) parts.push("OK");
+    if (data.nextEpochBegins) {
+      try {
+        const d = new Date(data.nextEpochBegins);
+        if (!isNaN(d.getTime())) {
+          parts.push("epoch " + d.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }));
+        }
+      } catch (e) {}
+    }
+    if (subEl) subEl.textContent = parts.length ? parts.join(" · ") : "Remaining balance";
+  }
+
+  async function loadVeniceCredits(opts) {
+    const force = !!(opts && opts.force);
+    try {
+      const res = await fetch(
+        "/api/admin/venice-credits" + (force ? "?fresh=1" : ""),
+        { headers: authHeaders() }
+      );
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        if (handleAuthFail(res)) return null;
+        renderVeniceCredits({
+          ok: false,
+          error: data.error || "Venice credits failed",
+        });
+        return null;
+      }
+      renderVeniceCredits(data);
+      return data;
+    } catch (e) {
+      renderVeniceCredits({ ok: false, error: "Network error" });
+      return null;
+    }
+  }
   function startOfTodayIstMs() {
     const now = Date.now();
     const istOffsetMin = 330;
@@ -2062,6 +2138,7 @@
     const allPays = await loadPayments({ soft: soft });
     const analytics = await loadAnalytics();
     updateStats(users, allPays, analytics);
+    loadVeniceCredits({ force: !soft });
     if (!soft) markLiveSync(true);
   }
 
@@ -2510,6 +2587,14 @@
   logoutBtn.addEventListener("click", logout);
   refreshBtn.addEventListener("click", refreshAll);
   refreshUsersBtn.addEventListener("click", refreshAll);
+  const veniceCreditsRefresh = document.getElementById("venice-credits-refresh");
+  if (veniceCreditsRefresh) {
+    veniceCreditsRefresh.addEventListener("click", async function () {
+      veniceCreditsRefresh.disabled = true;
+      await loadVeniceCredits({ force: true });
+      veniceCreditsRefresh.disabled = false;
+    });
+  }
   statusFilter.addEventListener("change", function () {
     renderPayments(paymentsCache);
   });

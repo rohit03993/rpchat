@@ -256,6 +256,80 @@ button {
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
 }
 
+.venice-credits {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(26, 111, 168, 0.28);
+  border-radius: 14px;
+  background:
+    linear-gradient(165deg, rgba(26, 111, 168, 0.08), transparent 55%),
+    var(--card);
+}
+
+.venice-credits.is-low {
+  border-color: rgba(184, 50, 64, 0.4);
+  background:
+    linear-gradient(165deg, rgba(184, 50, 64, 0.08), transparent 55%),
+    var(--card);
+}
+
+.venice-credits.is-ok {
+  border-color: rgba(8, 120, 94, 0.35);
+}
+
+.venice-credits-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.venice-credits-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.venice-credits-main b {
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: #1a6fa8;
+  font-variant-numeric: tabular-nums;
+}
+
+.venice-credits.is-low .venice-credits-main b {
+  color: var(--danger);
+}
+
+.venice-credits-sub {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.venice-credits-refresh {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.venice-credits-refresh:hover {
+  border-color: rgba(26, 111, 168, 0.45);
+  color: #1a6fa8;
+}
+
 .stats-more-btn {
   display: block;
   width: 100%;
