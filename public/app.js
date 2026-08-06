@@ -1774,6 +1774,8 @@
   }
 
   function maybeShowStoryImportAsk() {
+    // Temporarily disabled — Story link add-on hidden
+    return;
     if (!setupLocked) return;
     if (!storyImportAddon) return;
     if (importedStoryCard) return;
