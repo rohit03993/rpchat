@@ -2142,6 +2142,119 @@ body {
   line-height: 1.3;
 }
 
+.story-import {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fbf8f4 0%, #f4f7f8 100%);
+}
+
+.story-import.is-locked {
+  opacity: 0.92;
+}
+
+.story-import-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.story-import-head strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.story-import-sub {
+  margin: 4px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.story-import-lock {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(184, 50, 64, 0.12);
+  color: #9a2f3c;
+}
+
+.story-import:not(.is-locked) .story-import-lock {
+  background: rgba(8, 120, 94, 0.12);
+  color: var(--ok);
+}
+
+.story-import-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.story-import-tab {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.story-import-tab.is-on {
+  border-color: rgba(8, 120, 94, 0.45);
+  background: rgba(8, 120, 94, 0.1);
+  color: var(--ok);
+}
+
+.story-import-pane input,
+.story-import-pane textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.86rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.story-import-pane textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.story-import-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.story-import.is-locked .story-import-btn {
+  opacity: 0.85;
+}
+
+.story-import-status {
+  margin: 8px 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+  min-height: 1.1em;
+}
+
+.story-import-status.is-err {
+  color: #9a2f3c;
+}
+
+.story-import-status.is-ok {
+  color: var(--ok);
+}
+
 .composer {
   display: flex;
   align-items: center;

@@ -398,6 +398,53 @@
             placeholder="Scene e.g. Raat terrace pe soft baat; dirty only jab main push karun…"
           ></textarea>
         </label>
+
+        <div
+          class="story-import full"
+          id="story-import-box"
+          data-wiz-step="3"
+          data-wiz-field="scene"
+        >
+          <div class="story-import-head">
+            <div>
+              <strong>Import sex story</strong>
+              <p class="story-import-sub">
+                Paste Antarvasna / Hindi story URL (multi-page) or full text — AI plays those roles.
+              </p>
+            </div>
+            <span id="story-import-lock" class="story-import-lock">Paid</span>
+          </div>
+          <div class="story-import-tabs" role="tablist">
+            <button type="button" class="story-import-tab is-on" data-import-tab="url">
+              URL
+            </button>
+            <button type="button" class="story-import-tab" data-import-tab="text">
+              Paste text
+            </button>
+          </div>
+          <div id="story-import-url-pane" class="story-import-pane">
+            <input
+              id="story-import-url"
+              type="url"
+              maxlength="500"
+              placeholder="https://… story page 1 (we follow page 2, 3…)"
+              autocomplete="off"
+            />
+          </div>
+          <div id="story-import-text-pane" class="story-import-pane hidden">
+            <textarea
+              id="story-import-text"
+              rows="4"
+              maxlength="50000"
+              placeholder="Paste story text from all pages (comments optional — we ignore junk)…"
+            ></textarea>
+          </div>
+          <button type="button" id="story-import-btn" class="auth-btn story-import-btn">
+            Import into scene
+          </button>
+          <p id="story-import-status" class="story-import-status" aria-live="polite"></p>
+        </div>
+
         <label class="full" data-wiz-step="4" data-wiz-field="resistance">
           Resistance
           <select id="rp-resistance">

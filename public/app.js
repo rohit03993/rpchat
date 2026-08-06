@@ -71,6 +71,17 @@
   const rpCustomBot = document.getElementById("rp-custom-bot");
   const rpCustomUser = document.getElementById("rp-custom-user");
   const rpSetupStatus = document.getElementById("rp-setup-status");
+  const storyImportBox = document.getElementById("story-import-box");
+  const storyImportLock = document.getElementById("story-import-lock");
+  const storyImportBtn = document.getElementById("story-import-btn");
+  const storyImportUrl = document.getElementById("story-import-url");
+  const storyImportText = document.getElementById("story-import-text");
+  const storyImportStatus = document.getElementById("story-import-status");
+  const storyImportUrlPane = document.getElementById("story-import-url-pane");
+  const storyImportTextPane = document.getElementById("story-import-text-pane");
+  let storyImportTab = "url";
+  let importedStoryCard = "";
+  let importedOpeningHint = "";
   const settingsPanel = document.getElementById("settings-panel");
   const sceneChip = document.getElementById("scene-chip");
   const sceneChipText = document.getElementById("scene-chip-text");
@@ -516,6 +527,8 @@
       storyMode: !!storyModeOn,
       botRoleCustom: botRoleEl ? botRoleEl.value : "",
       userRoleCustom: userRoleEl ? userRoleEl.value : "",
+      importedStoryCard: importedStoryCard || "",
+      importedOpeningHint: importedOpeningHint || "",
     };
   }
 
@@ -531,6 +544,12 @@
     if (rpPaceEl && form.pace) rpPaceEl.value = form.pace;
     if (rpNoteEl && form.note != null) rpNoteEl.value = form.note;
     if (rpResistanceEl && form.resistance) rpResistanceEl.value = form.resistance;
+    if (form.importedStoryCard != null) {
+      importedStoryCard = String(form.importedStoryCard || "");
+    }
+    if (form.importedOpeningHint != null) {
+      importedOpeningHint = String(form.importedOpeningHint || "");
+    }
     if (chatSourceEl && form.chatSource) chatSourceEl.value = form.chatSource;
     if (chatModeEl && form.chatMode) chatModeEl.value = form.chatMode;
     if (botRoleEl && form.botRoleCustom != null) botRoleEl.value = form.botRoleCustom;
@@ -1523,6 +1542,7 @@
       currentUser = Object.assign({}, currentUser || {}, data.user);
       syncLocalClock(currentUser);
       paintHelpPending();
+      paintStoryImportUi();
       return;
     }
     if (typeof data.hoursBalance === "number") {
@@ -1597,6 +1617,7 @@
     saveStoryModePref();
     paintStoryModeUi();
     paintHelpPending();
+    paintStoryImportUi();
     if (remainingHoursNow() > 0.0001) {
       startLiveTimer();
     } else {
@@ -1656,6 +1677,7 @@
     }
     paintStoryModeUi();
     paintHelpPending();
+    paintStoryImportUi();
     return true;
   }
 
@@ -1673,6 +1695,214 @@
       if (pending) dot.classList.remove("hidden");
       else dot.classList.add("hidden");
     }
+  }
+
+  function isReallyPaidUser() {
+    if (!currentUser) return false;
+    if (typeof currentUser.paidFeature === "boolean") {
+      return !!currentUser.paidFeature;
+    }
+    // storyModeFreeLeft === null only for real hasPaid (not trial time)
+    return currentUser.storyModeFreeLeft === null;
+  }
+
+  function paintStoryImportUi() {
+    var paid = isReallyPaidUser();
+    if (storyImportBox) {
+      storyImportBox.classList.toggle("is-locked", !paid);
+    }
+    if (storyImportLock) {
+      storyImportLock.textContent = paid ? "Unlocked" : "Paid only";
+    }
+    if (storyImportUrl) storyImportUrl.disabled = !paid;
+    if (storyImportText) storyImportText.disabled = !paid;
+    if (storyImportBtn) {
+      storyImportBtn.textContent = paid
+        ? "Import into scene"
+        : "Unlock with Pay";
+    }
+  }
+
+  function setStoryImportTab(tab) {
+    storyImportTab = tab === "text" ? "text" : "url";
+    document.querySelectorAll(".story-import-tab").forEach(function (btn) {
+      btn.classList.toggle(
+        "is-on",
+        btn.getAttribute("data-import-tab") === storyImportTab
+      );
+    });
+    if (storyImportUrlPane) {
+      storyImportUrlPane.classList.toggle("hidden", storyImportTab !== "url");
+    }
+    if (storyImportTextPane) {
+      storyImportTextPane.classList.toggle("hidden", storyImportTab !== "text");
+    }
+  }
+
+  function setStoryImportStatus(msg, kind) {
+    if (!storyImportStatus) return;
+    storyImportStatus.textContent = msg || "";
+    storyImportStatus.classList.toggle("is-err", kind === "err");
+    storyImportStatus.classList.toggle("is-ok", kind === "ok");
+  }
+
+  function selectOrCustomRole(selectEl, value, customInput) {
+    if (!selectEl || !value) return;
+    var v = String(value).trim().toLowerCase();
+    var aliases = {
+      maa: "mummy",
+      mom: "mummy",
+      mother: "mummy",
+      papa: "dad",
+      father: "dad",
+      biwi: "wife",
+      pati: "husband",
+      son: "beta",
+      daughter: "beti",
+    };
+    if (aliases[v]) v = aliases[v];
+    var found = false;
+    for (var i = 0; i < selectEl.options.length; i++) {
+      if (String(selectEl.options[i].value).toLowerCase() === v) {
+        selectEl.value = selectEl.options[i].value;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      selectEl.value = "custom";
+      if (customInput) customInput.value = String(value).slice(0, 40);
+    }
+    syncCustomRoleFields();
+  }
+
+  async function runStoryImport() {
+    if (!isReallyPaidUser()) {
+      setStoryImportStatus("Paid feature — tap Pay to unlock", "err");
+      toast("Story import is for paid users", "err");
+      try {
+        openPaySheet();
+      } catch (e) {}
+      return;
+    }
+    var body = { mode: storyImportTab };
+    if (storyImportTab === "url") {
+      body.url = storyImportUrl ? storyImportUrl.value.trim() : "";
+      if (!body.url) {
+        setStoryImportStatus("Paste a story URL first", "err");
+        return;
+      }
+    } else {
+      body.text = storyImportText ? storyImportText.value.trim() : "";
+      if (!body.text || body.text.length < 120) {
+        setStoryImportStatus("Paste more story text (few paragraphs)", "err");
+        return;
+      }
+    }
+    if (storyImportBtn) storyImportBtn.disabled = true;
+    setStoryImportStatus(
+      storyImportTab === "url"
+        ? "Reading pages + building scene…"
+        : "Building scene from text…",
+      ""
+    );
+    try {
+      const res = await fetch("/api/story-import", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+      if (data.user) {
+        currentUser = Object.assign({}, currentUser || {}, data.user);
+        paintStoryImportUi();
+      }
+      if (!res.ok) {
+        if (data.code === "PAID_ONLY") {
+          setStoryImportStatus("Paid only — unlock with Pay", "err");
+          try {
+            openPaySheet();
+          } catch (e2) {}
+        } else {
+          setStoryImportStatus(data.error || "Import failed", "err");
+        }
+        return;
+      }
+      applyImportedScene(data.scene, data.meta);
+    } catch (e) {
+      setStoryImportStatus("Network error — try again", "err");
+    } finally {
+      if (storyImportBtn) storyImportBtn.disabled = false;
+    }
+  }
+
+  function applyImportedScene(scene, meta) {
+    if (!scene) {
+      setStoryImportStatus("Empty scene", "err");
+      return;
+    }
+    if (charNameEl && scene.characterName) {
+      charNameEl.value = String(scene.characterName).slice(0, 40);
+    }
+    selectOrCustomRole(rpBotRoleEl, scene.botRole, rpCustomBot);
+    selectOrCustomRole(rpUserRoleEl, scene.userRole, rpCustomUser);
+    if (rpResistanceEl && scene.resistance) {
+      rpResistanceEl.value = scene.resistance;
+    }
+    if (rpVibeEl && scene.vibe) {
+      var vibe = String(scene.vibe);
+      var matched = false;
+      for (var i = 0; i < rpVibeEl.options.length; i++) {
+        if (
+          rpVibeEl.options[i].value.toLowerCase().indexOf(vibe.toLowerCase().slice(0, 8)) !==
+            -1 ||
+          vibe.toLowerCase().indexOf(rpVibeEl.options[i].value.toLowerCase().slice(0, 8)) !==
+            -1
+        ) {
+          rpVibeEl.value = rpVibeEl.options[i].value;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched && /heat/i.test(vibe)) {
+        // pick already heated if present
+        for (var j = 0; j < rpVibeEl.options.length; j++) {
+          if (/heat/i.test(rpVibeEl.options[j].value)) {
+            rpVibeEl.value = rpVibeEl.options[j].value;
+            break;
+          }
+        }
+      }
+    }
+    importedStoryCard = String(scene.storyCard || "").slice(0, 1200);
+    importedOpeningHint = String(scene.openingHint || "").slice(0, 220);
+    if (rpNoteEl) {
+      var brief = String(scene.brief || "").slice(0, 280);
+      var note =
+        brief +
+        (importedStoryCard
+          ? (brief ? " · " : "") + importedStoryCard.slice(0, 180)
+          : "");
+      rpNoteEl.value = note.slice(0, 400);
+    }
+    try {
+      syncTitle();
+    } catch (e) {}
+    var pages = meta && meta.pageCount ? meta.pageCount : 1;
+    setStoryImportStatus(
+      "Ready · " +
+        pages +
+        " page" +
+        (pages === 1 ? "" : "s") +
+        " · roles filled — tap Start chat",
+      "ok"
+    );
+    toast("Story imported into scene", "ok");
+    try {
+      scheduleSaveChatSession();
+    } catch (e3) {}
   }
 
   function showSupportPopup(popup) {
@@ -3872,6 +4102,13 @@
       " All adults 18+. " +
       briefBlock +
       (activeMood ? ". ACTIVE MOOD: " + activeMood : "") +
+      (importedStoryCard
+        ? ". IMPORTED STORY LOCK (play this plot — do not invent a different family scene): " +
+          importedStoryCard +
+          (importedOpeningHint
+            ? ". Opening feel: " + importedOpeningHint
+            : "")
+        : "") +
       ". Scene rule: early replies must match USER RP BRIEF + vibe/pace for THIS role (not a generic Mummy hello). After that, follow user tempo/messages."
     );
   }
@@ -4286,6 +4523,8 @@
     setupLocked = false;
     rpSetup = "";
     activeMood = "";
+    importedStoryCard = "";
+    importedOpeningHint = "";
     wizStep = 1;
     clearSavedChatSession();
     syncTitle();
@@ -4975,6 +5214,16 @@
         return;
       }
       setStoryMode(!storyModeOn);
+    });
+  }
+  document.querySelectorAll(".story-import-tab").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      setStoryImportTab(btn.getAttribute("data-import-tab") || "url");
+    });
+  });
+  if (storyImportBtn) {
+    storyImportBtn.addEventListener("click", function () {
+      runStoryImport();
     });
   }
   if (discountOfferYesBtn) {

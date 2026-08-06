@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const storyImport = require("./lib/storyImport");
 const { prepareUserContent } = require("./lib/decodeMessage");
 const {
   buildMaaBrainPrompt,
@@ -479,6 +480,18 @@ function requireHours(req, res, next) {
   next();
 }
 
+/** Real payment only (trial time does not unlock paid features). */
+function requirePaid(req, res, next) {
+  const user = billing.getUser(req.userId);
+  if (!user || !user.hasPaid) {
+    return res.status(403).json({
+      error: "Story import is for paid users — tap Pay to unlock",
+      code: "PAID_ONLY",
+    });
+  }
+  next();
+}
+
 /** Fresh wallet fields after a long Venice call (req.billingUser is from request start). */
 function liveBillingFields(userId) {
   const tick = billing.tickUserHours(userId);
@@ -848,6 +861,77 @@ app.post("/api/chat/report", requireUser, (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message || "Report failed" });
+  }
+});
+
+/** Paid-only: import multi-page story URL or pasted text → scene card. */
+app.post("/api/story-import", requireUser, requirePaid, async (req, res) => {
+  try {
+    if (!VENICE_API_KEY) {
+      return res.status(500).json({
+        error: "VENICE_API_KEY missing. Add it to your .env file.",
+      });
+    }
+    const mode = String(req.body?.mode || "").trim().toLowerCase();
+    let pack = null;
+    if (mode === "url") {
+      pack = await storyImport.importStoryFromUrl(req.body?.url);
+    } else if (mode === "text") {
+      pack = storyImport.importStoryFromText(req.body?.text);
+    } else {
+      return res.status(400).json({ error: "mode must be url or text" });
+    }
+    if (!pack || !pack.ok) {
+      return res.status(400).json({
+        error: (pack && pack.error) || "Import failed",
+        code: "IMPORT_FAILED",
+      });
+    }
+
+    const prompt = storyImport.buildSummarizePrompt(pack.text);
+    const { response, data } = await callVenice(CLEAR_MODEL, [
+      {
+        role: "system",
+        content:
+          "You extract compact adult RP scene cards from Hindi/Hinglish stories. Output JSON only.",
+      },
+      { role: "user", content: prompt },
+    ], {
+      temperature: 0.25,
+      max_tokens: 900,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    });
+
+    if (!response.ok) {
+      const message =
+        data?.error?.message || data?.error || "Story summarize failed";
+      return res.status(502).json({ error: String(message).slice(0, 200) });
+    }
+
+    const raw = extractText(data?.choices?.[0]?.message);
+    const scene = storyImport.parseSceneJson(raw);
+    if (!scene || !scene.storyCard) {
+      return res.status(502).json({
+        error: "Could not build scene from that story — try paste text",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      scene,
+      meta: {
+        pageCount: pack.pageCount,
+        chars: pack.chars,
+        truncated: !!pack.truncated,
+        pages: pack.pages || [],
+      },
+      ...liveBillingFields(req.userId),
+    });
+  } catch (e) {
+    return res.status(500).json({
+      error: e.message || "Story import failed",
+    });
   }
 });
 
