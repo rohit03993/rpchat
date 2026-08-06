@@ -79,6 +79,12 @@
   const storyImportStatus = document.getElementById("story-import-status");
   const storyImportUrlPane = document.getElementById("story-import-url-pane");
   const storyImportTextPane = document.getElementById("story-import-text-pane");
+  const storyImportAddon = document.getElementById("story-import-addon");
+  const storyImportAsk = document.getElementById("story-import-ask");
+  const storyImportAskYes = document.getElementById("story-import-ask-yes");
+  const storyImportAskNo = document.getElementById("story-import-ask-no");
+  const storyImportOpenBtn = document.getElementById("story-import-open-btn");
+  const storyImportCloseBtn = document.getElementById("story-import-close");
   let storyImportTab = "url";
   let importedStoryCard = "";
   let importedOpeningHint = "";
@@ -654,6 +660,7 @@
       syncMoodBar();
       clearSceneBackup();
       refreshContinueBanner();
+      setTimeout(maybeShowStoryImportAsk, 1800);
       return history.length > 0 || !!rpSetup;
     } finally {
       restoringSession = false;
@@ -1712,15 +1719,72 @@
       storyImportBox.classList.toggle("is-locked", !paid);
     }
     if (storyImportLock) {
-      storyImportLock.textContent = paid ? "Unlocked" : "Paid only";
+      storyImportLock.textContent = paid ? "Add-on" : "Paid add-on";
     }
     if (storyImportUrl) storyImportUrl.disabled = !paid;
     if (storyImportText) storyImportText.disabled = !paid;
     if (storyImportBtn) {
       storyImportBtn.textContent = paid
-        ? "Import into scene"
+        ? "Use in this chat"
         : "Unlock with Pay";
     }
+  }
+
+  function storyImportDismissKey() {
+    var id = currentUserId();
+    return id ? "storyImportAsk_v1_" + id : "storyImportAsk_v1";
+  }
+
+  function wasStoryImportAskDismissed() {
+    try {
+      return localStorage.getItem(storyImportDismissKey()) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function dismissStoryImportAsk() {
+    try {
+      localStorage.setItem(storyImportDismissKey(), "1");
+    } catch (e) {}
+  }
+
+  function hideStoryImportAddon() {
+    if (storyImportAddon) storyImportAddon.classList.add("hidden");
+    if (storyImportAsk) storyImportAsk.classList.add("hidden");
+    if (storyImportBox) storyImportBox.classList.add("hidden");
+  }
+
+  function showStoryImportAsk() {
+    if (!storyImportAddon) return;
+    paintStoryImportUi();
+    storyImportAddon.classList.remove("hidden");
+    if (storyImportAsk) storyImportAsk.classList.remove("hidden");
+    if (storyImportBox) storyImportBox.classList.add("hidden");
+  }
+
+  function openStoryImportPanel() {
+    if (!storyImportAddon) return;
+    dismissStoryImportAsk();
+    paintStoryImportUi();
+    storyImportAddon.classList.remove("hidden");
+    if (storyImportAsk) storyImportAsk.classList.add("hidden");
+    if (storyImportBox) storyImportBox.classList.remove("hidden");
+    setStoryImportStatus("", "");
+  }
+
+  function maybeShowStoryImportAsk() {
+    if (!setupLocked) return;
+    if (!storyImportAddon) return;
+    if (importedStoryCard) return;
+    if (wasStoryImportAskDismissed()) return;
+    // Don't fight pay / support popups
+    var payOpen = billingPanel && !billingPanel.classList.contains("hidden");
+    var supportOpen =
+      document.getElementById("support-sheet") &&
+      !document.getElementById("support-sheet").classList.contains("hidden");
+    if (payOpen || supportOpen) return;
+    showStoryImportAsk();
   }
 
   function setStoryImportTab(tab) {
@@ -1892,14 +1956,50 @@
     } catch (e) {}
     var pages = meta && meta.pageCount ? meta.pageCount : 1;
     setStoryImportStatus(
-      "Ready · " +
+      "Loaded · " +
         pages +
         " page" +
         (pages === 1 ? "" : "s") +
-        " · roles filled — tap Start chat",
+        " — chat ab isi story pe",
       "ok"
     );
-    toast("Story imported into scene", "ok");
+    toast("Story loaded into this chat", "ok");
+    dismissStoryImportAsk();
+    if (setupLocked) {
+      rpSetup = buildRpSetupText();
+      syncTitle();
+      // Refresh hidden setup lock in history so next replies use new card
+      var hadSetup = false;
+      for (var hi = 0; hi < history.length; hi++) {
+        if (
+          history[hi] &&
+          history[hi].role === "assistant" &&
+          /^Setup locked for this chat:/i.test(String(history[hi].content || ""))
+        ) {
+          history[hi].content = "Setup locked for this chat: " + rpSetup;
+          hadSetup = true;
+          break;
+        }
+      }
+      if (!hadSetup) {
+        history.push({
+          role: "assistant",
+          content: "Setup locked for this chat: " + rpSetup,
+        });
+      }
+      addBubble(
+        "Story scene set — ab isi plot / characters pe baat karte hain.",
+        "incoming"
+      );
+      history.push({
+        role: "assistant",
+        content:
+          "Story scene set — ab isi plot / characters pe baat karte hain.",
+      });
+      setTimeout(function () {
+        hideStoryImportAddon();
+      }, 1200);
+    }
     try {
       scheduleSaveChatSession();
     } catch (e3) {}
@@ -4404,6 +4504,7 @@
     scheduleSaveChatSession();
     maybeShowWelcomeTip();
     input.focus();
+    setTimeout(maybeShowStoryImportAsk, 1600);
 
     if (isMaaMode()) {
       // Optional better Venice opener — short timeout; keep local if slow/paste
@@ -4525,6 +4626,7 @@
     activeMood = "";
     importedStoryCard = "";
     importedOpeningHint = "";
+    hideStoryImportAddon();
     wizStep = 1;
     clearSavedChatSession();
     syncTitle();
@@ -5224,6 +5326,27 @@
   if (storyImportBtn) {
     storyImportBtn.addEventListener("click", function () {
       runStoryImport();
+    });
+  }
+  if (storyImportAskYes) {
+    storyImportAskYes.addEventListener("click", function () {
+      openStoryImportPanel();
+    });
+  }
+  if (storyImportAskNo) {
+    storyImportAskNo.addEventListener("click", function () {
+      dismissStoryImportAsk();
+      hideStoryImportAddon();
+    });
+  }
+  if (storyImportOpenBtn) {
+    storyImportOpenBtn.addEventListener("click", function () {
+      openStoryImportPanel();
+    });
+  }
+  if (storyImportCloseBtn) {
+    storyImportCloseBtn.addEventListener("click", function () {
+      hideStoryImportAddon();
     });
   }
   if (discountOfferYesBtn) {
