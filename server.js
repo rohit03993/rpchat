@@ -18,6 +18,7 @@ const {
   replyTokenBudget,
   fixMaaGenderSlips,
   wantsLongReply,
+  storyModeRules,
   looksIncompleteReply,
   looksLikeStockOpener,
   looksLikeIrrelevantBubbles,
@@ -1293,6 +1294,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
       characterName,
       botGender,
       userGender,
+      storyMode: storyModeRaw,
     } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -1303,6 +1305,10 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
     const slug = String(characterSlug || "").trim();
     const source = String(chatSource || "").trim();
     const startedAt = Date.now();
+    // Story mode = paid only (server enforces; ignore client flag if unpaid)
+    const storyMode =
+      !!storyModeRaw &&
+      !!(req.billingUser && req.billingUser.hasPaid);
 
     // ===== Maa Agent: Brain (situation) → Voice (bubbles) =====
     // Website /chat/agent/... is not a public API; we recreate the feel here.
@@ -1347,7 +1353,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               : `Mirror heat. Do not jump ahead of user.\n`) +
             `MUST_ANSWER must react to the latest user line FIRST — never ignore hug/kiss/dirty ask for kitchen/padhai/weather.\n` +
             `If user answered your previous question, MUST_ANSWER = react to that answer — NEVER re-ask "dimaag/soch/kaisa laga".\n` +
-            `Default LENGTH=short. Soft → ACTIONS=none. Flirty/dirty/rough → ACTIONS=light (feature + mann *bubbles*). Full only for long/story/guest.\n\n` +
+            (storyMode
+              ? `STORY MODE ON (paid): set LENGTH=long and ACTIONS=light|full. Write continuing long scene beats — soft→flirty story or dirty story matching USER_HEAT. Not short WhatsApp.\n\n`
+              : `Default LENGTH=short. Soft → ACTIONS=none. Flirty/dirty/rough → ACTIONS=light (feature + mann *bubbles*). Full only for long/story/guest.\n\n`) +
             `Write the SCENE CARD now.`,
         },
       ];
@@ -1373,30 +1381,47 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           `SCENE: ${setupText || "ongoing private chat"}\n` +
           `MUST_ANSWER: react directly to his last words\n` +
           `NEXT_BEATS: stay in role; same-heat hook with USER only\n` +
-          `LENGTH: short\n` +
-          `ACTIONS: none\n` +
+          `LENGTH: ${storyMode ? "long" : "short"}\n` +
+          `ACTIONS: ${storyMode ? "light" : "none"}\n` +
           `HEAT: ${userHeat}\n` +
-          `AVOID: long essay, action spam, gender swap, invent relative hookups, lecture`;
+          `AVOID: ${storyMode ? "short one-liners, invent relative hookups, lecture" : "long essay, action spam, gender swap, invent relative hookups, lecture"}`;
       }
 
       sceneCard = patchSceneCardForMirror(sceneCard, lastUser, {
         rpSetup: setupText,
         messages: hist,
       });
+      if (storyMode) {
+        sceneCard = String(sceneCard || "").replace(
+          /LENGTH:\s*\w+/i,
+          "LENGTH: long"
+        );
+        if (!/LENGTH:\s*long/i.test(sceneCard)) {
+          sceneCard += "\nLENGTH: long";
+        }
+        if (!/ACTIONS:\s*(light|full)/i.test(sceneCard)) {
+          sceneCard = sceneCard.replace(/ACTIONS:\s*\w+/i, "ACTIONS: light");
+          if (!/ACTIONS:/i.test(sceneCard)) sceneCard += "\nACTIONS: light";
+        }
+      }
 
       // --- Step 2: Voice ---
       const wantsHinglish = lang !== "english";
       const langStyle = wantsHinglish
         ? "Easy Hinglish WhatsApp"
         : "clear natural English WhatsApp (NO Hinglish/Hindi words)";
-      const wantLong = wantsLongReply(lastUser, sceneCard);
-      const tokenBudget = replyTokenBudget(lastUser, sceneCard);
+      const wantLong = wantsLongReply(lastUser, sceneCard, { storyMode });
+      const tokenBudget = replyTokenBudget(lastUser, sceneCard, { storyMode });
       // English: clearer model + lower temp (stops garbled tails / language flip)
       const voiceModel = CLEAR_MODEL;
       const voiceTemp = wantsHinglish
-        ? sceneHeatIsDirty(sceneCard)
-          ? 0.75
-          : 0.5
+        ? storyMode
+          ? sceneHeatIsDirty(sceneCard)
+            ? 0.82
+            : 0.65
+          : sceneHeatIsDirty(sceneCard)
+            ? 0.75
+            : 0.5
         : 0.65;
 
       const stillResisting = strictStillResisting(setupText, hist);
@@ -1408,7 +1433,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         `USER_HEAT=${userHeat}. ` +
         (stillResisting
           ? `RESISTANCE ACTIVE: dirty talk OK, but DENY body-yes — no "Theek hai aaja", panty off, or sex start. Use shy deny / galat hai beta / make them beg. Still allow 1–2 short *feature/mann* bubbles. `
-          : `Match heat; short WhatsApp lines with feature/mann *bubbles* when flirty/dirty. `) +
+          : storyMode
+            ? `STORY MODE: long continuing scene; match heat with narration + dialogue. `
+            : `Match heat; short WhatsApp lines with feature/mann *bubbles* when flirty/dirty. `) +
         `ACTIONS from SCENE CARD: soft/clarify=none (ZERO bubbles). flirty/dirty=light ONLY if a real reaction helps — else plain talk. Never stock jhatka/shocked/chehra-laal. Never 3+ novel *blocks*. ` +
         (String(charOverrides.botRole || "").toLowerCase().match(/^(mom|mummy|maa|mother)$/)
           ? `HUSBAND WORD LOCK: say "tera Papa" or "mera pati" for user's father — NEVER "mere Papa" for husband. "mere Papa (tere Nana)" only for your own father.`
@@ -1426,6 +1453,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
           role: "system",
           content:
             buildMaaVoicePrompt(lang, sceneCard, setupText, charOverrides) +
+            (storyMode
+              ? "\n\n" + storyModeRules(charOverrides)
+              : "") +
             "\n\n" +
             memoryCard +
             (reportHints ? "\n\n" + reportHints : "") +
@@ -1736,7 +1766,9 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
               content:
                 `Keep reaction to what user said. ${genderHint}\n` +
                 (wantLong
-                  ? "Keep FULL phone dialogue — do not shorten. Keep existing *feature/mann* bubbles.\n"
+                  ? storyMode
+                    ? "STORY MODE: keep the FULL long scene (narration + dialogue). Do NOT shorten to WhatsApp one-liners.\n"
+                    : "Keep FULL phone dialogue — do not shorten. Keep existing *feature/mann* bubbles.\n"
                   : "Keep SHORT WhatsApp style — keep 1–2 existing *feature/mann* bubbles; do not pad to novel *action* spam or long paragraphs.\n") +
                 (stickyFacts.place || stickyFacts.clothing
                   ? `STICKY FACTS — keep unless user changed them: place=${stickyFacts.place || "n/a"}; clothes/props=${stickyFacts.clothing || "n/a"}; heat=${stickyFacts.heatStage || "n/a"}.\n`
@@ -1811,6 +1843,7 @@ app.post("/api/chat", requireUser, requireHours, async (req, res) => {
         workedMs,
         steps,
         mode: "maa-agent",
+        storyMode: !!storyMode,
         ...liveBillingFields(req.userId),
       });
     }

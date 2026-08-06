@@ -163,6 +163,9 @@
   const discountOfferEl = document.getElementById("discount-offer");
   const discountOfferYesBtn = document.getElementById("discount-offer-yes");
   const discountOfferNoBtn = document.getElementById("discount-offer-no");
+  const storyModeBtn = document.getElementById("story-mode-btn");
+  const storyModeHint = document.getElementById("story-mode-hint");
+  let storyModeOn = false;
   let openAdminNoticeId = null;
   let payWizardStep = 1;
   let payDeepestStep = 1;
@@ -510,6 +513,7 @@
       resistance: rpResistanceEl ? rpResistanceEl.value : "strict",
       chatSource: chatSourceEl ? chatSourceEl.value : "maa",
       chatMode: chatModeEl ? chatModeEl.value : "normal",
+      storyMode: !!storyModeOn,
       botRoleCustom: botRoleEl ? botRoleEl.value : "",
       userRoleCustom: userRoleEl ? userRoleEl.value : "",
     };
@@ -531,9 +535,13 @@
     if (chatModeEl && form.chatMode) chatModeEl.value = form.chatMode;
     if (botRoleEl && form.botRoleCustom != null) botRoleEl.value = form.botRoleCustom;
     if (userRoleEl && form.userRoleCustom != null) userRoleEl.value = form.userRoleCustom;
+    if (form.storyMode != null && canUseStoryMode()) {
+      storyModeOn = !!form.storyMode;
+    }
     syncCustomRoleFields();
     syncPanels();
     syncTitle();
+    paintStoryModeUi();
   }
 
   function isSetupMetaMessage(content) {
@@ -1106,6 +1114,7 @@
 
     if (needsUnlockWatch()) startUnlockWatch();
     else stopUnlockWatch();
+    paintStoryModeUi();
   }
 
   function notifyTimeIncreased(hoursLeft, prevLeft) {
@@ -1355,6 +1364,90 @@
     setTimeout(maybeShowPendingDiscountOffer, 500);
   }
 
+  function canUseStoryMode() {
+    return !!(currentUser && currentUser.hasPaid);
+  }
+
+  function storyModeStorageKey() {
+    var id = currentUserId();
+    return id ? "storyMode_v1_" + id : "";
+  }
+
+  function loadStoryModePref() {
+    try {
+      var key = storyModeStorageKey();
+      if (!key) return false;
+      return localStorage.getItem(key) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function saveStoryModePref(on) {
+    try {
+      var key = storyModeStorageKey();
+      if (!key) return;
+      if (on) localStorage.setItem(key, "1");
+      else localStorage.removeItem(key);
+    } catch (e) {}
+  }
+
+  function paintStoryModeUi() {
+    if (!canUseStoryMode() && storyModeOn) {
+      storyModeOn = false;
+      saveStoryModePref(false);
+    }
+    if (storyModeBtn) {
+      storyModeBtn.classList.toggle("is-on", !!storyModeOn);
+      storyModeBtn.classList.toggle("is-locked", !canUseStoryMode());
+      storyModeBtn.setAttribute("aria-pressed", storyModeOn ? "true" : "false");
+      storyModeBtn.title = canUseStoryMode()
+        ? storyModeOn
+          ? "Story mode on · longer scene replies"
+          : "Story mode off · tap to enable (paid)"
+        : "Paid feature · buy hours to unlock Story mode";
+    }
+    if (storyModeHint) {
+      if (!canUseStoryMode()) {
+        storyModeHint.textContent = "Paid only · unlock with Pay";
+      } else if (storyModeOn) {
+        storyModeHint.textContent = "On · long flirty/dirty scenes";
+      } else {
+        storyModeHint.textContent = "Off · short chat";
+      }
+    }
+  }
+
+  function setStoryMode(on, opts) {
+    var options = opts || {};
+    if (on && !canUseStoryMode()) {
+      storyModeOn = false;
+      paintStoryModeUi();
+      if (!options.silent) {
+        toast("Story mode is for paid users — tap Pay", "err");
+        try {
+          openPaySheet();
+        } catch (e) {}
+      }
+      return false;
+    }
+    storyModeOn = !!on;
+    saveStoryModePref(storyModeOn);
+    paintStoryModeUi();
+    try {
+      scheduleSaveChatSession();
+    } catch (e) {}
+    if (!options.silent) {
+      toast(
+        storyModeOn
+          ? "Story mode on · longer scene replies"
+          : "Story mode off · short chat",
+        "ok"
+      );
+    }
+    return true;
+  }
+
   function formatTime(u) {
     const hours = Number(u && u.hoursBalance != null ? u.hoursBalance : 0);
     return formatCountdown(hours);
@@ -1440,6 +1533,12 @@
     await refreshMe();
     startAppPresence();
     setUserChip(currentUser);
+    if (canUseStoryMode() && loadStoryModePref()) {
+      storyModeOn = true;
+    } else if (!canUseStoryMode()) {
+      storyModeOn = false;
+    }
+    paintStoryModeUi();
     if (remainingHoursNow() > 0.0001) {
       startLiveTimer();
     } else {
@@ -1497,6 +1596,7 @@
     } else if (!options.skipSupportPopupClear && !unlockFresh) {
       showSupportPopup(null);
     }
+    paintStoryModeUi();
     return true;
   }
 
@@ -4236,6 +4336,7 @@
         body.userRole = roles.userRole;
         body.botGender = roles.botGender;
         body.userGender = roles.userGender;
+        body.storyMode = !!(storyModeOn && canUseStoryMode());
       } else if (isVeniceMode()) {
         body.characterSlug = selectedCharacter.slug;
         body.characterModel = selectedCharacter.modelId || "";
@@ -4745,6 +4846,15 @@
       try {
         if (input) input.focus();
       } catch (e) {}
+    });
+  }
+  if (storyModeBtn) {
+    storyModeBtn.addEventListener("click", function () {
+      if (!canUseStoryMode()) {
+        setStoryMode(true);
+        return;
+      }
+      setStoryMode(!storyModeOn);
     });
   }
   if (discountOfferYesBtn) {

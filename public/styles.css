@@ -2099,6 +2099,49 @@ body {
   width: auto;
 }
 
+.story-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 8px;
+  flex-shrink: 0;
+}
+
+.story-mode-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.story-mode-btn.is-on {
+  border-color: rgba(8, 120, 94, 0.5);
+  background: rgba(8, 120, 94, 0.1);
+  color: var(--ok);
+}
+
+.story-mode-btn.is-locked {
+  opacity: 0.72;
+}
+
+.story-mode-btn:hover {
+  border-color: rgba(8, 120, 94, 0.4);
+  color: var(--ok);
+}
+
+.story-mode-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
 .composer {
   display: flex;
   align-items: center;
