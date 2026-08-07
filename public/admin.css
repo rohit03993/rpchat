@@ -1079,6 +1079,11 @@ button {
   color: var(--muted);
 }
 
+.uc-chip.ended {
+  background: rgba(184, 50, 64, 0.1);
+  color: #9a2f3c;
+}
+
 .uc-chip.story {
   background: rgba(40, 120, 180, 0.14);
   color: #1a5a8a;

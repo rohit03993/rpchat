@@ -979,7 +979,15 @@
   }
 
   function remainingHoursNow() {
-    // Wall-clock: time always runs from last sync, even if chat timer UI paused
+    // Prefer wall-clock end time (trial + paid) so UI hits 0 exactly when allotment ends
+    if (currentUser && currentUser.accessExpiresAt) {
+      const exp = Number(currentUser.accessExpiresAt) || 0;
+      if (exp > 0) {
+        if (exp <= Date.now()) return 0;
+        return Math.max(0, (exp - Date.now()) / 3600000);
+      }
+    }
+    // Fallback: hours synced from server + elapsed since sync
     if (!localSyncedAt) return Math.max(0, localHours);
     const elapsedH = Math.max(0, Date.now() - localSyncedAt) / 3600000;
     return Math.max(0, localHours - elapsedH);

@@ -1143,6 +1143,32 @@
     });
   }
 
+  function formatShortLeft(hoursBalance) {
+    const totalSec = Math.max(0, Math.floor(Number(hoursBalance || 0) * 3600));
+    if (totalSec <= 0) return "0";
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return h + "h " + m + "m";
+    if (m > 0) return m + "m";
+    return s + "s";
+  }
+
+  /** Trial + paid: chip shows time left or ended (same clock rules). */
+  function accessStatusChip(u) {
+    const left = Number(u.hoursBalance || 0);
+    const hasTime = left > 0.0001;
+    const paid = !!u.hasPaid;
+    if (paid) {
+      return hasTime
+        ? { key: "paid", text: "Paid · " + formatShortLeft(left) }
+        : { key: "ended", text: "Paid · ended" };
+    }
+    return hasTime
+      ? { key: "trial", text: "Trial · " + formatShortLeft(left) }
+      : { key: "ended", text: "Unpaid · ended" };
+  }
+
   /** Compact visit/pay labels for list rows + expand panel (IST day). */
   function userVisitInsight(u) {
     const todayMs = startOfTodayIstMs();
@@ -1153,6 +1179,7 @@
     const pending = Number(u.pendingPayments || 0) > 0;
     const paid = !!u.hasPaid;
     const approved = Number(u.approvedPayments || 0);
+    const hasTime = Number(u.hoursBalance || 0) > 0.0001;
 
     let visitKey = "idle";
     let visitLabel = "Quiet";
@@ -1174,7 +1201,10 @@
       chips.push({ key: "repeat", text: "Repeat" });
     }
     if (pending) chips.push({ key: "pay-wait", text: "Pay?" });
-    else if (paid) chips.push({ key: "paid", text: "Paid" });
+    else if (paid && hasTime) chips.push({ key: "paid", text: "Paid" });
+    else if (paid) chips.push({ key: "ended", text: "Ended" });
+    else if (hasTime) chips.push({ key: "trial", text: "Trial" });
+    else chips.push({ key: "ended", text: "Ended" });
 
     const parts = [];
     if (visitKey === "new") parts.push("Signed up today");
@@ -1185,9 +1215,15 @@
     if (pending) parts.push("payment waiting review");
     else if (paid) {
       parts.push(
-        approved > 1 ? approved + " approved pays" : "paid customer"
+        hasTime
+          ? approved > 1
+            ? approved + " approved pays · time left"
+            : "paid · time left"
+          : "paid · time ended"
       );
-    } else parts.push("still on trial");
+    } else {
+      parts.push(hasTime ? "free trial running" : "trial ended · unpaid");
+    }
 
     if (lastAt) parts.push("last seen " + formatRelativeShort(lastAt));
 
@@ -1379,6 +1415,19 @@
       if (detailClock) detailClock.textContent = formatClock(hours);
       const detailHrs = card.querySelector(".uc-time-hours");
       if (detailHrs) detailHrs.textContent = hours.toFixed(2) + "h left";
+      const accessChip = card.querySelector(".user-card-facts .uc-chip[data-access]");
+      if (accessChip) {
+        const paid = accessChip.getAttribute("data-access") === "paid";
+        if (hours <= 0.0001) {
+          accessChip.className = "uc-chip ended";
+          accessChip.setAttribute("data-access", paid ? "paid" : "trial");
+          accessChip.textContent = paid ? "Paid · ended" : "Unpaid · ended";
+        } else {
+          accessChip.className = "uc-chip " + (paid ? "paid" : "trial");
+          accessChip.textContent =
+            (paid ? "Paid · " : "Trial · ") + formatShortLeft(hours);
+        }
+      }
     });
     paintLiveSyncAge();
   }
@@ -1765,9 +1814,7 @@
           },
           insight.pending
             ? { key: "pay-wait", text: "Payment pending" }
-            : insight.paid
-              ? { key: "paid", text: "Paid" }
-              : { key: "trial", text: "Trial" },
+            : accessStatusChip(u),
         ];
         if (Number(u.storyModeTotalUses || 0) > 0) {
           detailChips.push({
@@ -1787,9 +1834,7 @@
         const tileFactChips = [
           insight.pending
             ? { key: "pay-wait", text: "Pay wait" }
-            : insight.paid
-              ? { key: "paid", text: "Paid" }
-              : { key: "trial", text: "Trial" },
+            : accessStatusChip(u),
         ];
         if (Number(u.storyModeTotalUses || 0) > 0) {
           tileFactChips.push({
@@ -1811,7 +1856,13 @@
             return (
               "<span class='uc-chip " +
               escapeHtml(c.key) +
-              "'>" +
+              "'" +
+              (c.key === "paid" || c.key === "trial" || c.key === "ended"
+                ? " data-access='" +
+                  (u.hasPaid ? "paid" : "trial") +
+                  "'"
+                : "") +
+              ">" +
               escapeHtml(c.text) +
               "</span>"
             );
@@ -1911,7 +1962,9 @@
             ? "<span class='uc-time-until'>Ends " +
               escapeHtml(new Date(Number(u.accessExpiresAt)).toLocaleString()) +
               "</span>"
-            : "<span class='uc-time-until muted'>No active access</span>") +
+            : "<span class='uc-time-until muted'>" +
+              (u.hasPaid ? "Paid access ended" : "Trial ended") +
+              "</span>") +
           "</div>" +
           "<div><span class='uc-label'>Seen</span> " +
           escapeHtml(formatRelativeShort(insight.lastAt)) +
